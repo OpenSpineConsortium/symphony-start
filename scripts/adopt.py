@@ -456,6 +456,13 @@ def read_spec(options):
     return path.read_bytes(), False
 
 
+# The call that loads a module from a file by its path, which a script uses
+# for a module whose name the standard library holds, and the shape of the
+# file name it is given.
+PATH_LOADER = "spec_from_file_location"
+PY_FILE = re.compile(r"[A-Za-z_][A-Za-z0-9_]*\.py")
+
+
 def imported_modules(rel, data):
     """The top-level name of each module the Python file rel imports by an
     absolute name, wherever in the file the import stands, since one inside
@@ -476,6 +483,30 @@ def imported_modules(rel, data):
             names.update(alias.name.partition(".")[0] for alias in node.names)
         elif isinstance(node, ast.ImportFrom) and node.level == 0:
             names.add(node.module.partition(".")[0])
+        elif isinstance(node, ast.Call) and called_name(node) == PATH_LOADER:
+            names.update(loaded_by_path(node))
+    return names
+
+
+def called_name(call):
+    """The last name of what a call calls: spec_from_file_location for
+    importlib.util.spec_from_file_location(...) as for the bare name."""
+    func = call.func
+    return func.attr if isinstance(func, ast.Attribute) else getattr(func, "id", "")
+
+
+def loaded_by_path(call):
+    """The module a spec_from_file_location call loads by its path, as the
+    file name in the path's literal, profile for TOOLS / "profile.py":
+    the template loads tools/profile.py so, since the standard library has
+    a module of that name, and an import statement never names it."""
+    names = set()
+    for argument in call.args[1:2] + [keyword.value for keyword in call.keywords if keyword.arg == "location"]:
+        for node in ast.walk(argument):
+            if isinstance(node, ast.Constant) and isinstance(node.value, str):
+                file_name = PurePosixPath(node.value).name
+                if PY_FILE.fullmatch(file_name):
+                    names.add(file_name.removesuffix(".py"))
     return names
 
 
