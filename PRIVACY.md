@@ -385,8 +385,10 @@ adopts a repository through the front door, as the section on the adoption says.
 nothing there. Where GitHub refuses the tab even to say whether the repository's secret is set, the
 tab says so as it opens, before you connect a drive, and offers no Track.
 
-When you press Track it reads the repository's record (its default branch and whether it is public)
-and its public key for secrets. Where the repository is public, Track writes nothing until you tick
+When you press Track it reads the repository's record (its default branch and whether it is public),
+the names of what its default branch holds at its top, to refuse a folder the repository already
+holds there, such as one its checks run, unless it is the folder the repository tracks already, and
+its public key for secrets. Where the repository is public, Track writes nothing until you tick
 the box beside it that says what you tick will be readable by anyone, a box the tab shows for a
 public repository and never ticks for you. It then writes three things, as you, in this order: the
 secret `SYMPHONY_DRIVE_REFRESH`, the drive's refresh token sealed in your browser with that key the
@@ -408,7 +410,8 @@ The drive's side goes through Microsoft and the sign-in service. When you first 
 asks the sign-in service which drives it is set up for, and the service answers with the public
 client id of the developer's Microsoft app registration, or that OneDrive is not set up yet. When
 you press "Connect OneDrive", the page keeps in the tab's own storage a one-time value, a one-time
-secret it made for this connection and the panel's query (the repository it showed), and sends your
+secret it made for this connection, the panel's query (the repository it showed) and the GitHub
+login the panel names, and sends your
 browser to Microsoft, which asks you on its own page whether Symphony may read and write your files
 (Files.ReadWrite) and keep that access when you are away (offline_access); for a work or school
 account, the organization's settings may require its administrator's approval first. Microsoft sends
@@ -425,12 +428,13 @@ Microsoft ends the renewals of a GitHub sign-in made for one tab alone, as leavi
 page does (the control panel, above), and that sign-in's token serves out its eight hours.
 
 The page keeps the drive's two tokens in its memory alone, never in the browser's storage, the
-address or a log, and only for the GitHub account the panel named when they came: reloading or
+address or a log, and only for the GitHub account the panel named when you pressed "Connect
+OneDrive" (or, pressed while it named nobody, the first it names on the return): reloading or
 leaving the page, any sign-out, pressing "Forget the token" among them, or a sign-in as another
 GitHub account forgets them, and you press "Connect OneDrive" again; Track drops them once the
 secret and the file are written. With the access token the page reads, from your browser and as you,
 through Microsoft Graph, the drive's type and its owner's display name, to say which drive is
-connected, and the names, kinds, sizes, dates and ids of the files and folders in the folders you
+connected, and its id, to refuse at Track an item the repository tracked from another drive, and the names, kinds, sizes, dates and ids of the files and folders in the folders you
 open, to draw the list you tick in; nothing of that list leaves your browser but the name, the id
 and the drive's id of what you tick, which go into drive.json. When the access token runs out during
 a sitting, the page sends the refresh token to the service, which answers with a new access token.
