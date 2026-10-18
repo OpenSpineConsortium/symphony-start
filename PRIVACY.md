@@ -1,6 +1,6 @@
 # Symphony GitHub Apps privacy statement
 
-Version 15, 2026-10-18. This text is also at https://openspineconsortium.com/symphony/apps-privacy.html.
+Version 16, 2026-10-18. This text is also at https://openspineconsortium.com/symphony/apps-privacy.html.
 The Symphony browser extension has a statement of its own, at https://openspineconsortium.com/symphony/privacy.html.
 
 Who makes the Apps: Gregory Schwing, trading as OpenSpineConsortium ("the developer"). Questions:
@@ -322,8 +322,17 @@ as any issue does, and anyone who can read the repository can read them: the lin
 and, until the run deletes it, the code, none of which gives a Claude token to anyone else. Delete
 the issue on GitHub if you want it gone. Beside the button, the page links the Claude GitHub App's
 install page on GitHub, opened for the one repository, unless the page can see that App installed
-on all of the organization's repositories already; installing it is your own press on GitHub. A slot is removed on
-GitHub under the organization's Settings, Secrets and variables, Actions. What
+on all of the organization's repositories already; installing it is your own press on GitHub.
+
+The page shows each token set as a tile, and on your press a tile's settings: a name, the model and
+thinking strength its runs take, a lesser model for when the model's weekly limit runs out, whether
+it comes back by itself when its limit resets, and Pause. The page writes them, as you, to the
+organization (or repository) variable SYMPHONY_CLAUDE_SETTINGS, which the repository's workers read,
+and the name to the slot's label variable; neither holds a token, and anyone who can read the
+repository's workflows can read them. A tile's X, after you confirm, deletes the slot's secret, its
+label, its settings and its place in SYMPHONY_CLAUDE_ACCOUNTS, as you; deleting the secret does not
+revoke the token, which you revoke on claude.ai. A slot can also be removed on GitHub under the
+organization's Settings, Secrets and variables, Actions. What
 they start, a worker's run or the Claude workflow's answer to a mention, runs on the token the
 repository holds, as the repository's own workflows do. To stop: press "Forget the token", which
 drops the token and the refresh token from the browser and, for a token from "Sign in with
@@ -384,6 +393,10 @@ Symphony is for people who administer GitHub repositories. It is not directed at
 A new version of this statement is published at https://openspineconsortium.com/symphony/apps-privacy.html
 and in the front door repository, github.com/OpenSpineConsortium/symphony-start, whose PRIVACY.md is
 this text.
+
+Version 16 adds the Tokens page's tiles: the settings each token's tile writes to the variable
+SYMPHONY_CLAUDE_SETTINGS and its label variable, and the X that deletes a slot's secret, label,
+settings and place in SYMPHONY_CLAUDE_ACCOUNTS. Nothing the developer receives or keeps changed.
 
 Version 15 says that the Tokens page's "Add a Claude account" starts the workflow Token on the
 repository in place of "Add with one press", which made a Codespace: the issue it opens, the sign-in
