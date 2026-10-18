@@ -501,6 +501,25 @@ jobs:
           permission-metadata: read
           skip-token-revoke: true
 
+      # For an organization's repository in mode new, a second token with
+      # the organization permission Administration, which setup.py uses
+      # only where the organization's policy holds off the box for GitHub
+      # Actions' pull requests: a new organization does. A separate mint,
+      # since an installation that has not granted that permission would
+      # fail the first one and read as the App not installed; without it a
+      # 409 stays a 409. Revoked with the first.
+      - uses: actions/create-github-app-token@v1
+        id: setup-org-token
+        if: env.REFUSED != 'true' && env.SETUP_APP == 'present' && steps.setup-token.outcome == 'success' && env.MODE == 'new' && steps.target.outputs.owner_type == 'Organization'
+        continue-on-error: true
+        with:
+          app-id: ${{ vars.SDLC_SETUP_APP_ID }}
+          private-key: ${{ secrets.SDLC_SETUP_APP_PRIVATE_KEY }}
+          owner: ${{ env.OWNER }}
+          repositories: ${{ env.NAME }}
+          permission-organization-administration: write
+          skip-token-revoke: true
+
       # Only after that mint failed, on the owner's own installation of
       # the Setup App, which is on this repository and nothing else, with
       # metadata read: a failure here is the Setup App's id or key, not the
@@ -530,6 +549,7 @@ jobs:
           SETUP_OUTCOME: ${{ steps.setup-token.outcome }}
           PROBE_OUTCOME: ${{ steps.setup-probe.outcome }}
           GH_TOKEN: ${{ steps.setup-token.outputs.token }}
+          GH_ORG_TOKEN: ${{ steps.setup-org-token.outputs.token }}
           TARGET: ${{ env.TARGET }}
         run: |
           if [ "$SETUP_APP" = present ] && [ "$SETUP_OUTCOME" = success ]; then
@@ -557,6 +577,14 @@ jobs:
         run: |
           gh api --method DELETE installation/token --silent \
             || echo "::warning::the Setup App's token could not be revoked; it expires within the hour"
+
+      - name: Revoke the Setup App's organization token
+        if: always() && steps.setup-org-token.outputs.token != ''
+        env:
+          GH_TOKEN: ${{ steps.setup-org-token.outputs.token }}
+        run: |
+          gh api --method DELETE installation/token --silent \
+            || echo "::warning::the Setup App's organization token could not be revoked; it expires within the hour"
 
       # Its one job done, the Setup App uninstalls itself, which an App may
       # do with its own JWT, when its installation reaches this repository

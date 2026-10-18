@@ -37,8 +37,14 @@ hand:
      protocol alone brings neither workflow, so mode existing leaves the
      box as it is, since the approvals would then serve nothing of the
      adoption's and might stand in for a review the repository's own
-     rules require. Where the organization or its enterprise forbids
-     it, GitHub's answer is kept and the run goes on.
+     rules require. A new organization holds the box off for its
+     repositories, and GitHub answers the repository's change with 409;
+     where the run was given a second token, GH_ORG_TOKEN, with the
+     organization permission Administration (write), it allows the box
+     for the organization, the default token's permissions sent back as
+     the organization had them, and ticks the repository's box again.
+     Where the organization cannot be changed, or its enterprise
+     forbids it, GitHub's answer is kept and the run goes on.
 
 The labels are the workflow's, made with the main App's token; the
 template's variables are optional and none is set here; the Claude token
@@ -58,8 +64,8 @@ is the person's own and never asked for; and GitHub's reading of
          step that applies them stopped before it could report. The pull
          request's text has one source for all of it.
 
-Python 3.12 or later, standard library only. The token is read from
-GH_TOKEN and never printed.
+Python 3.12 or later, standard library only. The tokens are read from
+GH_TOKEN and GH_ORG_TOKEN and never printed.
 """
 
 import argparse
@@ -111,6 +117,9 @@ TOPIC_NAME = "symphony"
 TOKEN_PERMISSIONS = ("read", "write")
 # GitHub's answer when the organization or its enterprise holds the setting.
 POLICY_CONFLICT = 409
+# The detail of a box ticked only after the organization allowed it, which
+# the pull request renders after the setting's name.
+ORGANIZATION_FIRST = "turned on for the organization first, whose policy held it off, then for this repository"
 # GitHub's message lands in the pull request, so it is one line and short.
 DETAIL_LENGTH = 300
 
@@ -333,32 +342,59 @@ def apply_scanning(github, repo, report):
         record(report, PUSH_PROTECTION, FAILED, str(said))
 
 
-def apply_actions_pull_requests(github, repo, report):
-    """Tick "Allow GitHub Actions to create and approve pull requests".
-    The PUT sets the default token's permissions too, so they go back as
+def tick_box(github, path):
+    """Tick "Allow GitHub Actions to create and approve pull requests" at
+    path, a repository's or an organization's workflow permissions. The
+    PUT sets the default token's permissions too, so they go back as
     GitHub read them and only the box changes; an answer that does not
     say them is a refusal and no PUT, since a guess could widen the token.
-    A box ticked already is recorded and not written again. A 409 is the
-    policy of the organization or its enterprise, kept apart from other
-    refusals so the pull request can say who may change it, and where."""
-    path = f"/repos/{repo}/actions/permissions/workflow"
+    True when the box was on already and nothing was written."""
+    answer = github.call("GET", path)
+    answer = answer if isinstance(answer, dict) else {}
+    if answer.get("can_approve_pull_request_reviews") is True:
+        return True
+    permissions = answer.get("default_workflow_permissions")
+    if permissions not in TOKEN_PERMISSIONS:
+        raise GitHubError("GitHub's answer did not say the workflow permissions")
+    github.call("PUT", path, {"default_workflow_permissions": permissions, "can_approve_pull_request_reviews": True})
+    return False
+
+
+def allow_for_organization(github, org_github, repo, report, refused):
+    """After the repository's 409: allow the box for the organization with
+    the organization's token, then tick the repository's again. An
+    organization whose box is on already was not what held it, so its
+    enterprise did and nothing is written; any refusal here keeps the
+    first 409 as the setting's state, with both of GitHub's answers."""
+    org = repo.split("/")[0]
     try:
-        answer = github.call("GET", path)
-        answer = answer if isinstance(answer, dict) else {}
-        if answer.get("can_approve_pull_request_reviews") is True:
-            record(report, ACTIONS_PULL_REQUESTS, DONE, "was on already")
-            return
-        permissions = answer.get("default_workflow_permissions")
-        if permissions not in TOKEN_PERMISSIONS:
-            raise GitHubError("GitHub's answer did not say the workflow permissions")
-        github.call("PUT", path,
-                    {"default_workflow_permissions": permissions, "can_approve_pull_request_reviews": True})
-        record(report, ACTIONS_PULL_REQUESTS, DONE)
+        if tick_box(org_github, f"/orgs/{org}/actions/permissions/workflow"):
+            raise GitHubError("the organization allows it already, so its enterprise holds it")
+        tick_box(github, f"/repos/{repo}/actions/permissions/workflow")
+        record(report, ACTIONS_PULL_REQUESTS, DONE, ORGANIZATION_FIRST)
     except GitHubError as said:
-        record(report, ACTIONS_PULL_REQUESTS, FORBIDDEN if said.status == POLICY_CONFLICT else FAILED, str(said))
+        record(report, ACTIONS_PULL_REQUESTS, FORBIDDEN, f"{refused}; for the organization: {said}")
 
 
-def apply_settings(github, repo, ruleset, mode):
+def apply_actions_pull_requests(github, repo, report, org_github=None):
+    """Tick the repository's box; a box ticked already is recorded and not
+    written again. A 409 is the policy of the organization or its
+    enterprise, kept apart from other refusals so the pull request can say
+    who may change it, and where; with the organization's token the run
+    first tries to allow it for the organization."""
+    try:
+        if tick_box(github, f"/repos/{repo}/actions/permissions/workflow"):
+            record(report, ACTIONS_PULL_REQUESTS, DONE, "was on already")
+        else:
+            record(report, ACTIONS_PULL_REQUESTS, DONE)
+    except GitHubError as said:
+        if said.status == POLICY_CONFLICT and org_github is not None:
+            allow_for_organization(github, org_github, repo, report, str(said))
+        else:
+            record(report, ACTIONS_PULL_REQUESTS, FORBIDDEN if said.status == POLICY_CONFLICT else FAILED, str(said))
+
+
+def apply_settings(github, repo, ruleset, mode, org_github=None):
     """Every setting, each on its own: one that fails costs itself and
     nothing else. ruleset is the dict, or the one-line reason it could not
     be read."""
@@ -375,7 +411,7 @@ def apply_settings(github, repo, ruleset, mode):
     apply_scanning(github, repo, report)
     # Only the whole template brings the workflows that need the box (5).
     if mode == "new":
-        apply_actions_pull_requests(github, repo, report)
+        apply_actions_pull_requests(github, repo, report, org_github)
     else:
         record(report, ACTIONS_PULL_REQUESTS, NOT_TRIED, "the protocol alone opens no pull request with GitHub Actions")
     return report
@@ -422,8 +458,13 @@ def command_apply(options, transport=urllib_transport):
     except (OSError, ValueError, UnicodeDecodeError):
         ruleset = "the template's ruleset file could not be read, so no ruleset was made"
     github = GitHub(token, transport, options.api)
+    # The organization's token is minted only for an organization's
+    # repository in mode new, and only where the installation granted the
+    # organization permission; without it a 409 stays a 409.
+    org_token = os.environ.get("GH_ORG_TOKEN", "")
+    org_github = GitHub(org_token, transport, options.api) if org_token else None
     try:
-        report = apply_settings(github, options.repo, ruleset, options.mode)
+        report = apply_settings(github, options.repo, ruleset, options.mode, org_github)
         write_report(options.report, report)
     except OSError as problem:
         print(f"setup: {problem}", file=sys.stderr)
