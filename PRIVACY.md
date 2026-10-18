@@ -1,6 +1,6 @@
 # Symphony GitHub Apps privacy statement
 
-Version 14, 2026-10-18. This text is also at https://openspineconsortium.com/symphony/apps-privacy.html.
+Version 15, 2026-10-18. This text is also at https://openspineconsortium.com/symphony/apps-privacy.html.
 The Symphony browser extension has a statement of its own, at https://openspineconsortium.com/symphony/privacy.html.
 
 Who makes the Apps: Gregory Schwing, trading as OpenSpineConsortium ("the developer"). Questions:
@@ -27,10 +27,11 @@ pull request and, only when you asked for it on the form, merge it; Issues (read
 make the board's labels and, in a new repository, open the issue "Set up this project"; Checks (read
 and write), to post the protocol check as a check run where the developer runs the App's server;
 Workflows (read and write), because the pull request brings files under `.github/workflows`, which
-GitHub lets no token write without it; Codespaces (read and write), for the control panel's Tokens
-page, which makes a Codespace on your repository when you press "Add with one press" and deletes it
-afterwards (the control panel, below); Actions (read and write), for the control panel's buttons
-that start a workflow run by hand, such as the Tokens page's "Read every slot now", and its reads
+GitHub lets no token write without it; Codespaces (read and write), which the control panel's Tokens
+page used up to version 13 of this statement to make a Codespace and no longer uses, and which stays
+on the App until the developer takes it off; Actions (read and write), for the control panel's buttons
+that start a workflow run by hand, such as the Tokens page's "Read every slot now" and "Add a Claude
+account", and its reads
 of the repository's workflow runs (the control panel, below); and Metadata (read), which every App has, to list the
 repositories it reaches. It subscribes to five event types (issues, issue comments, pull requests,
 pushes and check suites), which GitHub delivers only while the App's webhook is turned on; as this
@@ -45,9 +46,9 @@ a page you are signed in to does, as you, and GitHub lets it only where you are 
 organization. GitHub never gives a secret's value back to anyone, the App included.
 
 SymphonyBoard also asks for one account permission, Codespaces user secrets (read and write), which
-GitHub asks each person for when they sign in with GitHub on the control panel: the Tokens page uses
-it, as you and only on your press, to hand its own GitHub sign-in to the Codespace it makes (the
-control panel, below).
+GitHub asks each person for when they sign in with GitHub on the control panel. The Tokens page used
+it up to version 13 of this statement to hand its GitHub sign-in to a Codespace; it no longer uses
+it, and it stays on the App until the developer takes it off.
 
 Symphony Setup asks for two repository permissions, Administration (read and write), for the six
 settings below, and Metadata (read), and, on an organization, one organization permission,
@@ -301,24 +302,27 @@ repository) variables, the slot's label if you gave one and the list SYMPHONY_CL
 token goes nowhere else: not to the sign-in service, not to the developer, not into the browser's
 storage, a log or the page; the page empties its box once the token is sealed.
 
-"Add with one press" on the same page makes the token where it is needed instead of asking you to
-paste it. On your press, the page saves the GitHub token it holds for you, sealed in your browser
-with your own Codespaces public key from GitHub, as your Codespaces secret
-SYMPHONY_GITHUB_HANDOVER, which GitHub gives only to your own Codespaces on that one repository;
-then it makes a Codespace on the repository, as you, with the template's file
-.devcontainer/token/devcontainer.json, and opens it in a new tab. The Codespace runs on GitHub, on
-the repository's owner's Codespaces allowance, and is yours: in it, `claude setup-token` opens
-claude.ai's sign-in in another tab of your browser, and once you press Authorize there, the
-template's scripts/tokens.py hands the Claude token straight to GitHub's own command line, which
-seals it and saves it as the next free slot with the GitHub token the page handed over. The Claude
-token is never shown and never reaches the page, the sign-in service or the developer. Meanwhile the
-page reads the organization's list of secret names every ten seconds, for at most twenty minutes;
-once a new slot is listed, it deletes the Codespaces secret and the Codespace, and it deletes the
-secret too when the press fails. Where GitHub refuses the secret, the page hands over nothing and the
-Codespace asks you for a one-time GitHub code instead. A sign-in token handed over expires in eight
-hours, whatever happens to the secret; a pasted token lasts as long as you made it for. A secret or
-Codespace left behind is deleted on GitHub at https://github.com/settings/codespaces and
-https://github.com/codespaces. A slot is removed on
+"Add a Claude account" on the same page makes the token where it is needed instead of asking you to
+paste it. On your press, the page opens an issue on the repository, as you, and starts the
+repository's workflow Token (the template's .github/workflows/token.yml) with the issue's number and
+the public key GitHub gives for your organization's secrets (for a personal account's repository,
+the repository's). The run is on GitHub Actions, on the repository's owner's Actions allowance, and
+holds no secret: it installs Claude Code, runs `claude setup-token`, and posts on the issue the
+claude.ai sign-in link that prints. The page shows that link as a button. You sign in to claude.ai as
+the account to add and press Authorize, and claude.ai shows a code; you paste it into the page, which
+posts it on the issue as a comment of yours. The run reads it, deletes that comment, and hands it to
+`claude setup-token`; the code is good only once and only to that run, which holds the other half of
+the sign-in. The run takes the Claude token out of what Claude Code prints before anything is
+written to its log, seals it there with the public key the page gave, and posts only the sealed box
+on the issue, which GitHub alone can open. The page saves that box as the next free slot and, while
+CLAUDE_CODE_OAUTH_TOKEN is not set, as that secret too, writes the list SYMPHONY_CLAUDE_ACCOUNTS as
+above, and closes the issue. The Claude token is never on the page, in the issue, in the run's log,
+at the sign-in service or with the developer. The issue and its comments stay on your repository,
+as any issue does, and anyone who can read the repository can read them: the link, the sealed box,
+and, until the run deletes it, the code, none of which gives a Claude token to anyone else. Delete
+the issue on GitHub if you want it gone. Beside the button, the page links the Claude GitHub App's
+install page on GitHub, opened for the one repository, unless the page can see that App installed
+on all of the organization's repositories already; installing it is your own press on GitHub. A slot is removed on
 GitHub under the organization's Settings, Secrets and variables, Actions. What
 they start, a worker's run or the Claude workflow's answer to a mention, runs on the token the
 repository holds, as the repository's own workflows do. To stop: press "Forget the token", which
@@ -380,6 +384,13 @@ Symphony is for people who administer GitHub repositories. It is not directed at
 A new version of this statement is published at https://openspineconsortium.com/symphony/apps-privacy.html
 and in the front door repository, github.com/OpenSpineConsortium/symphony-start, whose PRIVACY.md is
 this text.
+
+Version 15 says that the Tokens page's "Add a Claude account" starts the workflow Token on the
+repository in place of "Add with one press", which made a Codespace: the issue it opens, the sign-in
+link, the code and the sealed token on that issue, the page saving the sealed box as the next slot
+and as CLAUDE_CODE_OAUTH_TOKEN while that is not set, and the link to the Claude GitHub App's install
+page. The page no longer makes a Codespace or saves a Codespaces secret, and the permissions
+Codespaces and Codespaces user secrets go unused. Nothing the developer receives or keeps changed.
 
 Version 14 adds Symphony Setup's organization permission Administration (read and write), used only
 to allow "Allow GitHub Actions to create and approve pull requests" for an organization whose policy
