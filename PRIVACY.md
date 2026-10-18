@@ -300,35 +300,37 @@ the token, so that it opens no second one; close the issue on GitHub and the pag
 your next question. The question, its block and the answer are on the issue, where GitHub keeps them
 as it keeps any issue's comments, and are sent to nobody else: the developer receives none of it.
 
-The control panel's Dependencies tab, https://openspineconsortium.com/symphony/control/#dependencies,
-draws the work of each open epic as a chart: its tasks, which are the epic's sub-issues on GitHub,
-an arrow from each issue that blocks one of them to the issue it blocks, which is GitHub's own
-blocked-by relation, and the goals above their epics, the chart the repository's own board draws
-into STATE.md once its protocol is new enough to draw it. To draw it the page reads, as you, with
-the GitHub token you gave it, what GitHub's own issue pages show under Sub-issues and Relationships:
-the sub-issues of each open issue labelled epic or goal, unless GitHub's summary of that issue says
-it has none, and, for each sub-issue of an epic whose summary counts an issue blocking it, the
-issues blocking it. It makes these reads whenever it reads the repository's open issues, which it
-does each time it opens a repository, when you press Refresh, and after you queue a task, give an
-issue to a worker, mention @claude or merge a pull request on the page, whether or not the
-Dependencies tab is open, and never on a timer of its own; it makes at most sixty for one drawing,
-each page of a list counting as one, and none once GitHub says your token has fewer than a hundred
-calls left in its hour. GitHub answers each read with the issues it names as its API describes any
-issue, and the page keeps for the chart their number, title, state, labels and link, the counts
-GitHub's two summaries give for each (its sub-issues, done and in all, and the issues blocking it,
-open and in all), and which of them an open pull request from its claim branch in the repository
-itself names, from the pull requests the page already shows; it reads whether each is a pull request
-and which repository it belongs to, to leave out pull requests and the issues of another repository,
-and keeps nothing else, in the open page's memory alone, until it draws again or the page is gone.
-The chart is drawn in your browser by a copy of Mermaid, an open-source drawing library (MIT) that
-the developer's site carries and the page loads from the site, as it loads its own files, only when
-there is a chart to draw, and the Board tab draws the same way the charts the board's own STATE.md
-holds, which the page already reads; beside that file, the tab asks nothing of anyone but GitHub.
-Pressing a node, here or in the Board tab, or a row's "Centre its row", opens the Tasks tab at that
-task's row, where the task tables hold it, and asks GitHub nothing; that task is then the one the
-page centres, which the assistant's next question names, as above. The tab writes nothing: not to
-GitHub, whose issues it only reads, and not to your browser's storage; the chart is gone with the
-page, and the developer receives none of it.
+The control panel's Dependencies tab,
+https://openspineconsortium.com/symphony/control/#dependencies, draws the work of each open epic as
+a chart: its tasks, which are the epic's sub-issues on GitHub, an arrow from each issue that blocks
+one of them to the issue it blocks, which is GitHub's own blocked-by relation, and the goals above
+their epics, the chart the repository's own board draws into STATE.md once its protocol is new
+enough to draw it. To draw it the page reads, as you, with the GitHub token you gave it, what
+GitHub's own issue pages show under Sub-issues and Relationships: the sub-issues of each open issue
+labelled epic or goal, unless GitHub's summary of that issue says it has none, and, for each
+sub-issue of an epic whose summary counts an issue blocking it, the issues blocking it. It makes
+these reads whenever it reads the repository's open issues, which it does each time it opens a
+repository, when you press Refresh, and after you queue a task, give an issue to a worker, mention
+@claude or merge a pull request on the page, whether or not the Dependencies tab is open, and never
+on a timer of its own; it makes at most sixty for one drawing, each page of a list counting as one,
+and none once GitHub says your token has fewer than a hundred calls left in its hour. GitHub answers
+each read with the issues it names as its API describes any issue, and the page keeps for the chart
+their number, title, state, labels and link, the counts GitHub's two summaries give for each (its
+sub-issues, done and in all, and the issues blocking it, open and in all), and which of them an open
+pull request from its claim branch in the repository itself names, from the pull requests the page
+already shows; it reads whether each is a pull request and which repository it belongs to, to leave
+out pull requests and the issues of another repository, and keeps nothing else, in the open page's
+memory alone, until it draws again or the page is gone. The chart is drawn in your browser by a copy
+of Mermaid, an open-source drawing library (MIT) that the developer's site carries and the page
+loads from the site, as it loads its own files, only when there is a chart to draw, and the Board
+tab draws the same way the charts the board's own STATE.md holds, which the page already reads, each
+only where every line of it is one the board writes, showing any other block there as text and never
+drawing it; beside the drawing library's file from the developer's site, the tab asks nothing of
+anyone but GitHub. Pressing a node, here or in the Board tab, or a row's "Centre its row", opens the
+Tasks tab at that task's row, where the task tables hold it, and asks GitHub nothing; that task is
+then the one the page centres, which the assistant's next question names, as above. The tab writes
+nothing: not to GitHub, whose issues it only reads, and not to your browser's storage; the chart is
+gone with the page, and the developer receives none of it.
 
 The aggregates the collector reads are as the section on field metrics says, whether or not you use
 the pages. The pages never show a repository's Claude secret, which GitHub never gives back. The
@@ -449,8 +451,9 @@ what GitHub's own issue pages show, made whenever the page reads the repository'
 whether or not the tab is open, at most sixty for one drawing and none once your token has fewer
 than a hundred calls left in its hour; and the copy of Mermaid that the developer's site carries,
 which the page loads only when there is a chart to draw and which also draws the charts of the
-board's STATE.md in the Board tab. The tab keeps what it reads in the open page alone and writes
-nothing, to GitHub or to your browser. Nothing the developer receives or keeps changed.
+board's STATE.md in the Board tab, only those written as the board writes them. The tab keeps what
+it reads in the open page alone and writes nothing, to GitHub or to your browser. Nothing the
+developer receives or keeps changed.
 
 Version 18 adds each token's id and owner in its settings, the page's read of your role in the
 organization, the dialog's list of the repositories a token is on, and the `token:<id>` label a
