@@ -265,7 +265,7 @@ you chose on the cost page and the number of the assistant issue it uses in each
 
 The control panel's Assistant section asks the repository's own Claude workflow a question, through
 GitHub and nothing else. Once per repository and person, on your press, the page opens an issue of
-yours titled "Assistant: <your login>" and labelled assistant, and makes that label when the
+yours titled `Assistant: <your login>` and labelled assistant, and makes that label when the
 repository lacks it; each question you press Ask on is one comment of yours on that issue, which
 mentions @claude and ends with a short block of the page's state (the repository's name, the task
 the page centres, the filter it shows and the board section it is at), and the repository's Claude
@@ -380,7 +380,7 @@ slot is saved; the Claude token going from claude to GitHub inside the Codespace
 and the page's reads of the organization's secret names while it waits. Nothing the developer
 receives or keeps changed.
 
-Version 11 adds the control panel's Assistant section: an issue of yours, "Assistant: <your login>"
+Version 11 adds the control panel's Assistant section: an issue of yours, `Assistant: <your login>`
 labelled assistant, that the page opens once per repository on your press, each question a comment
 of yours on it that mentions @claude and ends with a short block of the page's state, the answer the
 repository's Claude workflow writes there, reading only, the page's reads of that issue's comments
