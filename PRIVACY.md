@@ -259,7 +259,7 @@ you chose on the cost page and the number of the assistant issue it uses in each
 
 The control panel's Assistant section asks the repository's own Claude workflow a question, through
 GitHub and nothing else. Once per repository and person, on your press, the page opens an issue of
-yours titled "Assistant: \<your login\>" and labelled assistant, and makes that label when the
+yours titled `Assistant: <your login>` and labelled assistant, and makes that label when the
 repository lacks it; each question you press Ask on is one comment of yours on that issue, which
 mentions @claude and ends with a short block of the page's state (the repository's name, the task
 the page centres, the filter it shows and the board section it is at), and the repository's Claude
@@ -278,16 +278,22 @@ as it keeps any issue's comments, and are sent to nobody else: the developer rec
 The control panel's Dependencies section draws the work of each open epic as a chart: its tasks,
 which are the epic's sub-issues on GitHub, an arrow from each issue that blocks one of them to the
 issue it blocks, which is GitHub's own blocked-by relation, and the goals above their epics, the
-chart the repository's own board draws into STATE.md where the protocol carries it. To draw it the
-page reads, as you, what GitHub's own issue pages show under Sub-issues and Relationships: the
-sub-issues of each open issue labelled epic or goal and, for each sub-issue of an epic whose summary
-counts an issue blocking it, the issues blocking it, at most sixty reads for one drawing; GitHub
-answers each read with the issues it names as its API describes any issue, and the page keeps for
-the chart their number, title, state and labels, and nothing else. The chart is drawn in your
-browser by a copy of Mermaid, an open-source drawing library (MIT) that the developer's site carries
-and the page loads from the site only when there is a chart to draw; it asks nothing of any other
-party. The section writes nothing: not to GitHub, whose issues it only reads, and not to your
-browser's storage; the chart is gone with the page, and the developer receives none of it.
+chart the repository's own board draws into STATE.md once its protocol is new enough to draw it. To
+draw it the page reads, as you, what GitHub's own issue pages show under Sub-issues and
+Relationships: the sub-issues of each open issue labelled epic or goal and, for each sub-issue of an
+epic whose summary counts an issue blocking it, the issues blocking it, at most sixty reads for one
+drawing, and none once GitHub says your token has fewer than a hundred calls left in its hour;
+GitHub answers each read with the issues it names as its API describes any issue, and the page keeps
+for the chart their number, title, state, labels and link, the counts GitHub's two summaries give
+for each (its sub-issues, done and in all, and the issues blocking it, open and in all), and which
+of them an open pull request from its claim branch names, from the pull requests the page already
+shows; it reads which repository each belongs to, to leave out one of another repository, and keeps
+nothing else. The chart is drawn in your browser by a copy of Mermaid, an open-source drawing
+library (MIT) that the developer's site carries and the page loads from the site only when there is
+a chart to draw, and the Board box draws the same way the charts the board's own STATE.md holds,
+which the page already reads; it asks nothing of any other party. The section writes nothing: not to
+GitHub, whose issues it only reads, and not to your browser's storage; the chart is gone with the
+page, and the developer receives none of it.
 
 The aggregates the collector reads are as the section on field metrics says, whether or not you use
 the pages. The pages never show a repository's Claude secret, which GitHub never gives back. The
@@ -365,11 +371,12 @@ Version 13 adds the control panel's Dependencies section, which draws each open 
 issues blocking them, and the goals above their epics, as the section of that name says: the page's
 reads, as you, of the sub-issues of each open issue labelled epic or goal and of the issues blocking
 each of an epic's sub-issues, what GitHub's own issue pages show, drawn in your browser by a copy of
-Mermaid that the developer's site carries and the page loads only when there is a chart to draw. It
-writes nothing, to GitHub or to your browser, and asks nothing of anyone but GitHub. Nothing the
-developer receives or keeps changed.
+Mermaid that the developer's site carries and the page loads only when there is a chart to draw,
+which also draws the charts of the board's STATE.md in the Board box. It writes nothing, to GitHub
+or to your browser, and asks nothing of anyone but GitHub. Nothing the developer receives or keeps
+changed.
 
-Version 11 adds the control panel's Assistant section: an issue of yours, "Assistant: \<your login\>"
+Version 11 adds the control panel's Assistant section: an issue of yours, `Assistant: <your login>`
 labelled assistant, that the page opens once per repository on your press, each question a comment
 of yours on it that mentions @claude and ends with a short block of the page's state, the answer the
 repository's Claude workflow writes there, reading only, the page's reads of that issue's comments
