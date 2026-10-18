@@ -1,6 +1,6 @@
 # Symphony GitHub Apps privacy statement
 
-Version 24, 2026-10-18. This text is also at https://openspineconsortium.com/symphony/apps-privacy.html.
+Version 25, 2026-10-18. This text is also at https://openspineconsortium.com/symphony/apps-privacy.html.
 The Symphony browser extension has a statement of its own, at https://openspineconsortium.com/symphony/privacy.html.
 
 Who makes the Apps: Gregory Schwing, trading as OpenSpineConsortium ("the developer"). Questions:
@@ -321,6 +321,15 @@ the token, so that it opens no second one; close the issue on GitHub and the pag
 your next question. The question, its block and the answer are on the issue, where GitHub keeps them
 as it keeps any issue's comments, and are sent to nobody else: the developer receives none of it.
 
+The bar's button "Ask in claude.ai" opens claude.ai in a new browser tab, signed in as whoever you are
+there, with your question and a line or two naming what the page shows (the repository and the tab,
+and the task, the OneDrive folder and item, or the Explore level you are at, each with its GitHub or
+OneDrive link) carried in that tab's address, as the question claude.ai starts with. The page itself
+sends nothing to claude.ai, reads nothing from it and writes nothing for it, asks no write access to
+the repository for it, and cuts the whole to 2,000 characters, which an address carries. What you and
+Claude do there is on your own claude.ai account, under Anthropic's terms, with whatever you connected
+to that account; the developer receives none of it.
+
 The control panel's Dependencies tab,
 https://openspineconsortium.com/symphony/control/#dependencies, draws the work of each open epic as
 a chart: its tasks, which are the epic's sub-issues on GitHub, an arrow from each issue that blocks
@@ -607,6 +616,10 @@ Symphony is for people who administer GitHub repositories. It is not directed at
 A new version of this statement is published at https://openspineconsortium.com/symphony/apps-privacy.html
 and in the front door repository, github.com/OpenSpineConsortium/symphony-start, whose PRIVACY.md is
 this text.
+
+Version 25 adds the Ask Claude bar's button "Ask in claude.ai", as the section on the control panel
+says: it opens claude.ai in a new tab, on your own account, with your question and what the page shows
+in that tab's address; the page itself sends nothing. Nothing the developer receives or keeps changed.
 
 Version 24 adds the control panel's Explore tab, as the section on the control panel says: a map
 of the repository's work from its goals and epics down to the runs on a task's branch, their jobs and
