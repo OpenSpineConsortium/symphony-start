@@ -1,6 +1,6 @@
 # Symphony GitHub Apps privacy statement
 
-Version 18, 2026-10-18. This text is also at https://openspineconsortium.com/symphony/apps-privacy.html.
+Version 19, 2026-10-18. This text is also at https://openspineconsortium.com/symphony/apps-privacy.html.
 The Symphony browser extension has a statement of its own, at https://openspineconsortium.com/symphony/privacy.html.
 
 Who makes the Apps: Gregory Schwing, trading as OpenSpineConsortium ("the developer"). Questions:
@@ -344,7 +344,15 @@ and the name to the slot's label variable; neither holds a token, and anyone who
 repository's workflows can read them. A tile's X, after you confirm, deletes the slot's secret, its
 label, its settings and its place in SYMPHONY_CLAUDE_ACCOUNTS, as you; deleting the secret does not
 revoke the token, which you revoke on claude.ai. A slot can also be removed on GitHub under the
-organization's Settings, Secrets and variables, Actions. What
+organization's Settings, Secrets and variables, Actions. Each token's settings also hold an id,
+eight random hexadecimal digits the page makes, and the GitHub login of the person who added it, so
+that an organization's tokens pool in one place while each stays its owner's: to show who may change
+which token, the page asks GitHub for your role in the organization, and it offers a token's
+settings, its X and its repositories only to the token's owner and to an owner of the organization.
+A tile's dialog lists the repositories the token's secret is on, from GitHub, and a tick adds or
+removes one, as you. A worker's run in Actions labels the issue it worked `token:<id>`, with the
+repository's own token, so the panel can credit each token, and its owner, with the issues it
+closed; the label holds no token, name or e-mail address. What
 they start, a worker's run or the Claude workflow's answer to a mention, runs on the token the
 repository holds, as the repository's own workflows do. To stop: press "Forget the token", which
 drops the token and the refresh token from the browser and, for a token from "Sign in with
@@ -497,7 +505,7 @@ A new version of this statement is published at https://openspineconsortium.com/
 and in the front door repository, github.com/OpenSpineConsortium/symphony-start, whose PRIVACY.md is
 this text.
 
-Version 18 adds the control panel's Folders tab, as the section of that name says: a tab of the
+Version 19 adds the control panel's Folders tab, as the section of that name says: a tab of the
 control panel's one page, on its sign-in and the repository its bar chooses, that makes a repository
 of yours track files and folders of your OneDrive; SymphonyBoard's repository permission Secrets
 (read and write), for the tab and for the Tokens page on a personal account's repository; the tab's
@@ -514,6 +522,10 @@ Connect and, from the repository's workflow, on every sync, the one exchange the
 from no page; and the 90 days a Microsoft refresh token lasts. It also says that the control panel
 talks to the sign-in service and Microsoft for the Folders tab. Nothing the developer receives or
 keeps changed.
+
+Version 18 adds each token's id and owner in its settings, the page's read of your role in the
+organization, the dialog's list of the repositories a token is on, and the `token:<id>` label a
+worker's run puts on the issue it worked.
 
 Version 17 adds SymphonyBoard's repository permission Administration (read and write), used only by
 the control panel's Share tab to invite a collaborator you name, as you, and the Share tab's lookup of
