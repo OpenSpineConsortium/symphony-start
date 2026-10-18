@@ -1,6 +1,6 @@
 # Symphony GitHub Apps privacy statement
 
-Version 21, 2026-10-18. This text is also at https://openspineconsortium.com/symphony/apps-privacy.html.
+Version 22, 2026-10-18. This text is also at https://openspineconsortium.com/symphony/apps-privacy.html.
 The Symphony browser extension has a statement of its own, at https://openspineconsortium.com/symphony/privacy.html.
 
 Who makes the Apps: Gregory Schwing, trading as OpenSpineConsortium ("the developer"). Questions:
@@ -244,7 +244,9 @@ described below, and, for a drive you connect there, to Microsoft (the Folders t
 your own account's login (to say who is signed in), your repository's board (the file STATE.md on
 the branch `board`), its open issues and their labels, for its Dependencies tab (below) the
 sub-issues of each open issue labelled epic or goal and the issues blocking each of an epic's
-sub-issues, the worker files under `.github/symphony/workers/`, its open pull requests and the check
+sub-issues, the worker files under `.github/symphony/workers/`, the agents' list
+`.github/symphony/agents.json` and the agent files under `.claude/agents/` it names, its open pull
+requests and the check
 runs on their heads, its Actions runs, the repository's own record (its default branch, whether it
 is private, its topics and, for one you name, its numeric id and its owner's, to build the App's
 install link with that repository selected), on the cost page the file METRICS.json on the branch
@@ -254,7 +256,12 @@ carrying the topic symphony. Only when you
 press the button that says so, they write what GitHub's own pages would: an issue (a task, an "Add a
 worker" issue, one that mentions @claude, or the assistant's, below), a comment (a question to the
 assistant among them), a label on an issue (and the label itself when it is not there yet), a
-workflow run started by hand, a merge, or, on the Share tab, an invitation to the GitHub user you
+workflow run started by hand, a merge, an issue closed as not planned, a pull request closed, a
+pull request that changes or deletes a worker's file or deletes an agent's file and its line in
+agents.json, made as GitHub's own pages would make it (a branch of its own from the default branch's
+head, the files written or deleted on that branch, and the pull request opened, or the one already
+open from that branch found), never a push to the default branch, or, on the Share tab, an
+invitation to the GitHub user you
 name, with the role you pick, to collaborate on the repository (the Folders tab, below, says what
 else). To find that user from an email address you type, the Share tab asks GitHub's user search
 for an account showing that address publicly; the
@@ -566,6 +573,12 @@ Symphony is for people who administer GitHub repositories. It is not directed at
 A new version of this statement is published at https://openspineconsortium.com/symphony/apps-privacy.html
 and in the front door repository, github.com/OpenSpineConsortium/symphony-start, whose PRIVACY.md is
 this text.
+
+Version 22 adds the control panel's reads of the agents' list `.github/symphony/agents.json` and
+the agent files it names, and the writes its cards make on your press, as you: closing an issue as
+not planned, closing a pull request, and a pull request, from a branch of its own, that changes or
+deletes a worker's file or deletes an agent's file and its line in agents.json. Nothing the
+developer receives or keeps changed.
 
 Version 21 adds the control panel's Folders tab, as the section of that name says: a tab of the
 control panel's one page, on its sign-in and the repository its bar chooses, that makes a repository
