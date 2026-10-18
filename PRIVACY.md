@@ -253,8 +253,9 @@ press the button that says so, they write what GitHub's own pages would: an issu
 worker" issue, one that mentions @claude, or the assistant's, below), a comment (a question to the
 assistant among them), a label on an issue (and the label itself when it is not there yet), a
 workflow run started by hand, a merge, or, on the Share tab, an invitation to the GitHub user you
-name, with the role you pick, to collaborate on the repository. To find that user from an email address
-you type, the Share tab asks GitHub's user search for an account showing that address publicly; the
+name, with the role you pick, to collaborate on the repository (the Folders tab, below, says what
+else). To find that user from an email address you type, the Share tab asks GitHub's user search
+for an account showing that address publicly; the
 address goes to GitHub alone. The Share tab's mail buttons open Gmail, Outlook, your email app or
 your device's share sheet with a note you send yourself; the page sends nothing there.
 
@@ -278,8 +279,9 @@ that page is gone, closed, reloaded or replaced by another page such as the cost
 sign-in then ends with its eight-hour token. When a new sign-in, or a token you paste that GitHub
 accepts, takes the place of a sign-in's token, the page has the service ask GitHub to revoke the one
 it replaced, as "Forget the token" does. The service keeps nothing: no store, no cookie, and no log
-of its own of the code, the tokens or you; it answers no origin but the site's; and its host's own
-request logs are turned off, though Cloudflare, which carries the request, sees its address and
+of its own of the code, the tokens or you; it answers no origin but the site's (the Folders tab,
+below, says what else); and its host's own request logs are turned off, though Cloudflare, which
+carries the request, sees its address and
 timing under Cloudflare's own privacy policy. The developer receives nothing from the pages but what
 that service passes through in the moment: never a token to keep, never a name, never a count.
 Beside the token, the page keeps in your browser the names of the repositories you listed, the plan
@@ -377,62 +379,80 @@ for each one not on the bar's list yet whose entry there shows neither the templ
 symphony, that repository's own record, to add to the list those made from the Symphony template or
 carrying the topic symphony and choose the newest, which the control panel then reads as it reads
 any repository you choose. Its link "Create a repository from the template" opens GitHub's own form
-in a new tab, where you name the repository and create it on GitHub; the page sends nothing there.
+in a new tab, where you name the repository and create it on GitHub; while the template is internal
+to the developer's enterprise, only the enterprise's members can use that form, and anyone else
+adopts a repository through the front door, as the section on the adoption says. The page sends
+nothing there. Where GitHub refuses the tab even to say whether the repository's secret is set, the
+tab says so as it opens, before you connect a drive, and offers no Track.
 
-When you press Track it reads the repository's default branch and its public key for secrets, then
-writes three things, as you, in this order: the secret `SYMPHONY_DRIVE_REFRESH`, the drive's refresh
-token sealed in your browser with that key the way GitHub's own secrets page seals one, so that
-GitHub alone can open it; the file drive.json, which names the provider, the folder in the
-repository, the name, the id and the drive's id of each item you ticked and the day you connected,
-committed over the one already there, whose version it reads first, on the default branch or, where
-that branch takes only pull requests, on the branch `symphony/drive`, which it makes from the
-default branch's head, with a pull request for you to merge, or the one already open from that
-branch; and, only where the file went to the default branch, one run of drive-sync.yml started by
-hand. Where your token may not save the secret, the page says so and writes nothing else; where the
-file cannot be written, the secret stays saved, and the page says so and starts no run; where the
-run cannot be started, the page says so and links the workflow's page on GitHub, where you press
-"Run workflow". "Sync now", which the tab shows once the repository tracks a drive, reads the
-default branch and starts one run of drive-sync.yml on it.
+When you press Track it reads the repository's record (its default branch and whether it is public)
+and its public key for secrets. Where the repository is public, Track writes nothing until you tick
+the box beside it that says what you tick will be readable by anyone, a box the tab shows for a
+public repository and never ticks for you. It then writes three things, as you, in this order: the
+secret `SYMPHONY_DRIVE_REFRESH`, the drive's refresh token sealed in your browser with that key the
+way GitHub's own secrets page seals one, so that GitHub alone can open it; the file drive.json,
+which names the provider, the folder in the repository, the name, the id and the drive's id of each
+item you ticked and the day you connected, committed over the one already there, whose version it
+reads first, on the default branch or, where that branch takes only pull requests, on the branch
+`symphony/drive`, which it makes from the default branch's head, or sets back to that head where a
+branch of that name is there already, so that it holds this one commit and nothing else, with a pull
+request for you to merge, or the one already open from that branch; and, only where the file went to
+the default branch, one run of drive-sync.yml started by hand. Where your token may not save the
+secret, the page says so and writes nothing else; where the file cannot be written, the secret stays
+saved, and the page says so and starts no run; where the run cannot be started, the page says so and
+links the workflow's page on GitHub, where you press "Run workflow". "Sync now", which the tab shows
+once the repository tracks a drive, reads the default branch and starts one run of drive-sync.yml on
+it.
 
 The drive's side goes through Microsoft and the sign-in service. When you first open the tab, it
 asks the sign-in service which drives it is set up for, and the service answers with the public
 client id of the developer's Microsoft app registration, or that OneDrive is not set up yet. When
 you press "Connect OneDrive", the page keeps in the tab's own storage a one-time value, a one-time
-secret it made for this connection and the panel's address as it was, and sends your browser to
-Microsoft, which asks you on its own page whether Symphony may read and write your files
-(Files.ReadWrite) and keep that access when you are away (offline_access). Microsoft sends your
-browser back with a one-time code to the control panel's own address,
+secret it made for this connection and the panel's query (the repository it showed), and sends your
+browser to Microsoft, which asks you on its own page whether Symphony may read and write your files
+(Files.ReadWrite) and keep that access when you are away (offline_access); for a work or school
+account, the organization's settings may require its administrator's approval first. Microsoft sends
+your browser back with a one-time code to the control panel's own address,
 https://openspineconsortium.com/symphony/control/, the page GitHub's sign-in returns to as well; the
 page tells the two apart by which of the one-time values it kept the returned one matches, takes the
-code out of the address before anything else, forgets what it kept, puts the panel's address back as
-it was and, whatever came of the return, opens the Folders tab. A code that comes back with any
-other value is never sent for a drive's tokens. The page sends the code, with the one-time secret,
-to the sign-in service, which adds the client secret of the developer's Microsoft app registration,
-asks Microsoft for the drive's access token and refresh token, and hands both back. Leaving the page
-for Microsoft ends the renewals of a GitHub sign-in made for one tab alone, as leaving it for any
-other page does (the control panel, above), and that sign-in's token serves out its eight hours.
+code out of the address before anything else, forgets what it kept, and the other one-time values
+where a sign-in or a connection was left pending beside it, puts the panel's query back as it was
+and, whatever came of the return, opens the Folders tab. A code that comes back with any other value
+is never sent for a drive's tokens. The page sends the code, with the one-time secret, to the
+sign-in service, which adds the client secret of the developer's Microsoft app registration, asks
+Microsoft for the drive's access token and refresh token, and hands both back. Leaving the page for
+Microsoft ends the renewals of a GitHub sign-in made for one tab alone, as leaving it for any other
+page does (the control panel, above), and that sign-in's token serves out its eight hours.
 
 The page keeps the drive's two tokens in its memory alone, never in the browser's storage, the
 address or a log, and only for the GitHub account the panel named when they came: reloading or
-leaving the page, pressing "Forget the token", or a sign-in as another GitHub account forgets them,
-and you press "Connect OneDrive" again; Track drops them once the secret and the file are written.
-With the access token the page reads, from your browser and as you, through Microsoft Graph, the
-drive's type and its owner's display name, to say which drive is connected, and the names, kinds,
-sizes, dates and ids of the files and folders in the folders you open, to draw the list you tick in;
-nothing of that list leaves your browser but the name, the id and the drive's id of what you tick,
-which go into drive.json. When the access token runs out during a sitting, the page sends the
-refresh token to the service, which answers with a new access token.
+leaving the page, any sign-out, pressing "Forget the token" among them, or a sign-in as another
+GitHub account forgets them, and you press "Connect OneDrive" again; Track drops them once the
+secret and the file are written. With the access token the page reads, from your browser and as you,
+through Microsoft Graph, the drive's type and its owner's display name, to say which drive is
+connected, and the names, kinds, sizes, dates and ids of the files and folders in the folders you
+open, to draw the list you tick in; nothing of that list leaves your browser but the name, the id
+and the drive's id of what you tick, which go into drive.json. When the access token runs out during
+a sitting, the page sends the refresh token to the service, which answers with a new access token.
 
 The repository's workflow does the same at the start of every sync: on GitHub's runners it sends the
 secret, your refresh token, to the service, or to the address the repository's variable
 `SYMPHONY_DRIVE_TOKEN_URL` names instead, and with the access token it gets back it reads at
-Microsoft the items you ticked and what a ticked folder holds, six levels down, brings what changed
-in the drive into the repository by pull request, sends up what changed in the repository and, where
-a file changed on both sides, puts the repository's copy beside the drive's in the same folder; it
-touches nothing else in the drive. What comes down is the repository's, and the new review comments
-in its Word documents become tasks, issues of the repository, so whoever can read the repository can
-read them, and anyone where it is public. The route of the service that trades a refresh token for
-an access token answers the workflow's request, which comes from no page, as well as the site's; the
+Microsoft the items the default branch's drive.json names and what a ticked folder holds, six levels
+down (until a pull request carrying a new list merges, the newly saved secret is used with the list
+already there), brings what changed in the drive into the repository by pull request, sends up what
+changed in the repository and, where a file changed on both sides, puts the repository's copy beside
+the drive's in the same folder; it touches nothing else in the drive. What comes down, and
+drive.json with the names of what you ticked, can be read by whoever can read the repository, and by
+anyone where it is public, and the new review comments in its Word documents become tasks, issues of
+the repository, readable the same way. The route of the service that trades a refresh token for an
+access token answers whoever sends it one, the workflow's request, which comes from no page, among
+them. The access Microsoft grants reaches every file of your OneDrive, not only what you ticked, so
+whoever can run a workflow on the repository, anyone who may write to it, can read the secret and,
+through that route, reach the whole drive until the token lapses or you withdraw the access;
+deleting the secret withdraws nothing at Microsoft. You withdraw it at
+https://account.live.com/consent/Manage for a personal account, or in My Apps,
+https://myapps.microsoft.com, for a work or school account, where its administrator may have to. The
 service's word on which drives it is set up for, a public client id, is given to whoever asks; every
 other route answers the site's pages alone, as the control panel section says. The service keeps
 nothing of any of it: no store, no cookie and no log of its own of the code, the tokens or you, and
@@ -441,9 +461,11 @@ Connect and on every sync and rests only in your repository's secret, and the ne
 Microsoft issues with each access token is dropped there. A Microsoft refresh token lasts 90 days,
 and the workflow cannot keep the newer one, so the tab shows the day you connected, which drive.json
 records, and the day by which to press "Connect OneDrive" again and then Track, which replaces the
-secret and that day. Google Drive is not offered: Google's own picker takes a browser API key, which
-the developer has declined, so the page connects no other drive and the service refuses any provider
-but OneDrive. The developer receives nothing from the tab, the service or the workflow.
+secret and that day, and once that day has passed it says that the connection has run out and that
+every sync since stops before it reaches the drive. Google Drive is not offered: Google's own picker
+takes a browser API key, which the developer has declined, so the page connects no other drive and
+the service refuses any provider but OneDrive. The developer receives nothing from the tab, the
+service or the workflow.
 
 ## The App's server, where it is run
 
@@ -507,19 +529,22 @@ this text.
 
 Version 19 adds the control panel's Folders tab, as the section of that name says: a tab of the
 control panel's one page, on its sign-in and the repository its bar chooses, that makes a repository
-of yours track files and folders of your OneDrive; SymphonyBoard's repository permission Secrets
-(read and write), for the tab and for the Tokens page on a personal account's repository; the tab's
-reads of the repository's drive.json, of whether its secret SYMPHONY_DRIVE_REFRESH is set and of
-whether it has drive-sync.yml, and of your newest repositories when you ask it to find the one you
-just made; Track's three writes, as you: the secret sealed in your browser, the file drive.json, on
-a branch with a pull request where the default branch takes only those, and a run of drive-sync.yml;
-the drive's consent at Microsoft, which returns to the control panel's own address, and the sign-in
+of yours track files and folders of your OneDrive; the box Track asks you to tick before it tracks
+into a public repository, where what comes down and drive.json's names can be read by anyone; that
+whoever can run a workflow on the repository can use its secret to reach your whole drive, and how
+to withdraw the access at Microsoft; SymphonyBoard's repository permission Secrets (read and write),
+for the tab and for the Tokens page on a personal account's repository; the tab's reads of the
+repository's drive.json, of whether its secret SYMPHONY_DRIVE_REFRESH is set and of whether it has
+drive-sync.yml, and of your newest repositories when you ask it to find the one you just made;
+Track's three writes, as you: the secret sealed in your browser, the file drive.json, on a branch
+with a pull request where the default branch takes only those, and a run of drive-sync.yml; the
+drive's consent at Microsoft, which returns to the control panel's own address, and the sign-in
 service, which adds the client secret of the developer's Microsoft app registration, kept on
 Cloudflare, answers with the drive's access token and refresh token and keeps nothing; the tokens in
 the page's memory alone, for one sitting and one GitHub account; the page's reads of your drive's
 folders through Microsoft Graph, from your browser; the refresh token passing through the service on
 Connect and, from the repository's workflow, on every sync, the one exchange the service answers
-from no page; and the 90 days a Microsoft refresh token lasts. It also says that the control panel
+for any caller; and the 90 days a Microsoft refresh token lasts. It also says that the control panel
 talks to the sign-in service and Microsoft for the Folders tab. Nothing the developer receives or
 keeps changed.
 
