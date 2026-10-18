@@ -1,6 +1,6 @@
 # Symphony GitHub Apps privacy statement
 
-Version 11, 2026-10-18. This text is also at https://openspineconsortium.com/symphony/apps-privacy.html.
+Version 14, 2026-10-18. This text is also at https://openspineconsortium.com/symphony/apps-privacy.html.
 The Symphony browser extension has a statement of its own, at https://openspineconsortium.com/symphony/privacy.html.
 
 Who makes the Apps: Gregory Schwing, trading as OpenSpineConsortium ("the developer"). Questions:
@@ -258,7 +258,7 @@ you chose on the cost page and the number of the assistant issue it uses in each
 
 The control panel's Assistant section asks the repository's own Claude workflow a question, through
 GitHub and nothing else. Once per repository and person, on your press, the page opens an issue of
-yours titled "Assistant: <your login>" and labelled assistant, and makes that label when the
+yours titled `Assistant: <your login>` and labelled assistant, and makes that label when the
 repository lacks it; each question you press Ask on is one comment of yours on that issue, which
 mentions @claude and ends with a short block of the page's state (the repository's name, the task
 the page centres, the filter it shows and the board section it is at), and the repository's Claude
@@ -293,6 +293,49 @@ on GitHub under Settings, Developer settings, Personal access tokens, and the Ap
 which covers every token and refresh token it issued you, under Settings, Applications, Authorized
 GitHub Apps.
 
+## The Folders page
+
+The control panel's Folders page, https://openspineconsortium.com/symphony/control/folders.html,
+makes a repository of yours track files and folders of your OneDrive, which the repository's own
+workflow, drive-sync.yml, then keeps in step with the drive. It signs in with GitHub, or takes a
+token, as the control panel does, and with that token reads and writes only what you press for.
+It reads the repository's file `.github/symphony/drive.json`, whether its secret
+`SYMPHONY_DRIVE_REFRESH` is set (never the secret itself, which GitHub gives nobody back), whether
+its workflow drive-sync.yml is there, its default branch, its public key for secrets and, when you
+press Refresh, the names, topics and template of your newest repositories, to list those made
+from the Symphony template or carrying the topic symphony. When you press Track it writes three
+things: the secret, sealed in your browser with the repository's public key the way GitHub's own
+secrets page seals one, so that GitHub alone can open it; the file drive.json, which names the
+drive, the folder in the repository, the names and ids of the items you ticked and the day you
+connected, on the default branch or, where that branch takes only pull requests, on the branch
+`symphony/drive` with a pull request for you to merge; and one run of drive-sync.yml by hand,
+which "Sync now" also starts.
+
+The drive's side goes through Microsoft and the sign-in service. When you press "Connect
+OneDrive", Microsoft asks you on its own page whether Symphony may read and write your files
+(Files.ReadWrite) and keep that access when you are away (offline_access), and sends your browser
+back to the page with a one-time code. The page sends that code, with a one-time secret it made
+for this connection, to the sign-in service, which adds the client secret of the developer's
+Microsoft app registration, asks Microsoft for the drive's access token and refresh token, and
+hands both back. The page keeps both in its memory alone, never in the browser's storage, the
+address or a log, and drops them when you press Track or leave the page. With the access token
+the page reads, from your browser and as you, the names, kinds, sizes and dates of the files and
+folders in the folders you open, through Microsoft Graph, to draw the list you tick in; nothing
+of that list leaves your browser but the names and ids of what you tick, which go into
+drive.json. When the access token runs out during a sitting, the page sends the refresh token to
+the service, which answers with a new access token. The repository's workflow does the same at
+the start of every sync: on GitHub's runners it sends the secret, your refresh token, to the
+service and reads and writes the ticked items of your drive with the access token the service
+returns, as the repository's own files say. The service keeps nothing of any of it: no store, no
+cookie and no log of its own of the code, the tokens or you, and its host's request logs are off,
+as the control panel section says; the refresh token passes through it on Connect and on every
+sync and rests only in your repository's secret. A Microsoft refresh token lasts 90 days, and the
+workflow cannot keep the newer one Microsoft issues on each sync, so the page says by which day
+to press Connect again, which replaces the secret. Google Drive is not offered: Google's own
+picker takes a browser API key, which the developer has declined, so the page and the service
+refuse any provider but OneDrive. The developer receives nothing from the page, the service or
+the workflow.
+
 ## The App's server, where it is run
 
 SymphonyBoard's webhook server, when the developer turns the webhook on, receives from GitHub each
@@ -312,7 +355,9 @@ person's words.
 
 Each App's private key is the developer's and is never given to anyone: it lives in the Actions
 secrets of the developer's own repositories and in the server's environment, outside any
-repository. Every token minted from it is an installation token that lives one hour, asked with the
+repository. The client secrets the sign-in service holds, SymphonyBoard's and the developer's
+Microsoft app registration's, live in that service's settings on Cloudflare, outside any
+repository, and go from there only to GitHub's and Microsoft's token endpoints. Every token minted from it is an installation token that lives one hour, asked with the
 fewest permissions the step needs (metadata alone to resolve a number, contents read to read, the
 four write permissions only for the adoption itself) and revoked as soon as the step is done where
 the code can. No token, key or signature is ever printed to a log.
@@ -346,7 +391,22 @@ A new version of this statement is published at https://openspineconsortium.com/
 and in the front door repository, github.com/OpenSpineConsortium/symphony-start, whose PRIVACY.md is
 this text.
 
-Version 11 adds the control panel's Assistant section: an issue of yours, "Assistant: <your login>"
+Version 14 adds the Folders page of the control panel, as the section of that name says: a page
+that makes a repository of yours track files and folders of your OneDrive, reading and writing
+the repository as you (the file drive.json, the secret SYMPHONY_DRIVE_REFRESH sealed in your
+browser, a pull request where the default branch takes only those, and a run of drive-sync.yml),
+and connecting the drive through Microsoft's consent and the sign-in service, which adds the
+client secret of the developer's Microsoft app registration, kept on Cloudflare, answers with the
+drive's access token and refresh token and keeps nothing; the tokens in the page's memory alone;
+the page's reads of your drive's folders through Microsoft Graph, from your browser; the refresh
+token passing through the service on Connect and, from the repository's workflow, on every sync;
+and the 90 days a Microsoft refresh token lasts. Nothing the developer receives or keeps changed.
+
+Version 13 adds the control panel's Dependencies section.
+
+Version 12 adds the Tokens page's "Add a Claude account".
+
+Version 11 adds the control panel's Assistant section: an issue of yours, `Assistant: <your login>`
 labelled assistant, that the page opens once per repository on your press, each question a comment
 of yours on it that mentions @claude and ends with a short block of the page's state, the answer the
 repository's Claude workflow writes there, reading only, the page's reads of that issue's comments
