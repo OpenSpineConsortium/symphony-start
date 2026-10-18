@@ -252,7 +252,11 @@ is private, its topics and, for one you name, its numeric id and its owner's, to
 install link with that repository selected), on the cost page the file METRICS.json on the branch
 `metrics`, and, when you press "Find my Symphony repositories", the names and topics of the
 repositories your token reaches, up to three hundred of the most recently pushed, to keep the ones
-carrying the topic symphony. Only when you
+carrying the topic symphony, and, in the dialog "Add repository", the repositories SymphonyBoard is
+installed on that you can reach, installation by installation, or, with a pasted token, the
+repositories that token reaches, to choose one to add to your list; on the Share tab, who has access
+to the repository (its direct collaborators in an organization's repository, all of them in a
+person's) with their roles, and the invitations waiting for an answer. Only when you
 press the button that says so, they write what GitHub's own pages would: an issue (a task, an "Add a
 worker" issue, one that mentions @claude, or the assistant's, below), a comment (a question to the
 assistant among them), a label on an issue (and the label itself when it is not there yet), a
@@ -262,8 +266,9 @@ agents.json, made as GitHub's own pages would make it (a branch of its own from 
 head, the files written or deleted on that branch, and the pull request opened, or the one already
 open from that branch found), never a push to the default branch, or, on the Share tab, an
 invitation to the GitHub user you
-name, with the role you pick, to collaborate on the repository (the Folders tab, below, says what
-else). To find that user from an email address you type, the Share tab asks GitHub's user search
+name, with the role you pick, to collaborate on the repository, a new role for a collaborator or
+for an invitation waiting, a collaborator removed or an invitation withdrawn (the Folders tab,
+below, says what else). To find that user from an email address you type, the Share tab asks GitHub's user search
 for an account showing that address publicly; the
 address goes to GitHub alone. The Share tab's mail buttons open Gmail, Outlook, your email app or
 your device's share sheet with a note you send yourself; the page sends nothing there.
@@ -575,10 +580,12 @@ and in the front door repository, github.com/OpenSpineConsortium/symphony-start,
 this text.
 
 Version 22 adds the control panel's reads of the agents' list `.github/symphony/agents.json` and
-the agent files it names, and the writes its cards make on your press, as you: closing an issue as
-not planned, closing a pull request, and a pull request, from a branch of its own, that changes or
-deletes a worker's file or deletes an agent's file and its line in agents.json. Nothing the
-developer receives or keeps changed.
+the agent files it names, of the repositories its "Add repository" dialog offers, and of the Share
+tab's collaborators and waiting invitations, and the writes its cards and the Share tab make on your
+press, as you: closing an issue as not planned, closing a pull request, a pull request, from a
+branch of its own, that changes or deletes a worker's file or deletes an agent's file and its line
+in agents.json, and a collaborator's or an invitation's new role, removal or withdrawal. The page
+keeps nothing new. Nothing the developer receives or keeps changed.
 
 Version 21 adds the control panel's Folders tab, as the section of that name says: a tab of the
 control panel's one page, on its sign-in and the repository its bar chooses, that makes a repository
