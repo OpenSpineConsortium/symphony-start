@@ -1,6 +1,6 @@
 # Symphony GitHub Apps privacy statement
 
-Version 23, 2026-10-18. This text is also at https://openspineconsortium.com/symphony/apps-privacy.html.
+Version 24, 2026-10-18. This text is also at https://openspineconsortium.com/symphony/apps-privacy.html.
 The Symphony browser extension has a statement of its own, at https://openspineconsortium.com/symphony/privacy.html.
 
 Who makes the Apps: Gregory Schwing, trading as OpenSpineConsortium ("the developer"). Questions:
@@ -32,7 +32,7 @@ page used up to version 13 of this statement to make a Codespace and no longer u
 on the App until the developer takes it off; Actions (read and write), for the control panel's buttons
 that start a workflow run by hand, such as the Tokens page's "Read every slot now" and "Add a Claude
 account", and its reads
-of the repository's workflow runs (the control panel, below); Administration (read and write), for one thing only: the
+of the repository's workflow runs, their jobs and a job's log (the control panel, below); Administration (read and write), for one thing only: the
 control panel's Share tab invites a person you name by their GitHub username as a collaborator on the repository, as
 you, when you press "Invite" (the control panel, below), and no adoption run, workflow or other page uses it;
 Secrets (read and write), for the control panel's Folders tab, which reads whether the repository's
@@ -353,6 +353,24 @@ then the one the page centres, which the assistant's next question names, as abo
 nothing: not to GitHub, whose issues it only reads, and not to your browser's storage; the chart is
 gone with the page, and the developer receives none of it.
 
+The control panel's Explore tab, https://openspineconsortium.com/symphony/control/#explore, shows
+the same work as a map you go into one level at a time: the repository, its goals and epics, each
+epic's tasks, a task's open pull requests (or, where it has none, its claim branch), the GitHub
+Actions runs on that branch, each run's jobs and steps and, at the bottom, the lines of a job's log,
+cut to one step's lines by the times GitHub gives each step. Down to the tasks it draws only what the
+page has already read, as above, and makes no read of its own. Below a task it reads, as you, with
+the GitHub token you gave it, only when you go into a level and once for each: the runs on that
+branch (the latest twenty), a run's jobs and their steps, and a job's log, which GitHub hands over
+from its own storage, the address GitHub's answer names, and your browser asks that storage for the
+log with no token of yours, since a browser drops the token when GitHub sends it elsewhere; where your browser may not read it from there, the tab says so and links
+the log on GitHub. It reads none of these once GitHub says your token has fewer than a hundred calls
+left in its hour. A job's log is what GitHub shows anyone who may read the repository's Actions, and
+it may hold whatever the job printed, a Claude run's conversation among it. The tab keeps what it
+reads in the open page's memory alone, the lines of the last three jobs' logs you opened and no
+more, until you choose another repository or the page is gone, and reads a level again only when you
+press Read again; it writes nothing, not to GitHub and not to your
+browser's storage, and the developer receives none of it.
+
 The aggregates the collector reads are as the section on field metrics says, whether or not you use
 the pages. The pages never show a repository's Claude secret, which GitHub never gives back. The
 one Claude token they take is one you paste into the Tokens page's "Add or renew a slot": the page
@@ -589,6 +607,11 @@ Symphony is for people who administer GitHub repositories. It is not directed at
 A new version of this statement is published at https://openspineconsortium.com/symphony/apps-privacy.html
 and in the front door repository, github.com/OpenSpineConsortium/symphony-start, whose PRIVACY.md is
 this text.
+
+Version 24 adds the control panel's Explore tab, as the section on the control panel says: a map
+of the repository's work from its goals and epics down to the runs on a task's branch, their jobs and
+steps and a job's log, read as you only when you go into a level, kept in the open page's memory and
+written nowhere. Nothing the developer receives or keeps changed.
 
 Version 23 adds the Folders tab's list drawn as a file explorer, its read of each item's path in the
 drive and web address, and the opening of a file from it, in its Office program on your computer or
