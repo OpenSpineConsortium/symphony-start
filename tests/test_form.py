@@ -283,9 +283,20 @@ class TheWorkflows(unittest.TestCase):
         self.assertIn("permission-administration: write", asking[0])
         self.assertIn("continue-on-error: true", asking[0])
         self.assertNotIn("permission-contents", asking[0])
-        # The key is minted for Administration once, probed once, read as
-        # set-or-not once, and signs the JWT that uninstalls the App itself.
-        self.assertEqual(text.count("secrets.SDLC_SETUP_APP_PRIVATE_KEY"), 4)
+        # The key is minted for Administration once, for the organization's
+        # Administration once, probed once, read as set-or-not once, and
+        # signs the JWT that uninstalls the App itself.
+        self.assertEqual(text.count("secrets.SDLC_SETUP_APP_PRIVATE_KEY"), 5)
+        org, = [step for step in steps if "id: setup-org-token" in step]
+        self.assertIn("app-id: ${{ vars.SDLC_SETUP_APP_ID }}", org)
+        self.assertIn("repositories: ${{ env.NAME }}", org)
+        self.assertIn("permission-organization-administration: write", org)
+        self.assertIn("continue-on-error: true", org)
+        self.assertIn("steps.setup-token.outcome == 'success'", org)
+        self.assertIn("env.MODE == 'new'", org)
+        self.assertIn("steps.target.outputs.owner_type == 'Organization'", org)
+        for word in ("permission-contents", "permission-administration:", "permission-metadata"):
+            self.assertNotIn(word, org)
         self.assertIn("secrets.SDLC_SETUP_APP_PRIVATE_KEY != ''", text)
         probe, = [step for step in steps if "id: setup-probe" in step]
         self.assertIn("owner: OpenSpineConsortium\n          repositories: symphony-start\n", probe)
