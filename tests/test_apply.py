@@ -456,6 +456,22 @@ class ExistingMode(Scratch):
         self.assertNotIn("tools/usage.py", manifest["added"], "nothing imports it now")
         self.assertEqual(run_script(self.target, "tools/metrics.py").stdout, "metrics by_setting priced\n")
 
+    def test_a_module_the_script_loads_by_its_path_comes_with_it(self):
+        """The template's tools/usage.py loads tools/profile.py by its path,
+        since the standard library has a module named profile, so no import
+        statement names it; it comes with the script all the same, and
+        what it imports comes with it."""
+        make_template(self.template, metrics=True)
+        write(self.template, "tools/economics.py",
+              "import importlib.util\nfrom pathlib import Path\n\n\ndef priced():\n"
+              "    spec = importlib.util.spec_from_file_location(\"symphony_profile\", Path(__file__).parent / \"profile.py\")\n"
+              "    module = importlib.util.module_from_spec(spec)\n    spec.loader.exec_module(module)\n    return module.TABLE\n")
+        write(self.template, "tools/profile.py", "import prices\n\nTABLE = prices.TABLE\n")
+        write(self.template, "tools/prices.py", "TABLE = 'priced'\n")
+        manifest = self.adopt_existing()
+        self.assertTrue({"tools/profile.py", "tools/prices.py"} <= set(manifest["added"]))
+        self.assertEqual(run_script(self.target, "tools/metrics.py").stdout, "metrics by_setting priced\n")
+
     def test_an_earlier_adoption_gains_the_modules_its_script_came_to_import(self):
         """A tree adopted while the front door brought the metrics workflow
         and its script alone holds the template's bytes of both; apply run

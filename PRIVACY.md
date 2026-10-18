@@ -1,6 +1,6 @@
 # Symphony GitHub Apps privacy statement
 
-Version 13, 2026-10-18. This text is also at https://openspineconsortium.com/symphony/apps-privacy.html.
+Version 18, 2026-10-18. This text is also at https://openspineconsortium.com/symphony/apps-privacy.html.
 The Symphony browser extension has a statement of its own, at https://openspineconsortium.com/symphony/privacy.html.
 
 Who makes the Apps: Gregory Schwing, trading as OpenSpineConsortium ("the developer"). Questions:
@@ -20,18 +20,26 @@ The unit of consent is the installation. Whatever repositories you give an App w
 ("All repositories" or "Only select repositories"), the App can read what its permissions allow on
 every one of them, and this statement applies to each.
 
-SymphonyBoard asks for six repository permissions: Contents (read and write), to read your default
+SymphonyBoard asks for nine repository permissions: Contents (read and write), to read your default
 branch and push the branch `symphony/adopt` and, in a repository with no commit yet, to make its first
 commit, a README; Pull requests (read and write), to open the adoption
 pull request and, only when you asked for it on the form, merge it; Issues (read and write), to
 make the board's labels and, in a new repository, open the issue "Set up this project"; Checks (read
 and write), to post the protocol check as a check run where the developer runs the App's server;
 Workflows (read and write), because the pull request brings files under `.github/workflows`, which
-GitHub lets no token write without it; and Metadata (read), which every App has, to list the
+GitHub lets no token write without it; Codespaces (read and write), which the control panel's Tokens
+page used up to version 13 of this statement to make a Codespace and no longer uses, and which stays
+on the App until the developer takes it off; Actions (read and write), for the control panel's buttons
+that start a workflow run by hand, such as the Tokens page's "Read every slot now" and "Add a Claude
+account", and its reads
+of the repository's workflow runs (the control panel, below); Administration (read and write), for one thing only: the
+control panel's Share tab invites a person you name by their GitHub username as a collaborator on the repository, as
+you, when you press "Invite" (the control panel, below), and no adoption run, workflow or other page uses it; and
+Metadata (read), which every App has, to list the
 repositories it reaches. It subscribes to five event types (issues, issue comments, pull requests,
 pushes and check suites), which GitHub delivers only while the App's webhook is turned on; as this
 statement is written, it is turned off, and the section on the server below applies from the day
-it is turned on. SymphonyBoard never asks for Administration.
+it is turned on.
 
 On an organization, SymphonyBoard also asks for two organization permissions: Secrets (read and
 write) and Variables (read and write), for the control panel's Tokens page, which saves a Claude
@@ -40,8 +48,20 @@ it to (the control panel, below). The App itself never reads or writes a secret 
 a page you are signed in to does, as you, and GitHub lets it only where you are an owner of the
 organization. GitHub never gives a secret's value back to anyone, the App included.
 
-Symphony Setup asks for two permissions and nothing else: Administration (read and write), for the
-six settings below, and Metadata (read). It has no webhook and receives no event. It is meant to be
+SymphonyBoard also asks for one account permission, Codespaces user secrets (read and write), which
+GitHub asks each person for when they sign in with GitHub on the control panel. The Tokens page used
+it up to version 13 of this statement to hand its GitHub sign-in to a Codespace; it no longer uses
+it, and it stays on the App until the developer takes it off.
+
+Symphony Setup asks for two repository permissions, Administration (read and write), for the six
+settings below, and Metadata (read), and, on an organization, one organization permission,
+Administration (read and write). It uses that one for one thing only: where the organization holds
+off "Allow GitHub Actions to create and approve pull requests" for its repositories, as a new
+organization does, and the repository takes the whole template, the run allows that box for the
+organization, leaving the default permissions of GitHub Actions' token as they were, and then ticks
+it on the repository. It reads and changes no other setting of the organization. That setting of
+the organization stays allowed after the run, and repositories the organization makes later inherit
+it; an owner turns it off under the organization's Settings, Actions, General, Workflow permissions. It has no webhook and receives no event. It is meant to be
 installed on the one repository being adopted, for the one run, and the run uninstalls it when that
 repository was the only one it reached, after the adoption or after a request refused because the
 repository is adopted already; otherwise the pull request, or that refusal's answer, asks you to
@@ -215,20 +235,25 @@ names you.
 The control panel is a page of the developer's site, https://openspineconsortium.com/symphony/control/,
 and the cost page beside it, https://openspineconsortium.com/symphony/cost.html. Both are static
 files that work in your browser with a GitHub token you give them, and they talk to GitHub's own API
-as you and, only when you sign in with GitHub, to the sign-in service described below.
-They read your own account's login (to say who is signed in), your repository's board (the file
-STATE.md on the branch `board`), its open issues and their labels, for its Dependencies section
-(below) the sub-issues of each open issue labelled epic or goal and the issues blocking each of an
-epic's sub-issues, the worker files under `.github/symphony/workers/`, its open pull requests and
-the check runs on their heads, its Actions runs, the repository's own record (its default branch,
-whether it is private, its topics and, for one you name, its numeric id and its owner's, to build
-the App's install link with that repository selected), on the cost page the file METRICS.json on the
-branch `metrics`, and, when you press "Find my Symphony repositories", the names and topics of the
+as you and, only when you sign in with GitHub, to the sign-in service described below. They read
+your own account's login (to say who is signed in), your repository's board (the file STATE.md on
+the branch `board`), its open issues and their labels, for its Dependencies tab (below) the
+sub-issues of each open issue labelled epic or goal and the issues blocking each of an epic's
+sub-issues, the worker files under `.github/symphony/workers/`, its open pull requests and the check
+runs on their heads, its Actions runs, the repository's own record (its default branch, whether it
+is private, its topics and, for one you name, its numeric id and its owner's, to build the App's
+install link with that repository selected), on the cost page the file METRICS.json on the branch
+`metrics`, and, when you press "Find my Symphony repositories", the names and topics of the
 repositories your token reaches, up to three hundred of the most recently pushed, to keep the ones
-carrying the topic symphony. Only when you press the button that says so, they write what GitHub's
-own pages would: an issue (a task, an "Add a worker" issue, one that mentions @claude, or the
-assistant's, below), a comment (a question to the assistant among them), a label on an issue (and
-the label itself when it is not there yet), a workflow run started by hand, or a merge.
+carrying the topic symphony. Only when you
+press the button that says so, they write what GitHub's own pages would: an issue (a task, an "Add a
+worker" issue, one that mentions @claude, or the assistant's, below), a comment (a question to the
+assistant among them), a label on an issue (and the label itself when it is not there yet), a
+workflow run started by hand, a merge, or, on the Share tab, an invitation to the GitHub user you
+name, with the role you pick, to collaborate on the repository. To find that user from an email address
+you type, the Share tab asks GitHub's user search for an account showing that address publicly; the
+address goes to GitHub alone. The Share tab's mail buttons open Gmail, Outlook, your email app or
+your device's share sheet with a note you send yourself; the page sends nothing there.
 
 The token is one of two kinds, and either way it stays in your browser. A fine-grained personal
 access token you make on GitHub and paste into the page is first sent to GitHub alone, to ask whose
@@ -275,23 +300,33 @@ the token, so that it opens no second one; close the issue on GitHub and the pag
 your next question. The question, its block and the answer are on the issue, where GitHub keeps them
 as it keeps any issue's comments, and are sent to nobody else: the developer receives none of it.
 
-The control panel's Dependencies section draws the work of each open epic as a chart: its tasks,
-which are the epic's sub-issues on GitHub, an arrow from each issue that blocks one of them to the
-issue it blocks, which is GitHub's own blocked-by relation, and the goals above their epics, the
-chart the repository's own board draws into STATE.md once its protocol is new enough to draw it. To
-draw it the page reads, as you, what GitHub's own issue pages show under Sub-issues and
-Relationships: the sub-issues of each open issue labelled epic or goal and, for each sub-issue of an
-epic whose summary counts an issue blocking it, the issues blocking it, at most sixty reads for one
-drawing, and none once GitHub says your token has fewer than a hundred calls left in its hour;
-GitHub answers each read with the issues it names as its API describes any issue, and the page keeps
-for the chart their number, title, state, labels and link, the counts GitHub's two summaries give
-for each (its sub-issues, done and in all, and the issues blocking it, open and in all), and which
-of them an open pull request from its claim branch names, from the pull requests the page already
-shows; it reads which repository each belongs to, to leave out one of another repository, and keeps
-nothing else. The chart is drawn in your browser by a copy of Mermaid, an open-source drawing
-library (MIT) that the developer's site carries and the page loads from the site only when there is
-a chart to draw, and the Board box draws the same way the charts the board's own STATE.md holds,
-which the page already reads; it asks nothing of any other party. The section writes nothing: not to
+The control panel's Dependencies tab, https://openspineconsortium.com/symphony/control/#dependencies,
+draws the work of each open epic as a chart: its tasks, which are the epic's sub-issues on GitHub,
+an arrow from each issue that blocks one of them to the issue it blocks, which is GitHub's own
+blocked-by relation, and the goals above their epics, the chart the repository's own board draws
+into STATE.md once its protocol is new enough to draw it. To draw it the page reads, as you, with
+the GitHub token you gave it, what GitHub's own issue pages show under Sub-issues and Relationships:
+the sub-issues of each open issue labelled epic or goal, unless GitHub's summary of that issue says
+it has none, and, for each sub-issue of an epic whose summary counts an issue blocking it, the
+issues blocking it. It makes these reads whenever it reads the repository's open issues, which it
+does each time it opens a repository, when you press Refresh, and after you queue a task, give an
+issue to a worker, mention @claude or merge a pull request on the page, whether or not the
+Dependencies tab is open, and never on a timer of its own; it makes at most sixty for one drawing,
+each page of a list counting as one, and none once GitHub says your token has fewer than a hundred
+calls left in its hour. GitHub answers each read with the issues it names as its API describes any
+issue, and the page keeps for the chart their number, title, state, labels and link, the counts
+GitHub's two summaries give for each (its sub-issues, done and in all, and the issues blocking it,
+open and in all), and which of them an open pull request from its claim branch in the repository
+itself names, from the pull requests the page already shows; it reads whether each is a pull request
+and which repository it belongs to, to leave out pull requests and the issues of another repository,
+and keeps nothing else, in the open page's memory alone, until it draws again or the page is gone.
+The chart is drawn in your browser by a copy of Mermaid, an open-source drawing library (MIT) that
+the developer's site carries and the page loads from the site, as it loads its own files, only when
+there is a chart to draw, and the Board tab draws the same way the charts the board's own STATE.md
+holds, which the page already reads; beside that file, the tab asks nothing of anyone but GitHub.
+Pressing a node, here or in the Board tab, or a row's "Centre its row", opens the Tasks tab at that
+task's row, where the task tables hold it, and asks GitHub nothing; that task is then the one the
+page centres, which the assistant's next question names, as above. The tab writes nothing: not to
 GitHub, whose issues it only reads, and not to your browser's storage; the chart is gone with the
 page, and the developer receives none of it.
 
@@ -304,8 +339,39 @@ sealed box, which GitHub alone can open, as the secret SYMPHONY_CLAUDE_1 to SYMP
 CLAUDE_CODE_OAUTH_TOKEN, seen by the repositories you tick. It then writes, as organization (or
 repository) variables, the slot's label if you gave one and the list SYMPHONY_CLAUDE_ACCOUNTS. The
 token goes nowhere else: not to the sign-in service, not to the developer, not into the browser's
-storage, a log or the page; the page empties its box once the token is sealed. A slot is removed on
-GitHub under the organization's Settings, Secrets and variables, Actions. What
+storage, a log or the page; the page empties its box once the token is sealed.
+
+"Add a Claude account" on the same page makes the token where it is needed instead of asking you to
+paste it. On your press, the page opens an issue on the repository, as you, and starts the
+repository's workflow Token (the template's .github/workflows/token.yml) with the issue's number and
+the public key GitHub gives for your organization's secrets (for a personal account's repository,
+the repository's). The run is on GitHub Actions, on the repository's owner's Actions allowance, and
+holds no secret: it installs Claude Code, runs `claude setup-token`, and posts on the issue the
+claude.ai sign-in link that prints. The page shows that link as a button. You sign in to claude.ai as
+the account to add and press Authorize, and claude.ai shows a code; you paste it into the page, which
+posts it on the issue as a comment of yours. The run reads it, deletes that comment, and hands it to
+`claude setup-token`; the code is good only once and only to that run, which holds the other half of
+the sign-in. The run takes the Claude token out of what Claude Code prints before anything is
+written to its log, seals it there with the public key the page gave, and posts only the sealed box
+on the issue, which GitHub alone can open. The page saves that box as the next free slot and, while
+CLAUDE_CODE_OAUTH_TOKEN is not set, as that secret too, writes the list SYMPHONY_CLAUDE_ACCOUNTS as
+above, and closes the issue. The Claude token is never on the page, in the issue, in the run's log,
+at the sign-in service or with the developer. The issue and its comments stay on your repository,
+as any issue does, and anyone who can read the repository can read them: the link, the sealed box,
+and, until the run deletes it, the code, none of which gives a Claude token to anyone else. Delete
+the issue on GitHub if you want it gone. Beside the button, the page links the Claude GitHub App's
+install page on GitHub, opened for the one repository, unless the page can see that App installed
+on all of the organization's repositories already; installing it is your own press on GitHub.
+
+The page shows each token set as a tile, and on your press a tile's settings: a name, the model and
+thinking strength its runs take, a lesser model for when the model's weekly limit runs out, whether
+it comes back by itself when its limit resets, and Pause. The page writes them, as you, to the
+organization (or repository) variable SYMPHONY_CLAUDE_SETTINGS, which the repository's workers read,
+and the name to the slot's label variable; neither holds a token, and anyone who can read the
+repository's workflows can read them. A tile's X, after you confirm, deletes the slot's secret, its
+label, its settings and its place in SYMPHONY_CLAUDE_ACCOUNTS, as you; deleting the secret does not
+revoke the token, which you revoke on claude.ai. A slot can also be removed on GitHub under the
+organization's Settings, Secrets and variables, Actions. What
 they start, a worker's run or the Claude workflow's answer to a mention, runs on the token the
 repository holds, as the repository's own workflows do. To stop: press "Forget the token", which
 drops the token and the refresh token from the browser and, for a token from "Sign in with
@@ -341,8 +407,9 @@ the code can. No token, key or signature is ever printed to a log.
 ## What the Apps never do
 
 They send nothing to any service but GitHub's own API. They have no analytics, no error reporting
-and no third party. SymphonyBoard never holds Administration on anyone's repository; Symphony Setup
-holds it for one run and only where you installed it. They read your repository's code only as the
+and no third party. SymphonyBoard holds Administration only to send the invitation you ask for on the
+control panel's Share tab, as you, and changes no setting with it; Symphony Setup holds it for one run
+and only where you installed it. They read your repository's code only as the
 adoption above says (the tree listing, a one-commit checkout of the default branch, and the few
 files named), never to keep or send it. They never write to a repository but the adoption's branch,
 pull request, labels, issue and settings, each of them yours to undo, and the README that begins a
@@ -367,14 +434,48 @@ A new version of this statement is published at https://openspineconsortium.com/
 and in the front door repository, github.com/OpenSpineConsortium/symphony-start, whose PRIVACY.md is
 this text.
 
-Version 13 adds the control panel's Dependencies section, which draws each open epic's tasks and the
-issues blocking them, and the goals above their epics, as the section of that name says: the page's
-reads, as you, of the sub-issues of each open issue labelled epic or goal and of the issues blocking
-each of an epic's sub-issues, what GitHub's own issue pages show, drawn in your browser by a copy of
-Mermaid that the developer's site carries and the page loads only when there is a chart to draw,
-which also draws the charts of the board's STATE.md in the Board box. It writes nothing, to GitHub
-or to your browser, and asks nothing of anyone but GitHub. Nothing the developer receives or keeps
-changed.
+Version 18 adds the control panel's Dependencies tab, which draws each open epic's tasks and the
+issues blocking them, and the goals above their epics: the page's reads, as you, of the sub-issues
+of each open issue labelled epic or goal and of the issues blocking each of an epic's sub-issues,
+what GitHub's own issue pages show, made whenever the page reads the repository's open issues,
+whether or not the tab is open, at most sixty for one drawing and none once your token has fewer
+than a hundred calls left in its hour; and the copy of Mermaid that the developer's site carries,
+which the page loads only when there is a chart to draw and which also draws the charts of the
+board's STATE.md in the Board tab. The tab keeps what it reads in the open page alone and writes
+nothing, to GitHub or to your browser. Nothing the developer receives or keeps changed.
+
+Version 17 adds SymphonyBoard's repository permission Administration (read and write), used only by
+the control panel's Share tab to invite a collaborator you name, as you, and the Share tab's lookup of
+an email address in GitHub's user search. Nothing the developer receives or keeps changed.
+
+Version 16 adds the Tokens page's tiles: the settings each token's tile writes to the variable
+SYMPHONY_CLAUDE_SETTINGS and its label variable, and the X that deletes a slot's secret, label,
+settings and place in SYMPHONY_CLAUDE_ACCOUNTS. Nothing the developer receives or keeps changed.
+
+Version 15 says that the Tokens page's "Add a Claude account" starts the workflow Token on the
+repository in place of "Add with one press", which made a Codespace: the issue it opens, the sign-in
+link, the code and the sealed token on that issue, the page saving the sealed box as the next slot
+and as CLAUDE_CODE_OAUTH_TOKEN while that is not set, and the link to the Claude GitHub App's install
+page. The page no longer makes a Codespace or saves a Codespaces secret, and the permissions
+Codespaces and Codespaces user secrets go unused. Nothing the developer receives or keeps changed.
+
+Version 14 adds Symphony Setup's organization permission Administration (read and write), used only
+to allow "Allow GitHub Actions to create and approve pull requests" for an organization whose policy
+holds it off, so the sixth setting needs no step by hand there; the run reads the organization's
+workflow permissions to leave the token's default permissions as they were. Nothing the developer
+receives or keeps changed.
+
+Version 13 adds SymphonyBoard's repository permission Actions (read and write), which the control
+panel's buttons that start a workflow run by hand, and its reads of the runs, use as you. What the
+pages do is unchanged, and nothing the developer receives or keeps changed.
+
+Version 12 adds the Tokens page's "Add with one press": SymphonyBoard's repository permission
+Codespaces and account permission Codespaces user secrets; the Codespace the page makes and deletes
+on your press; the page's GitHub token handed to it as your Codespaces secret
+SYMPHONY_GITHUB_HANDOVER, seen by your own Codespaces on that repository alone and deleted once the
+slot is saved; the Claude token going from claude to GitHub inside the Codespace, never to the page;
+and the page's reads of the organization's secret names while it waits. Nothing the developer
+receives or keeps changed.
 
 Version 11 adds the control panel's Assistant section: an issue of yours, `Assistant: <your login>`
 labelled assistant, that the page opens once per repository on your press, each question a comment

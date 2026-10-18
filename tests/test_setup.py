@@ -57,6 +57,8 @@ WORKFLOW = f"/repos/{REPO}/actions/permissions/workflow"
 # GitHub's default for a repository: the token reads, and GitHub Actions
 # may not create or approve pull requests; the PUT ticks the box alone.
 THEIR_WORKFLOW = {"default_workflow_permissions": "read", "can_approve_pull_request_reviews": False}
+ORG_WORKFLOW = "/orgs/octo-org/actions/permissions/workflow"
+ORG_TOKEN = "ghs_org_token_for_tests"
 ACTIONS_ON = {"default_workflow_permissions": "read", "can_approve_pull_request_reviews": True}
 ACTIONS_LOG = "settings: allow GitHub Actions to create and approve pull requests: "
 NOT_TRIED_IN_EXISTING = "the protocol alone opens no pull request with GitHub Actions"
@@ -81,7 +83,11 @@ class FakeGitHub:
         if self.raising:
             raise setup.GitHubError(self.raising)
         if (method, path) in self.answers:
-            status, answer = self.answers[(method, path)]
+            # A list is a sequence of answers to the same call, the last
+            # one standing for every later call.
+            answers = self.answers[(method, path)]
+            status, answer = answers.pop(0) if isinstance(answers, list) and len(answers) > 1 else (
+                answers[0] if isinstance(answers, list) else answers)
         elif (method, path) == ("GET", f"/repos/{REPO}"):
             status, answer = 200, {"private": False}
         elif (method, path) == ("GET", f"/repos/{REPO}/rulesets?includes_parents=false"):
@@ -114,8 +120,12 @@ class Apply(unittest.TestCase):
         patcher.start()
         self.addCleanup(patcher.stop)
 
-    def apply(self, github, mode="new", ruleset=None):
+    def apply(self, github, mode="new", ruleset=None, org_token=None):
         """Run apply; (exit code, the report or None, stdout, stderr)."""
+        if org_token:
+            patcher = mock.patch.dict(os.environ, {"GH_ORG_TOKEN": org_token})
+            patcher.start()
+            self.addCleanup(patcher.stop)
         out, err = io.StringIO(), io.StringIO()
         argv = ["apply", "--repo", REPO, "--mode", mode, "--ruleset", str(ruleset or self.ruleset),
                 "--report", str(self.report)]
@@ -396,6 +406,83 @@ class Apply(unittest.TestCase):
                 self.assertIn(ACTIONS_LOG + "not turned on", out.splitlines())
                 for word in ("409", "Conflict", "forbidden", "policy"):
                     self.assertNotIn(word, out)
+
+    def test_the_organizations_token_allows_the_box_for_the_organization_then_ticks_the_repository(self):
+        """A new organization holds the box off: with the organization's
+        token the run allows it there, the default token's permissions sent
+        back as the organization had them, and ticks the repository's box
+        again with the repository's token; only those two calls carry the
+        organization's token."""
+        github = FakeGitHub({
+            ("PUT", WORKFLOW): [(409, {"message": "Conflict"}), (204, None)],
+            ("GET", ORG_WORKFLOW): (200, {"default_workflow_permissions": "write",
+                                          "can_approve_pull_request_reviews": False}),
+            ("PUT", ORG_WORKFLOW): (204, None),
+        })
+        code, report, out, err = self.apply(github, org_token=ORG_TOKEN)
+        self.assertEqual((code, err), (0, ""))
+        self.assertEqual(report["settings"]["actions_pull_requests"],
+                         {"state": "done", "detail": setup.organization_first("octo-org")})
+        self.assertIn(("PUT", ORG_WORKFLOW, {"default_workflow_permissions": "write",
+                                             "can_approve_pull_request_reviews": True}), github.writes())
+        self.assertEqual([w for w in github.writes() if w[1] == WORKFLOW][-1], ("PUT", WORKFLOW, ACTIONS_ON))
+        with_org = [path for _, path, headers, _ in github.calls if ORG_TOKEN in headers["Authorization"]]
+        self.assertEqual(with_org, [ORG_WORKFLOW, ORG_WORKFLOW])
+        self.assertIn(ACTIONS_LOG + "on", out.splitlines())
+        self.assertNotIn(ORG_TOKEN, out)
+
+    def test_an_organization_that_allows_the_box_already_leaves_it_forbidden(self):
+        """The organization had the box on, so its enterprise held it: the
+        organization is not written and the setting stays forbidden, with
+        both answers."""
+        github = FakeGitHub({
+            ("PUT", WORKFLOW): (409, {"message": "Conflict"}),
+            ("GET", ORG_WORKFLOW): (200, {"default_workflow_permissions": "read",
+                                          "can_approve_pull_request_reviews": True}),
+        })
+        code, report, out, err = self.apply(github, org_token=ORG_TOKEN)
+        setting = report["settings"]["actions_pull_requests"]
+        self.assertEqual(setting["state"], "forbidden")
+        self.assertTrue(setting["detail"].startswith("HTTP 409: Conflict; for the organization: "))
+        self.assertIn("enterprise", setting["detail"])
+        self.assertNotIn(("PUT", ORG_WORKFLOW), [(m, p) for m, p, _ in github.writes()])
+
+    def test_an_organization_github_refuses_keeps_the_409_with_both_answers(self):
+        """An installation that did not grant the organization permission,
+        or an enterprise that forbids it, answers the organization's change
+        with a refusal: the setting stays forbidden and the repository is
+        not tried again."""
+        for answer, said in (((403, {"message": "Resource not accessible by integration"}),
+                              "HTTP 403: Resource not accessible by integration"),
+                             ((409, None), "HTTP 409")):
+            with self.subTest(answer=answer):
+                github = FakeGitHub({("PUT", WORKFLOW): (409, {"message": "Conflict"}),
+                                     ("GET", ORG_WORKFLOW): (200, dict(THEIR_WORKFLOW)), ("PUT", ORG_WORKFLOW): answer})
+                code, report, out, err = self.apply(github, org_token=ORG_TOKEN)
+                self.assertEqual(report["settings"]["actions_pull_requests"],
+                                 {"state": "forbidden", "detail": f"HTTP 409: Conflict; for the organization: {said}"})
+                self.assertEqual(len([w for w in github.writes() if w[1] == WORKFLOW]), 1)
+                self.assertIn(ACTIONS_LOG + "not turned on", out.splitlines())
+
+    def test_a_repository_refused_again_after_the_organization_changed_says_so(self):
+        """The organization was changed but the repository's second try is
+        refused: the detail says the organization was allowed, and only a
+        409 is forbidden, any other refusal a failure."""
+        for second, state in (((409, None), "forbidden"), ((502, {"message": "Bad Gateway"}), "failed")):
+            with self.subTest(second=second):
+                github = FakeGitHub({("PUT", WORKFLOW): [(409, {"message": "Conflict"}), second],
+                                     ("GET", ORG_WORKFLOW): (200, dict(THEIR_WORKFLOW)),
+                                     ("PUT", ORG_WORKFLOW): (204, None)})
+                code, report, out, err = self.apply(github, org_token=ORG_TOKEN)
+                setting = report["settings"]["actions_pull_requests"]
+                self.assertEqual(setting["state"], state)
+                self.assertIn("; allowed for the organization, then for this repository: HTTP ", setting["detail"])
+
+    def test_the_organizations_token_is_not_used_where_the_repository_takes_the_box(self):
+        github = FakeGitHub()
+        code, report, out, err = self.apply(github, org_token=ORG_TOKEN)
+        self.assertEqual(report["settings"]["actions_pull_requests"], {"state": "done", "detail": ""})
+        self.assertFalse([path for _, path, headers, _ in github.calls if ORG_TOKEN in headers["Authorization"]])
 
     def test_actions_refused_otherwise_is_a_failure_in_githubs_words(self):
         """Any other refusal of the write, or of the read before it, is a
