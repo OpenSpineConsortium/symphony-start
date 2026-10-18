@@ -1,6 +1,6 @@
 # Symphony GitHub Apps privacy statement
 
-Version 12, 2026-10-18. This text is also at https://openspineconsortium.com/symphony/apps-privacy.html.
+Version 13, 2026-10-18. This text is also at https://openspineconsortium.com/symphony/apps-privacy.html.
 The Symphony browser extension has a statement of its own, at https://openspineconsortium.com/symphony/privacy.html.
 
 Who makes the Apps: Gregory Schwing, trading as OpenSpineConsortium ("the developer"). Questions:
@@ -20,7 +20,7 @@ The unit of consent is the installation. Whatever repositories you give an App w
 ("All repositories" or "Only select repositories"), the App can read what its permissions allow on
 every one of them, and this statement applies to each.
 
-SymphonyBoard asks for seven repository permissions: Contents (read and write), to read your default
+SymphonyBoard asks for eight repository permissions: Contents (read and write), to read your default
 branch and push the branch `symphony/adopt` and, in a repository with no commit yet, to make its first
 commit, a README; Pull requests (read and write), to open the adoption
 pull request and, only when you asked for it on the form, merge it; Issues (read and write), to
@@ -29,7 +29,9 @@ and write), to post the protocol check as a check run where the developer runs t
 Workflows (read and write), because the pull request brings files under `.github/workflows`, which
 GitHub lets no token write without it; Codespaces (read and write), for the control panel's Tokens
 page, which makes a Codespace on your repository when you press "Add with one press" and deletes it
-afterwards (the control panel, below); and Metadata (read), which every App has, to list the
+afterwards (the control panel, below); Actions (read and write), for the control panel's buttons
+that start a workflow run by hand, such as the Tokens page's "Read every slot now", and its reads
+of the repository's workflow runs (the control panel, below); and Metadata (read), which every App has, to list the
 repositories it reaches. It subscribes to five event types (issues, issue comments, pull requests,
 pushes and check suites), which GitHub delivers only while the App's webhook is turned on; as this
 statement is written, it is turned off, and the section on the server below applies from the day
@@ -371,6 +373,10 @@ Symphony is for people who administer GitHub repositories. It is not directed at
 A new version of this statement is published at https://openspineconsortium.com/symphony/apps-privacy.html
 and in the front door repository, github.com/OpenSpineConsortium/symphony-start, whose PRIVACY.md is
 this text.
+
+Version 13 adds SymphonyBoard's repository permission Actions (read and write), which the control
+panel's buttons that start a workflow run by hand, and its reads of the runs, use as you. What the
+pages do is unchanged, and nothing the developer receives or keeps changed.
 
 Version 12 adds the Tokens page's "Add with one press": SymphonyBoard's repository permission
 Codespaces and account permission Codespaces user secrets; the Codespace the page makes and deletes
