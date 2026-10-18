@@ -1,6 +1,6 @@
 # Symphony GitHub Apps privacy statement
 
-Version 22, 2026-10-18. This text is also at https://openspineconsortium.com/symphony/apps-privacy.html.
+Version 23, 2026-10-18. This text is also at https://openspineconsortium.com/symphony/apps-privacy.html.
 The Symphony browser extension has a statement of its own, at https://openspineconsortium.com/symphony/privacy.html.
 
 Who makes the Apps: Gregory Schwing, trading as OpenSpineConsortium ("the developer"). Questions:
@@ -482,9 +482,20 @@ leaving the page, any sign-out, pressing "Forget the token" among them, or a sig
 GitHub account forgets them, and you press "Connect OneDrive" again; Track drops them once the
 secret and the file are written. With the access token the page reads, from your browser and as you,
 through Microsoft Graph, the drive's type and its owner's display name, to say which drive is
-connected, and its id, to refuse at Track an item the repository tracked from another drive, and the names, kinds, sizes, dates and ids of the files and folders in the folders you
-open, to draw the list you tick in; nothing of that list leaves your browser but the name, the id
-and the drive's id of what you tick, which go into drive.json. When the access token runs out during
+connected, and its id, to refuse at Track an item the repository tracked from another drive, and the
+names, kinds, sizes, dates, ids, paths in the drive and web addresses of the files and folders in the
+folders you open, to draw the list you tick in, laid out as a file explorer with a tree of the
+folders you open in it; nothing of that list leaves your browser but the name, the id and the
+drive's id of what you tick, which go into drive.json. When you open a file from the list, by a
+double click, Enter or its menu, the page hands your browser the file's address and nothing else: a
+Word, Excel, PowerPoint or Visio file goes to that program on your computer through Office's own
+address scheme (`ms-word:` and the like), at the file's address on your drive (for a personal
+OneDrive, d.docs.live.net, your drive's id and the file's path; for a work or school drive, the
+address OneDrive gave), so that the program opens it from the drive, signs in to Microsoft itself
+and saves your edits there; any other file, or one you choose to open in the browser, opens on
+OneDrive's own page in a new tab. Your browser may ask first whether to open the program. Nothing is
+sent to the developer, the sign-in service or GitHub when you open a file, and the page never
+downloads it. When the access token runs out during
 a sitting, the page sends the refresh token to the service, which answers with a new access token.
 
 The repository's workflow does the same at the start of every sync: on GitHub's runners it sends the
@@ -578,6 +589,11 @@ Symphony is for people who administer GitHub repositories. It is not directed at
 A new version of this statement is published at https://openspineconsortium.com/symphony/apps-privacy.html
 and in the front door repository, github.com/OpenSpineConsortium/symphony-start, whose PRIVACY.md is
 this text.
+
+Version 23 adds the Folders tab's list drawn as a file explorer, its read of each item's path in the
+drive and web address, and the opening of a file from it, in its Office program on your computer or
+on OneDrive's own page, which hands your browser the file's address and nothing else. Nothing the
+developer receives or keeps changed.
 
 Version 22 adds the control panel's reads of the agents' list `.github/symphony/agents.json` and
 the agent files it names, of the repositories its "Add repository" dialog offers, and of the Share
