@@ -1,6 +1,6 @@
 # Symphony GitHub Apps privacy statement
 
-Version 26, 2026-10-18. This text is also at https://openspineconsortium.com/symphony/apps-privacy.html.
+Version 27, 2026-10-18. This text is also at https://openspineconsortium.com/symphony/apps-privacy.html.
 The Symphony browser extension has a statement of its own, at https://openspineconsortium.com/symphony/privacy.html.
 
 Who makes the Apps: Gregory Schwing, trading as OpenSpineConsortium ("the developer"). Questions:
@@ -20,7 +20,7 @@ The unit of consent is the installation. Whatever repositories you give an App w
 ("All repositories" or "Only select repositories"), the App can read what its permissions allow on
 every one of them, and this statement applies to each.
 
-SymphonyBoard asks for ten repository permissions: Contents (read and write), to read your default
+SymphonyBoard asks for eleven repository permissions: Contents (read and write), to read your default
 branch and push the branch `symphony/adopt` and, in a repository with no commit yet, to make its first
 commit, a README; Pull requests (read and write), to open the adoption
 pull request and, only when you asked for it on the form, merge it; Issues (read and write), to
@@ -38,7 +38,10 @@ you, when you press "Invite" (the control panel, below), and no adoption run, wo
 Secrets (read and write), for the control panel's Folders tab, which reads whether the repository's
 secret SYMPHONY_DRIVE_REFRESH is set and, when you press Track, saves a drive's refresh token as
 that secret, and for the Tokens page on a personal account's repository, which holds its Claude
-tokens as secrets of its own, each as you (the control panel, below); and Metadata (read), which
+tokens as secrets of its own, each as you (the control panel, below); Variables (read and write), for
+the Tokens page on a personal account's repository, which holds a Claude slot's settings and the list
+of accounts (SYMPHONY_CLAUDE_SETTINGS and SYMPHONY_CLAUDE_ACCOUNTS) as that repository's own Actions
+variables, each as you (the control panel, below); and Metadata (read), which
 every App has, to list the
 repositories it reaches. It subscribes to five event types (issues, issue comments, pull requests,
 pushes and check suites), which GitHub delivers only while the App's webhook is turned on; as this
@@ -627,6 +630,12 @@ Symphony is for people who administer GitHub repositories. It is not directed at
 A new version of this statement is published at https://openspineconsortium.com/symphony/apps-privacy.html
 and in the front door repository, github.com/OpenSpineConsortium/symphony-start, whose PRIVACY.md is
 this text.
+
+Version 27 adds SymphonyBoard's repository permission Variables (read and write), for the control
+panel's Tokens page on a personal account's repository, which holds a Claude slot's settings and the
+list of accounts as that repository's own Actions variables, each as you; until the permission is
+accepted on the App's installation such a repository takes one Claude token, its main one. Nothing
+the developer receives or keeps changed.
 
 Version 26 adds the Folders tab's read of the drive organizer's catalog, as the section on the Folders
 tab says: where the repository holds the branch drive-catalog and no drive is connected, the tab reads
