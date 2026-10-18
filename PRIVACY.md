@@ -1,6 +1,6 @@
 # Symphony GitHub Apps privacy statement
 
-Version 10, 2026-10-18. This text is also at https://openspineconsortium.com/symphony/apps-privacy.html.
+Version 11, 2026-10-18. This text is also at https://openspineconsortium.com/symphony/apps-privacy.html.
 The Symphony browser extension has a statement of its own, at https://openspineconsortium.com/symphony/privacy.html.
 
 Who makes the Apps: Gregory Schwing, trading as OpenSpineConsortium ("the developer"). Questions:
@@ -225,8 +225,9 @@ selected), on the cost page the file METRICS.json on the branch `metrics`, and, 
 my Symphony repositories", the names and topics of the repositories your token reaches, up to three
 hundred of the most recently pushed, to keep the ones carrying the topic symphony. Only when you
 press the button that says so, they write what GitHub's own pages would: an issue (a task, an "Add a
-worker" issue, or one that mentions @claude), a comment, a label on an issue (and the label itself
-when it is not there yet), a workflow run started by hand, or a merge.
+worker" issue, one that mentions @claude, or the assistant's, below), a comment (a question to the
+assistant among them), a label on an issue (and the label itself when it is not there yet), a
+workflow run started by hand, or a merge.
 
 The token is one of two kinds, and either way it stays in your browser. A fine-grained personal
 access token you make on GitHub and paste into the page is first sent to GitHub alone, to ask whose
@@ -252,8 +253,26 @@ of its own of the code, the tokens or you; it answers no origin but the site's; 
 request logs are turned off, though Cloudflare, which carries the request, sees its address and
 timing under Cloudflare's own privacy policy. The developer receives nothing from the pages but what
 that service passes through in the moment: never a token to keep, never a name, never a count.
-Beside the token, the page keeps in your browser the names of the repositories you listed and the
-plan you chose on the cost page.
+Beside the token, the page keeps in your browser the names of the repositories you listed, the plan
+you chose on the cost page and the number of the assistant issue it uses in each repository (below).
+
+The control panel's Assistant section asks the repository's own Claude workflow a question, through
+GitHub and nothing else. Once per repository and person, on your press, the page opens an issue of
+yours titled "Assistant: <your login>" and labelled assistant, and makes that label when the
+repository lacks it; each question you press Ask on is one comment of yours on that issue, which
+mentions @claude and ends with a short block of the page's state (the repository's name, the task
+the page centres, the filter it shows and the board section it is at), and the repository's Claude
+workflow answers it there, on the Claude token the repository holds, reading the repository only, as
+a comment the page shows you. While it waits, the page reads that issue's comments every few
+seconds, then every half minute, for at most forty-five minutes or until you press "Stop watching",
+each read made conditional on the last so that GitHub answers "nothing new" at no cost against your
+rate limit. The page offers the box only where GitHub, asked, says you may write to the repository,
+since the workflow answers nobody else, and only where the repository's default branch carries the
+assistant's file, .github/symphony/assistant.md, which the page reads to tell. The number of the
+assistant issue it uses in each repository, one it opened or found, is kept in your browser beside
+the token, so that it opens no second one; close the issue on GitHub and the page opens another at
+your next question. The question, its block and the answer are on the issue, where GitHub keeps them
+as it keeps any issue's comments, and are sent to nobody else: the developer receives none of it.
 
 The aggregates the collector reads are as the section on field metrics says, whether or not you use
 the pages. The pages never show a repository's Claude secret, which GitHub never gives back. The
@@ -326,6 +345,14 @@ Symphony is for people who administer GitHub repositories. It is not directed at
 A new version of this statement is published at https://openspineconsortium.com/symphony/apps-privacy.html
 and in the front door repository, github.com/OpenSpineConsortium/symphony-start, whose PRIVACY.md is
 this text.
+
+Version 11 adds the control panel's Assistant section: an issue of yours, "Assistant: <your login>"
+labelled assistant, that the page opens once per repository on your press, each question a comment
+of yours on it that mentions @claude and ends with a short block of the page's state, the answer the
+repository's Claude workflow writes there, reading only, the page's reads of that issue's comments
+every few seconds while it waits, its reads of whether you may write to the repository and of the
+assistant's file on the default branch, and the number of that issue kept in your browser for each
+repository. Nothing the developer receives or keeps changed.
 
 Version 10 adds SymphonyBoard's two organization permissions, Secrets and Variables (read and
 write), and the Tokens page's "Add or renew a slot", which seals a Claude token you paste in your
