@@ -361,13 +361,14 @@ cut to one step's lines by the times GitHub gives each step. Down to the tasks i
 page has already read, as above, and makes no read of its own. Below a task it reads, as you, with
 the GitHub token you gave it, only when you go into a level and once for each: the runs on that
 branch (the latest twenty), a run's jobs and their steps, and a job's log, which GitHub hands over
-from its own storage, the address GitHub's answer names, so your browser asks that storage for the
-log with no token of yours; where your browser may not read it from there, the tab says so and links
+from its own storage, the address GitHub's answer names, and your browser asks that storage for the
+log with no token of yours, since a browser drops the token when GitHub sends it elsewhere; where your browser may not read it from there, the tab says so and links
 the log on GitHub. It reads none of these once GitHub says your token has fewer than a hundred calls
 left in its hour. A job's log is what GitHub shows anyone who may read the repository's Actions, and
 it may hold whatever the job printed, a Claude run's conversation among it. The tab keeps what it
-reads in the open page's memory alone, for the repository chosen, until you choose another, the page
-reads the issues again or the page is gone; it writes nothing, not to GitHub and not to your
+reads in the open page's memory alone, the lines of the last three jobs' logs you opened and no
+more, until you choose another repository or the page is gone, and reads a level again only when you
+press Read again; it writes nothing, not to GitHub and not to your
 browser's storage, and the developer receives none of it.
 
 The aggregates the collector reads are as the section on field metrics says, whether or not you use
