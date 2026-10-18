@@ -1,6 +1,6 @@
 # Symphony GitHub Apps privacy statement
 
-Version 18, 2026-10-18. This text is also at https://openspineconsortium.com/symphony/apps-privacy.html.
+Version 19, 2026-10-18. This text is also at https://openspineconsortium.com/symphony/apps-privacy.html.
 The Symphony browser extension has a statement of its own, at https://openspineconsortium.com/symphony/privacy.html.
 
 Who makes the Apps: Gregory Schwing, trading as OpenSpineConsortium ("the developer"). Questions:
@@ -237,13 +237,15 @@ and the cost page beside it, https://openspineconsortium.com/symphony/cost.html.
 files that work in your browser with a GitHub token you give them, and they talk to GitHub's own API
 as you and, only when you sign in with GitHub, to the sign-in service described below. They read
 your own account's login (to say who is signed in), your repository's board (the file STATE.md on
-the branch `board`), its open issues and their labels, the worker files under
-`.github/symphony/workers/`, its open pull requests and the check runs on their heads, its Actions
-runs, the repository's own record (its default branch, whether it is private, its topics and, for one
-you name, its numeric id and its owner's, to build the App's install link with that repository
-selected), on the cost page the file METRICS.json on the branch `metrics`, and, when you press "Find
-my Symphony repositories", the names and topics of the repositories your token reaches, up to three
-hundred of the most recently pushed, to keep the ones carrying the topic symphony. Only when you
+the branch `board`), its open issues and their labels, for its Dependencies tab (below) the
+sub-issues of each open issue labelled epic or goal and the issues blocking each of an epic's
+sub-issues, the worker files under `.github/symphony/workers/`, its open pull requests and the check
+runs on their heads, its Actions runs, the repository's own record (its default branch, whether it
+is private, its topics and, for one you name, its numeric id and its owner's, to build the App's
+install link with that repository selected), on the cost page the file METRICS.json on the branch
+`metrics`, and, when you press "Find my Symphony repositories", the names and topics of the
+repositories your token reaches, up to three hundred of the most recently pushed, to keep the ones
+carrying the topic symphony. Only when you
 press the button that says so, they write what GitHub's own pages would: an issue (a task, an "Add a
 worker" issue, one that mentions @claude, or the assistant's, below), a comment (a question to the
 assistant among them), a label on an issue (and the label itself when it is not there yet), a
@@ -297,6 +299,38 @@ assistant issue it uses in each repository, one it opened or found, is kept in y
 the token, so that it opens no second one; close the issue on GitHub and the page opens another at
 your next question. The question, its block and the answer are on the issue, where GitHub keeps them
 as it keeps any issue's comments, and are sent to nobody else: the developer receives none of it.
+
+The control panel's Dependencies tab,
+https://openspineconsortium.com/symphony/control/#dependencies, draws the work of each open epic as
+a chart: its tasks, which are the epic's sub-issues on GitHub, an arrow from each issue that blocks
+one of them to the issue it blocks, which is GitHub's own blocked-by relation, and the goals above
+their epics, the chart the repository's own board draws into STATE.md once its protocol is new
+enough to draw it. To draw it the page reads, as you, with the GitHub token you gave it, what
+GitHub's own issue pages show under Sub-issues and Relationships: the sub-issues of each open issue
+labelled epic or goal, unless GitHub's summary of that issue says it has none, and, for each
+sub-issue of an epic whose summary counts an issue blocking it, the issues blocking it. It makes
+these reads whenever it reads the repository's open issues, which it does each time it opens a
+repository, when you press Refresh, and after you queue a task, give an issue to a worker, mention
+@claude or merge a pull request on the page, whether or not the Dependencies tab is open, and never
+on a timer of its own; it makes at most sixty for one drawing, each page of a list counting as one,
+and none once GitHub says your token has fewer than a hundred calls left in its hour. GitHub answers
+each read with the issues it names as its API describes any issue, and the page keeps for the chart
+their number, title, state, labels and link, the counts GitHub's two summaries give for each (its
+sub-issues, done and in all, and the issues blocking it, open and in all), and which of them an open
+pull request from its claim branch in the repository itself names, from the pull requests the page
+already shows; it reads whether each is a pull request and which repository it belongs to, to leave
+out pull requests and the issues of another repository, and keeps nothing else, in the open page's
+memory alone, until it draws again or the page is gone. The chart is drawn in your browser by a copy
+of Mermaid, an open-source drawing library (MIT) that the developer's site carries and the page
+loads from the site, as it loads its own files, only when there is a chart to draw, and the Board
+tab draws the same way the charts the board's own STATE.md holds, which the page already reads, each
+only where every line of it is one the board writes, showing any other block there as text and never
+drawing it; beside the drawing library's file from the developer's site, the tab asks nothing of
+anyone but GitHub. Pressing a node, here or in the Board tab, or a row's "Centre its row", opens the
+Tasks tab at that task's row, where the task tables hold it, and asks GitHub nothing; that task is
+then the one the page centres, which the assistant's next question names, as above. The tab writes
+nothing: not to GitHub, whose issues it only reads, and not to your browser's storage; the chart is
+gone with the page, and the developer receives none of it.
 
 The aggregates the collector reads are as the section on field metrics says, whether or not you use
 the pages. The pages never show a repository's Claude secret, which GitHub never gives back. The
@@ -409,6 +443,17 @@ Symphony is for people who administer GitHub repositories. It is not directed at
 A new version of this statement is published at https://openspineconsortium.com/symphony/apps-privacy.html
 and in the front door repository, github.com/OpenSpineConsortium/symphony-start, whose PRIVACY.md is
 this text.
+
+Version 19 adds the control panel's Dependencies tab, which draws each open epic's tasks and the
+issues blocking them, and the goals above their epics: the page's reads, as you, of the sub-issues
+of each open issue labelled epic or goal and of the issues blocking each of an epic's sub-issues,
+what GitHub's own issue pages show, made whenever the page reads the repository's open issues,
+whether or not the tab is open, at most sixty for one drawing and none once your token has fewer
+than a hundred calls left in its hour; and the copy of Mermaid that the developer's site carries,
+which the page loads only when there is a chart to draw and which also draws the charts of the
+board's STATE.md in the Board tab, only those written as the board writes them. The tab keeps what
+it reads in the open page alone and writes nothing, to GitHub or to your browser. Nothing the
+developer receives or keeps changed.
 
 Version 18 adds each token's id and owner in its settings, the page's read of your role in the
 organization, the dialog's list of the repositories a token is on, and the `token:<id>` label a
