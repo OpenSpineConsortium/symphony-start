@@ -32,11 +32,9 @@ page used up to version 13 of this statement to make a Codespace and no longer u
 on the App until the developer takes it off; Actions (read and write), for the control panel's buttons
 that start a workflow run by hand, such as the Tokens page's "Read every slot now" and "Add a Claude
 account", and its reads
-of the repository's workflow runs (the control panel, below); Administration (read and write), for the
-control panel's Share tab alone: it reads the repository's collaborators and the invitations still
-pending, and, as you, when you press the button that says so, invites a person you name by their
-GitHub username as a collaborator, changes a collaborator's role, removes a collaborator or cancels
-an invitation (the control panel, below); no adoption run, workflow or other page uses it; and
+of the repository's workflow runs (the control panel, below); Administration (read and write), for one thing only: the
+control panel's Share tab invites a person you name by their GitHub username as a collaborator on the repository, as
+you, when you press "Invite" (the control panel, below), and no adoption run, workflow or other page uses it; and
 Metadata (read), which every App has, to list the
 repositories it reaches. It subscribes to five event types (issues, issue comments, pull requests,
 pushes and check suites), which GitHub delivers only while the App's webhook is turned on; as this
@@ -245,18 +243,14 @@ sub-issues, the worker files under `.github/symphony/workers/`, its open pull re
 runs on their heads, its Actions runs, the repository's own record (its default branch, whether it
 is private, its topics and, for one you name, its numeric id and its owner's, to build the App's
 install link with that repository selected), on the cost page the file METRICS.json on the branch
-`metrics`, for the Share tab the repository's collaborators, with their roles, and the invitations
-still pending, for the repository picker the repositories you may pick (signed in with GitHub, the
-installations of SymphonyBoard your account can see and the repositories each of them reaches; with
-a pasted token, the repositories that token reaches), and, when you press "Find my Symphony
-repositories", the names and topics of the repositories your token reaches, up to three hundred of
-the most recently pushed, to keep the ones carrying the topic symphony. Only when you
+`metrics`, and, when you press "Find my Symphony repositories", the names and topics of the
+repositories your token reaches, up to three hundred of the most recently pushed, to keep the ones
+carrying the topic symphony. Only when you
 press the button that says so, they write what GitHub's own pages would: an issue (a task, an "Add a
 worker" issue, one that mentions @claude, or the assistant's, below), a comment (a question to the
 assistant among them), a label on an issue (and the label itself when it is not there yet), a
 workflow run started by hand, a merge, or, on the Share tab, an invitation to the GitHub user you
-name, with the role you pick, to collaborate on the repository, a new role for a collaborator, a
-collaborator's removal or an invitation's cancellation. To find that user from an email address
+name, with the role you pick, to collaborate on the repository. To find that user from an email address
 you type, the Share tab asks GitHub's user search for an account showing that address publicly; the
 address goes to GitHub alone. The Share tab's mail buttons open Gmail, Outlook, your email app or
 your device's share sheet with a note you send yourself; the page sends nothing there.
@@ -287,8 +281,8 @@ timing under Cloudflare's own privacy policy. The developer receives nothing fro
 that service passes through in the moment: never a token to keep, never a name, never a count.
 Beside the token, the page keeps in your browser the names of the repositories you listed, the plan
 you chose on the cost page, the number of the assistant issue it uses in each repository (below),
-and the layout you set: the sizes of the panels you resized and the text size, numbers alone,
-holding nothing of your repositories or of GitHub.
+and the layout you set: the widths and heights of the panels you resized and the text size, numbers
+alone, holding nothing of your repositories or of GitHub and sent nowhere.
 
 The control panel's Assistant section asks the repository's own Claude workflow a question, through
 GitHub and nothing else. Once per repository and person, on your press, the page opens an issue of
@@ -425,9 +419,8 @@ the code can. No token, key or signature is ever printed to a log.
 ## What the Apps never do
 
 They send nothing to any service but GitHub's own API. They have no analytics, no error reporting
-and no third party. SymphonyBoard holds Administration only for the control panel's Share tab, to read
-the repository's collaborators and invitations and to make the changes to them you ask for there, as
-you, and changes no setting with it; Symphony Setup holds it for one run
+and no third party. SymphonyBoard holds Administration only to send the invitation you ask for on the
+control panel's Share tab, as you, and changes no setting with it; Symphony Setup holds it for one run
 and only where you installed it. They read your repository's code only as the
 adoption above says (the tree listing, a one-commit checkout of the default branch, and the few
 files named), never to keep or send it. They never write to a repository but the adoption's branch,
@@ -453,13 +446,9 @@ A new version of this statement is published at https://openspineconsortium.com/
 and in the front door repository, github.com/OpenSpineConsortium/symphony-start, whose PRIVACY.md is
 this text.
 
-Version 20 adds, for the control panel's Share tab, its reads of the repository's collaborators and
-pending invitations and the changes to them you press for (a collaborator's role, a collaborator's
-removal, an invitation's cancellation), so SymphonyBoard's Administration now serves the whole tab
-and not the invitation alone; the repository picker's reads of the repositories you may pick, from
-SymphonyBoard's installations when you signed in with GitHub or from a pasted token's own list; and
-the layout the page keeps in your browser, panel sizes and the text size, numbers alone. Nothing the
-developer receives or keeps changed.
+Version 20 adds the layout the control panel keeps in your browser: the sizes of the panels you
+resized and the text size you chose, numbers alone, sent nowhere. Nothing the developer receives or
+keeps changed.
 
 Version 19 adds the control panel's Dependencies tab, which draws each open epic's tasks and the
 issues blocking them, and the goals above their epics: the page's reads, as you, of the sub-issues
