@@ -1,6 +1,6 @@
 # Symphony GitHub Apps privacy statement
 
-Version 19, 2026-10-18. This text is also at https://openspineconsortium.com/symphony/apps-privacy.html.
+Version 20, 2026-10-18. This text is also at https://openspineconsortium.com/symphony/apps-privacy.html.
 The Symphony browser extension has a statement of its own, at https://openspineconsortium.com/symphony/privacy.html.
 
 Who makes the Apps: Gregory Schwing, trading as OpenSpineConsortium ("the developer"). Questions:
@@ -280,7 +280,9 @@ request logs are turned off, though Cloudflare, which carries the request, sees 
 timing under Cloudflare's own privacy policy. The developer receives nothing from the pages but what
 that service passes through in the moment: never a token to keep, never a name, never a count.
 Beside the token, the page keeps in your browser the names of the repositories you listed, the plan
-you chose on the cost page and the number of the assistant issue it uses in each repository (below).
+you chose on the cost page, the number of the assistant issue it uses in each repository (below),
+and the layout you set: the widths and heights of the panels you resized and the text size, numbers
+alone, holding nothing of your repositories or of GitHub and sent nowhere.
 
 The control panel's Assistant section asks the repository's own Claude workflow a question, through
 GitHub and nothing else. Once per repository and person, on your press, the page opens an issue of
@@ -443,6 +445,10 @@ Symphony is for people who administer GitHub repositories. It is not directed at
 A new version of this statement is published at https://openspineconsortium.com/symphony/apps-privacy.html
 and in the front door repository, github.com/OpenSpineConsortium/symphony-start, whose PRIVACY.md is
 this text.
+
+Version 20 adds the layout the control panel keeps in your browser: the sizes of the panels you
+resized and the text size you chose, numbers alone, sent nowhere. Nothing the developer receives or
+keeps changed.
 
 Version 19 adds the control panel's Dependencies tab, which draws each open epic's tasks and the
 issues blocking them, and the goals above their epics: the page's reads, as you, of the sub-issues
