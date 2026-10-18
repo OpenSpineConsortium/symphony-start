@@ -55,7 +55,9 @@ Administration (read and write). It uses that one for one thing only: where the 
 off "Allow GitHub Actions to create and approve pull requests" for its repositories, as a new
 organization does, and the repository takes the whole template, the run allows that box for the
 organization, leaving the default permissions of GitHub Actions' token as they were, and then ticks
-it on the repository. It reads and changes no other setting of the organization. It has no webhook and receives no event. It is meant to be
+it on the repository. It reads and changes no other setting of the organization. That setting of
+the organization stays allowed after the run, and repositories the organization makes later inherit
+it; an owner turns it off under the organization's Settings, Actions, General, Workflow permissions. It has no webhook and receives no event. It is meant to be
 installed on the one repository being adopted, for the one run, and the run uninstalls it when that
 repository was the only one it reached, after the adoption or after a request refused because the
 repository is adopted already; otherwise the pull request, or that refusal's answer, asks you to

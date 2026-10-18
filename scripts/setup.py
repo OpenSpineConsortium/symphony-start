@@ -117,9 +117,13 @@ TOPIC_NAME = "symphony"
 TOKEN_PERMISSIONS = ("read", "write")
 # GitHub's answer when the organization or its enterprise holds the setting.
 POLICY_CONFLICT = 409
-# The detail of a box ticked only after the organization allowed it, which
-# the pull request renders after the setting's name.
-ORGANIZATION_FIRST = "turned on for the organization first, whose policy held it off, then for this repository"
+def organization_first(org):
+    """The detail of a box ticked only after the organization allowed it:
+    the organization's setting stays allowed, and the repositories it makes
+    later inherit it, so the pull request says where it is turned off."""
+    return ("turned on for the organization first, whose policy held it off, then for this repository; the"
+            " organization's setting stays on and its new repositories inherit it, which an owner turns off"
+            f" under Workflow permissions at https://github.com/organizations/{org}/settings/actions")
 # GitHub's message lands in the pull request, so it is one line and short.
 DETAIL_LENGTH = 300
 
@@ -364,16 +368,24 @@ def allow_for_organization(github, org_github, repo, report, refused):
     """After the repository's 409: allow the box for the organization with
     the organization's token, then tick the repository's again. An
     organization whose box is on already was not what held it, so its
-    enterprise did and nothing is written; any refusal here keeps the
-    first 409 as the setting's state, with both of GitHub's answers."""
+    enterprise did and nothing is written. A refusal from the organization
+    keeps the first 409 as the setting's state, with both of GitHub's
+    answers; a refusal of the repository's second try, after the
+    organization was changed, says the organization was, and is forbidden
+    only where it is a 409 again."""
     org = repo.split("/")[0]
     try:
         if tick_box(org_github, f"/orgs/{org}/actions/permissions/workflow"):
             raise GitHubError("the organization allows it already, so its enterprise holds it")
-        tick_box(github, f"/repos/{repo}/actions/permissions/workflow")
-        record(report, ACTIONS_PULL_REQUESTS, DONE, ORGANIZATION_FIRST)
     except GitHubError as said:
         record(report, ACTIONS_PULL_REQUESTS, FORBIDDEN, f"{refused}; for the organization: {said}")
+        return
+    try:
+        tick_box(github, f"/repos/{repo}/actions/permissions/workflow")
+        record(report, ACTIONS_PULL_REQUESTS, DONE, organization_first(org))
+    except GitHubError as said:
+        record(report, ACTIONS_PULL_REQUESTS, FORBIDDEN if said.status == POLICY_CONFLICT else FAILED,
+               f"{refused}; allowed for the organization, then for this repository: {said}")
 
 
 def apply_actions_pull_requests(github, repo, report, org_github=None):

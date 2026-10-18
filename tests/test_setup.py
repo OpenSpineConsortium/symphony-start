@@ -422,7 +422,7 @@ class Apply(unittest.TestCase):
         code, report, out, err = self.apply(github, org_token=ORG_TOKEN)
         self.assertEqual((code, err), (0, ""))
         self.assertEqual(report["settings"]["actions_pull_requests"],
-                         {"state": "done", "detail": setup.ORGANIZATION_FIRST})
+                         {"state": "done", "detail": setup.organization_first("octo-org")})
         self.assertIn(("PUT", ORG_WORKFLOW, {"default_workflow_permissions": "write",
                                              "can_approve_pull_request_reviews": True}), github.writes())
         self.assertEqual([w for w in github.writes() if w[1] == WORKFLOW][-1], ("PUT", WORKFLOW, ACTIONS_ON))
@@ -463,6 +463,20 @@ class Apply(unittest.TestCase):
                                  {"state": "forbidden", "detail": f"HTTP 409: Conflict; for the organization: {said}"})
                 self.assertEqual(len([w for w in github.writes() if w[1] == WORKFLOW]), 1)
                 self.assertIn(ACTIONS_LOG + "not turned on", out.splitlines())
+
+    def test_a_repository_refused_again_after_the_organization_changed_says_so(self):
+        """The organization was changed but the repository's second try is
+        refused: the detail says the organization was allowed, and only a
+        409 is forbidden, any other refusal a failure."""
+        for second, state in (((409, None), "forbidden"), ((502, {"message": "Bad Gateway"}), "failed")):
+            with self.subTest(second=second):
+                github = FakeGitHub({("PUT", WORKFLOW): [(409, {"message": "Conflict"}), second],
+                                     ("GET", ORG_WORKFLOW): (200, dict(THEIR_WORKFLOW)),
+                                     ("PUT", ORG_WORKFLOW): (204, None)})
+                code, report, out, err = self.apply(github, org_token=ORG_TOKEN)
+                setting = report["settings"]["actions_pull_requests"]
+                self.assertEqual(setting["state"], state)
+                self.assertIn("; allowed for the organization, then for this repository: HTTP ", setting["detail"])
 
     def test_the_organizations_token_is_not_used_where_the_repository_takes_the_box(self):
         github = FakeGitHub()
