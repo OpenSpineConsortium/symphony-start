@@ -1,6 +1,6 @@
 # Symphony GitHub Apps privacy statement
 
-Version 16, 2026-10-18. This text is also at https://openspineconsortium.com/symphony/apps-privacy.html.
+Version 17, 2026-10-18. This text is also at https://openspineconsortium.com/symphony/apps-privacy.html.
 The Symphony browser extension has a statement of its own, at https://openspineconsortium.com/symphony/privacy.html.
 
 Who makes the Apps: Gregory Schwing, trading as OpenSpineConsortium ("the developer"). Questions:
@@ -20,7 +20,7 @@ The unit of consent is the installation. Whatever repositories you give an App w
 ("All repositories" or "Only select repositories"), the App can read what its permissions allow on
 every one of them, and this statement applies to each.
 
-SymphonyBoard asks for eight repository permissions: Contents (read and write), to read your default
+SymphonyBoard asks for nine repository permissions: Contents (read and write), to read your default
 branch and push the branch `symphony/adopt` and, in a repository with no commit yet, to make its first
 commit, a README; Pull requests (read and write), to open the adoption
 pull request and, only when you asked for it on the form, merge it; Issues (read and write), to
@@ -32,11 +32,14 @@ page used up to version 13 of this statement to make a Codespace and no longer u
 on the App until the developer takes it off; Actions (read and write), for the control panel's buttons
 that start a workflow run by hand, such as the Tokens page's "Read every slot now" and "Add a Claude
 account", and its reads
-of the repository's workflow runs (the control panel, below); and Metadata (read), which every App has, to list the
+of the repository's workflow runs (the control panel, below); Administration (read and write), for one thing only: the
+control panel's Share tab invites a person you name by their GitHub username as a collaborator on the repository, as
+you, when you press "Invite" (the control panel, below), and no adoption run, workflow or other page uses it; and
+Metadata (read), which every App has, to list the
 repositories it reaches. It subscribes to five event types (issues, issue comments, pull requests,
 pushes and check suites), which GitHub delivers only while the App's webhook is turned on; as this
 statement is written, it is turned off, and the section on the server below applies from the day
-it is turned on. SymphonyBoard never asks for Administration.
+it is turned on.
 
 On an organization, SymphonyBoard also asks for two organization permissions: Secrets (read and
 write) and Variables (read and write), for the control panel's Tokens page, which saves a Claude
@@ -244,7 +247,11 @@ hundred of the most recently pushed, to keep the ones carrying the topic symphon
 press the button that says so, they write what GitHub's own pages would: an issue (a task, an "Add a
 worker" issue, one that mentions @claude, or the assistant's, below), a comment (a question to the
 assistant among them), a label on an issue (and the label itself when it is not there yet), a
-workflow run started by hand, or a merge.
+workflow run started by hand, a merge, or, on the Share tab, an invitation to the GitHub user you
+name, with the role you pick, to collaborate on the repository. To find that user from an email address
+you type, the Share tab asks GitHub's user search for an account showing that address publicly; the
+address goes to GitHub alone. The Share tab's mail buttons open Gmail, Outlook, your email app or
+your device's share sheet with a note you send yourself; the page sends nothing there.
 
 The token is one of two kinds, and either way it stays in your browser. A fine-grained personal
 access token you make on GitHub and paste into the page is first sent to GitHub alone, to ask whose
@@ -368,8 +375,9 @@ the code can. No token, key or signature is ever printed to a log.
 ## What the Apps never do
 
 They send nothing to any service but GitHub's own API. They have no analytics, no error reporting
-and no third party. SymphonyBoard never holds Administration on anyone's repository; Symphony Setup
-holds it for one run and only where you installed it. They read your repository's code only as the
+and no third party. SymphonyBoard holds Administration only to send the invitation you ask for on the
+control panel's Share tab, as you, and changes no setting with it; Symphony Setup holds it for one run
+and only where you installed it. They read your repository's code only as the
 adoption above says (the tree listing, a one-commit checkout of the default branch, and the few
 files named), never to keep or send it. They never write to a repository but the adoption's branch,
 pull request, labels, issue and settings, each of them yours to undo, and the README that begins a
@@ -393,6 +401,10 @@ Symphony is for people who administer GitHub repositories. It is not directed at
 A new version of this statement is published at https://openspineconsortium.com/symphony/apps-privacy.html
 and in the front door repository, github.com/OpenSpineConsortium/symphony-start, whose PRIVACY.md is
 this text.
+
+Version 17 adds SymphonyBoard's repository permission Administration (read and write), used only by
+the control panel's Share tab to invite a collaborator you name, as you, and the Share tab's lookup of
+an email address in GitHub's user search. Nothing the developer receives or keeps changed.
 
 Version 16 adds the Tokens page's tiles: the settings each token's tile writes to the variable
 SYMPHONY_CLAUDE_SETTINGS and its label variable, and the X that deletes a slot's secret, label,
