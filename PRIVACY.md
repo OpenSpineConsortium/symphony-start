@@ -1,6 +1,6 @@
 # Symphony GitHub Apps privacy statement
 
-Version 25, 2026-10-18. This text is also at https://openspineconsortium.com/symphony/apps-privacy.html.
+Version 26, 2026-10-18. This text is also at https://openspineconsortium.com/symphony/apps-privacy.html.
 The Symphony browser extension has a statement of its own, at https://openspineconsortium.com/symphony/privacy.html.
 
 Who makes the Apps: Gregory Schwing, trading as OpenSpineConsortium ("the developer"). Questions:
@@ -460,6 +460,17 @@ adopts a repository through the front door, as the section on the adoption says.
 nothing there. Where GitHub refuses the tab even to say whether the repository's secret is set, the
 tab says so as it opens, before you connect a drive, and offers no Track.
 
+Where the chosen repository holds the branch drive-catalog, which the drive organizer writes (a
+workflow of the repository with the drive's own access, or a Claude session with your own connector;
+in a private repository only, since the catalog names your files), and no drive is connected in the
+tab, the tab shows that catalog in place of the drive: it reads, with your GitHub token, when that
+branch was last written and its file catalog.json, the names, sizes, dates and OneDrive links of the
+folders and files the organizer listed, and draws them in the same explorer, read from the
+repository alone, with no Microsoft sign-in and nothing asked of Microsoft. A double-click opens a
+file in its Office app or in OneDrive through the link the catalog holds, as it does from the drive;
+Track is not offered, since the page holds no token for the drive. Connecting the drive puts the
+drive itself in the catalog's place. The developer receives none of it.
+
 When you press Track it reads the repository's record (its default branch and whether it is public),
 the names of what its default branch holds at its top, to refuse a folder the repository already
 holds there, such as one its checks run, unless it is the folder the repository tracks already, and
@@ -616,6 +627,11 @@ Symphony is for people who administer GitHub repositories. It is not directed at
 A new version of this statement is published at https://openspineconsortium.com/symphony/apps-privacy.html
 and in the front door repository, github.com/OpenSpineConsortium/symphony-start, whose PRIVACY.md is
 this text.
+
+Version 26 adds the Folders tab's read of the drive organizer's catalog, as the section on the Folders
+tab says: where the repository holds the branch drive-catalog and no drive is connected, the tab reads
+catalog.json from that branch, with your GitHub token, and shows the folders and files it names;
+nothing is asked of Microsoft. Nothing the developer receives or keeps changed.
 
 Version 25 adds the Ask Claude bar's button "Ask in claude.ai", as the section on the control panel
 says: it opens claude.ai in a new tab, on your own account, with your question and what the page shows
