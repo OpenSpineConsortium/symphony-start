@@ -1,6 +1,6 @@
 # Symphony GitHub Apps privacy statement
 
-Version 14, 2026-10-18. This text is also at https://openspineconsortium.com/symphony/apps-privacy.html.
+Version 15, 2026-10-18. This text is also at https://openspineconsortium.com/symphony/apps-privacy.html.
 The Symphony browser extension has a statement of its own, at https://openspineconsortium.com/symphony/privacy.html.
 
 Who makes the Apps: Gregory Schwing, trading as OpenSpineConsortium ("the developer"). Questions:
@@ -50,8 +50,15 @@ GitHub asks each person for when they sign in with GitHub on the control panel. 
 it up to version 13 of this statement to hand its GitHub sign-in to a Codespace; it no longer uses
 it, and it stays on the App until the developer takes it off.
 
-Symphony Setup asks for two permissions and nothing else: Administration (read and write), for the
-six settings below, and Metadata (read). It has no webhook and receives no event. It is meant to be
+Symphony Setup asks for two repository permissions, Administration (read and write), for the six
+settings below, and Metadata (read), and, on an organization, one organization permission,
+Administration (read and write). It uses that one for one thing only: where the organization holds
+off "Allow GitHub Actions to create and approve pull requests" for its repositories, as a new
+organization does, and the repository takes the whole template, the run allows that box for the
+organization, leaving the default permissions of GitHub Actions' token as they were, and then ticks
+it on the repository. It reads and changes no other setting of the organization. That setting of
+the organization stays allowed after the run, and repositories the organization makes later inherit
+it; an owner turns it off under the organization's Settings, Actions, General, Workflow permissions. It has no webhook and receives no event. It is meant to be
 installed on the one repository being adopted, for the one run, and the run uninstalls it when that
 repository was the only one it reached, after the adoption or after a request refused because the
 repository is adopted already; otherwise the pull request, or that refusal's answer, asks you to
@@ -378,12 +385,18 @@ A new version of this statement is published at https://openspineconsortium.com/
 and in the front door repository, github.com/OpenSpineConsortium/symphony-start, whose PRIVACY.md is
 this text.
 
-Version 14 says that the Tokens page's "Add a Claude account" starts the workflow Token on the
+Version 15 says that the Tokens page's "Add a Claude account" starts the workflow Token on the
 repository in place of "Add with one press", which made a Codespace: the issue it opens, the sign-in
 link, the code and the sealed token on that issue, the page saving the sealed box as the next slot
 and as CLAUDE_CODE_OAUTH_TOKEN while that is not set, and the link to the Claude GitHub App's install
 page. The page no longer makes a Codespace or saves a Codespaces secret, and the permissions
 Codespaces and Codespaces user secrets go unused. Nothing the developer receives or keeps changed.
+
+Version 14 adds Symphony Setup's organization permission Administration (read and write), used only
+to allow "Allow GitHub Actions to create and approve pull requests" for an organization whose policy
+holds it off, so the sixth setting needs no step by hand there; the run reads the organization's
+workflow permissions to leave the token's default permissions as they were. Nothing the developer
+receives or keeps changed.
 
 Version 13 adds SymphonyBoard's repository permission Actions (read and write), which the control
 panel's buttons that start a workflow run by hand, and its reads of the runs, use as you. What the

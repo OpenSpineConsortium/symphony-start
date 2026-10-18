@@ -1713,8 +1713,10 @@ def by_hand_pointer(manifest):
 
 
 def uninstall_sentence(manifest):
+    holds = ("Administration on this repository and, where its installation accepted it, on the organization"
+             if manifest["owner_type"] == "Organization" else "Administration on this repository")
     return (f"That was the Setup App's one job: uninstall it at {installations_page(manifest)}, since it holds"
-            " Administration on this repository and nothing else uses it. The Symphony App, which opened this"
+            f" {holds}, and nothing else uses it. The Symphony App, which opened this"
             " pull request, stays; uninstalling it undoes nothing here and only stops what is shared, above, from"
             " being read.")
 
