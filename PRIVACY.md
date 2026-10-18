@@ -1,6 +1,6 @@
 # Symphony GitHub Apps privacy statement
 
-Version 18, 2026-10-18. This text is also at https://openspineconsortium.com/symphony/apps-privacy.html.
+Version 19, 2026-10-18. This text is also at https://openspineconsortium.com/symphony/apps-privacy.html.
 The Symphony browser extension has a statement of its own, at https://openspineconsortium.com/symphony/privacy.html.
 
 Who makes the Apps: Gregory Schwing, trading as OpenSpineConsortium ("the developer"). Questions:
@@ -371,7 +371,15 @@ and the name to the slot's label variable; neither holds a token, and anyone who
 repository's workflows can read them. A tile's X, after you confirm, deletes the slot's secret, its
 label, its settings and its place in SYMPHONY_CLAUDE_ACCOUNTS, as you; deleting the secret does not
 revoke the token, which you revoke on claude.ai. A slot can also be removed on GitHub under the
-organization's Settings, Secrets and variables, Actions. What
+organization's Settings, Secrets and variables, Actions. Each token's settings also hold an id,
+eight random hexadecimal digits the page makes, and the GitHub login of the person who added it, so
+that an organization's tokens pool in one place while each stays its owner's: to show who may change
+which token, the page asks GitHub for your role in the organization, and it offers a token's
+settings, its X and its repositories only to the token's owner and to an owner of the organization.
+A tile's dialog lists the repositories the token's secret is on, from GitHub, and a tick adds or
+removes one, as you. A worker's run in Actions labels the issue it worked `token:<id>`, with the
+repository's own token, so the panel can credit each token, and its owner, with the issues it
+closed; the label holds no token, name or e-mail address. What
 they start, a worker's run or the Claude workflow's answer to a mention, runs on the token the
 repository holds, as the repository's own workflows do. To stop: press "Forget the token", which
 drops the token and the refresh token from the browser and, for a token from "Sign in with
@@ -434,7 +442,7 @@ A new version of this statement is published at https://openspineconsortium.com/
 and in the front door repository, github.com/OpenSpineConsortium/symphony-start, whose PRIVACY.md is
 this text.
 
-Version 18 adds the control panel's Dependencies tab, which draws each open epic's tasks and the
+Version 19 adds the control panel's Dependencies tab, which draws each open epic's tasks and the
 issues blocking them, and the goals above their epics: the page's reads, as you, of the sub-issues
 of each open issue labelled epic or goal and of the issues blocking each of an epic's sub-issues,
 what GitHub's own issue pages show, made whenever the page reads the repository's open issues,
@@ -443,6 +451,10 @@ than a hundred calls left in its hour; and the copy of Mermaid that the develope
 which the page loads only when there is a chart to draw and which also draws the charts of the
 board's STATE.md in the Board tab. The tab keeps what it reads in the open page alone and writes
 nothing, to GitHub or to your browser. Nothing the developer receives or keeps changed.
+
+Version 18 adds each token's id and owner in its settings, the page's read of your role in the
+organization, the dialog's list of the repositories a token is on, and the `token:<id>` label a
+worker's run puts on the issue it worked.
 
 Version 17 adds SymphonyBoard's repository permission Administration (read and write), used only by
 the control panel's Share tab to invite a collaborator you name, as you, and the Share tab's lookup of
