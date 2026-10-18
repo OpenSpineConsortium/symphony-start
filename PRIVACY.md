@@ -298,43 +298,47 @@ GitHub Apps.
 The control panel's Folders page, https://openspineconsortium.com/symphony/control/folders.html,
 makes a repository of yours track files and folders of your OneDrive, which the repository's own
 workflow, drive-sync.yml, then keeps in step with the drive. It signs in with GitHub, or takes a
-token, as the control panel does, and with that token reads and writes only what you press for.
-It reads the repository's file `.github/symphony/drive.json`, whether its secret
+token, as the control panel does, and with that token reads and writes only what you press for; for
+the drive it talks to Microsoft and to the sign-in service, whichever way you signed in, as the next
+paragraph says. It reads the repository's file `.github/symphony/drive.json`, whether its secret
 `SYMPHONY_DRIVE_REFRESH` is set (never the secret itself, which GitHub gives nobody back), whether
 its workflow drive-sync.yml is there, its default branch, its public key for secrets and, when you
-press Refresh, the names, topics and template of your newest repositories, to list those made
-from the Symphony template or carrying the topic symphony. When you press Track it writes three
-things: the secret, sealed in your browser with the repository's public key the way GitHub's own
-secrets page seals one, so that GitHub alone can open it; the file drive.json, which names the
+press Refresh, the names, topics and template of your newest repositories, to list those made from
+the Symphony template or carrying the topic symphony. When you press Track it writes three things,
+in this order: the secret, sealed in your browser with the repository's public key the way GitHub's
+own secrets page seals one, so that GitHub alone can open it; the file drive.json, which names the
 drive, the folder in the repository, the names and ids of the items you ticked and the day you
 connected, on the default branch or, where that branch takes only pull requests, on the branch
-`symphony/drive` with a pull request for you to merge; and one run of drive-sync.yml by hand,
-which "Sync now" also starts.
+`symphony/drive` with a pull request for you to merge; and one run of drive-sync.yml by hand, which
+"Sync now" also starts. Where your token may not do one of the three, the page says so and writes
+nothing more.
 
-The drive's side goes through Microsoft and the sign-in service. When you press "Connect
-OneDrive", Microsoft asks you on its own page whether Symphony may read and write your files
-(Files.ReadWrite) and keep that access when you are away (offline_access), and sends your browser
-back to the page with a one-time code. The page sends that code, with a one-time secret it made
-for this connection, to the sign-in service, which adds the client secret of the developer's
-Microsoft app registration, asks Microsoft for the drive's access token and refresh token, and
-hands both back. The page keeps both in its memory alone, never in the browser's storage, the
-address or a log, and drops them when you press Track or leave the page. With the access token
-the page reads, from your browser and as you, the names, kinds, sizes and dates of the files and
-folders in the folders you open, through Microsoft Graph, to draw the list you tick in; nothing
-of that list leaves your browser but the names and ids of what you tick, which go into
-drive.json. When the access token runs out during a sitting, the page sends the refresh token to
-the service, which answers with a new access token. The repository's workflow does the same at
-the start of every sync: on GitHub's runners it sends the secret, your refresh token, to the
-service and reads and writes the ticked items of your drive with the access token the service
-returns, as the repository's own files say. The service keeps nothing of any of it: no store, no
-cookie and no log of its own of the code, the tokens or you, and its host's request logs are off,
-as the control panel section says; the refresh token passes through it on Connect and on every
-sync and rests only in your repository's secret. A Microsoft refresh token lasts 90 days, and the
-workflow cannot keep the newer one Microsoft issues on each sync, so the page says by which day
-to press Connect again, which replaces the secret. Google Drive is not offered: Google's own
-picker takes a browser API key, which the developer has declined, so the page and the service
-refuse any provider but OneDrive. The developer receives nothing from the page, the service or
-the workflow.
+The drive's side goes through Microsoft and the sign-in service. When you press "Connect OneDrive",
+Microsoft asks you on its own page whether Symphony may read and write your files (Files.ReadWrite)
+and keep that access when you are away (offline_access), and sends your browser back to the page
+with a one-time code. The page sends that code, with a one-time secret it made for this connection,
+to the sign-in service, which adds the client secret of the developer's Microsoft app registration,
+asks Microsoft for the drive's access token and refresh token, and hands both back. The page keeps
+both in its memory alone, never in the browser's storage, the address or a log, so a connection is
+made in one sitting: reloading or leaving the page forgets them, and you press "Connect OneDrive"
+again; Track drops them as soon as the secret and the file are written. With the access token the
+page reads, from your browser and as you, the names, kinds, sizes and dates of the files and folders
+in the folders you open, through Microsoft Graph, to draw the list you tick in; nothing of that list
+leaves your browser but the names and ids of what you tick, which go into drive.json. When the
+access token runs out during a sitting, the page sends the refresh token to the service, which
+answers with a new access token. The repository's workflow does the same at the start of every sync:
+on GitHub's runners it sends the secret, your refresh token, to the service, and with the access
+token the service returns it reads and writes the items you ticked, at Microsoft, and nothing beyond
+them. That one route of the service answers the workflow's request, which comes from no page, as
+well as the site's; every other answers the site's pages alone, as the control panel section says.
+The service keeps nothing of any of it: no store, no cookie and no log of its own of the code, the
+tokens or you, and its host's request logs are off, as that section says; the refresh token passes
+through it on Connect and on every sync and rests only in your repository's secret. A Microsoft
+refresh token lasts 90 days, and the workflow cannot keep the newer one Microsoft issues on each
+sync, so the page shows the day you connected and by which day to press "Connect again", which
+replaces the secret and that day. Google Drive is not offered: Google's own picker takes a browser
+API key, which the developer has declined, so the page and the service refuse any provider but
+OneDrive. The developer receives nothing from the page, the service or the workflow.
 
 ## The App's server, where it is run
 
@@ -355,12 +359,13 @@ person's words.
 
 Each App's private key is the developer's and is never given to anyone: it lives in the Actions
 secrets of the developer's own repositories and in the server's environment, outside any
-repository. The client secrets the sign-in service holds, SymphonyBoard's and the developer's
-Microsoft app registration's, live in that service's settings on Cloudflare, outside any
-repository, and go from there only to GitHub's and Microsoft's token endpoints. Every token minted from it is an installation token that lives one hour, asked with the
+repository. Every token minted from it is an installation token that lives one hour, asked with the
 fewest permissions the step needs (metadata alone to resolve a number, contents read to read, the
 four write permissions only for the adoption itself) and revoked as soon as the step is done where
-the code can. No token, key or signature is ever printed to a log.
+the code can. The client secrets the sign-in service holds, SymphonyBoard's and the developer's
+Microsoft app registration's, live in that service's settings on Cloudflare, outside any repository,
+and go from there only to GitHub's and Microsoft's token endpoints. No token, key or signature is
+ever printed to a log.
 
 ## What the Apps never do
 
@@ -372,7 +377,10 @@ files named), never to keep or send it. They never write to a repository but the
 pull request, labels, issue and settings, each of them yours to undo, and the README that begins a
 repository with no commit. They never read a Claude credential (a token you paste into the Tokens page is sealed in your browser
 for GitHub, and neither App nor the developer can read it), and nothing here runs on
-anyone's Claude account but the one a project's own maintainer chooses to run the judge with.
+anyone's Claude account but the one a project's own maintainer chooses to run the judge with. The
+control panel's Folders page and the sign-in service, neither of them an App, talk to Microsoft for
+the OneDrive you connect, as the Folders page section says; the Apps themselves send Microsoft
+nothing.
 
 ## Uninstalling
 
@@ -391,20 +399,21 @@ A new version of this statement is published at https://openspineconsortium.com/
 and in the front door repository, github.com/OpenSpineConsortium/symphony-start, whose PRIVACY.md is
 this text.
 
-Version 14 adds the Folders page of the control panel, as the section of that name says: a page
-that makes a repository of yours track files and folders of your OneDrive, reading and writing
-the repository as you (the file drive.json, the secret SYMPHONY_DRIVE_REFRESH sealed in your
-browser, a pull request where the default branch takes only those, and a run of drive-sync.yml),
-and connecting the drive through Microsoft's consent and the sign-in service, which adds the
-client secret of the developer's Microsoft app registration, kept on Cloudflare, answers with the
-drive's access token and refresh token and keeps nothing; the tokens in the page's memory alone;
-the page's reads of your drive's folders through Microsoft Graph, from your browser; the refresh
-token passing through the service on Connect and, from the repository's workflow, on every sync;
-and the 90 days a Microsoft refresh token lasts. Nothing the developer receives or keeps changed.
+Version 14 adds the Folders page of the control panel, as the section of that name says: a page that
+makes a repository of yours track files and folders of your OneDrive, reading and writing the
+repository as you (the file drive.json, the secret SYMPHONY_DRIVE_REFRESH sealed in your browser, a
+pull request where the default branch takes only those, and a run of drive-sync.yml), and connecting
+the drive through Microsoft's consent and the sign-in service, which adds the client secret of the
+developer's Microsoft app registration, kept on Cloudflare, answers with the drive's access token
+and refresh token and keeps nothing; the tokens in the page's memory alone, for one sitting; the
+page's reads of your drive's folders through Microsoft Graph, from your browser; the refresh token
+passing through the service on Connect and, from the repository's workflow, on every sync, the one
+request the service answers from no page; and the 90 days a Microsoft refresh token lasts. Nothing
+the developer receives or keeps changed.
 
-Version 13 adds the control panel's Dependencies section.
+Version 13 adds a change of its own, whose entry takes this line's place when it merges.
 
-Version 12 adds the Tokens page's "Add a Claude account".
+Version 12 adds a change of its own, whose entry takes this line's place when it merges.
 
 Version 11 adds the control panel's Assistant section: an issue of yours, `Assistant: <your login>`
 labelled assistant, that the page opens once per repository on your press, each question a comment
