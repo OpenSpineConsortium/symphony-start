@@ -34,8 +34,8 @@ Workflows (read and write), because the pull request brings files under `.github
 GitHub lets no token write without it; Codespaces (read and write), which the control panel's Tokens
 page used up to version 13 of this statement to make a Codespace and no longer uses, and which stays
 on the App until the developer takes it off; Actions (read and write), for the control panel's buttons
-that start a workflow run by hand, such as the Tokens page's "Read every slot now" and "Add a Claude
-account", and its reads
+that start a workflow run by hand, such as the Tokens page's "Read use now" and "Add Token" and the
+presses of its box "Your token", and its reads
 of the repository's workflow runs, their jobs and a job's log (the control panel, below); Administration (read and write), for the
 control panel's Share tab and its Notebooks tab's "Make private", each as you (the control panel, below): the Share tab
 reads the invitations waiting for an answer and, when you press the button that says so, invites a person you name by
@@ -73,14 +73,35 @@ secret, the next free slot SYMPHONY_CLAUDE_n, and two organization variables, th
 SYMPHONY_CLAUDE_ACCOUNTS and SYMPHONY_CLAUDE_SETTINGS, which holds the settings of every slot (for
 this one, a random id, the login and the account id of the person who lent it and, for a token lent
 with no say, the word organization). The workflow adds each repository the token is lent to to the
-lists of repositories that may read the secret and the two variables, and never takes a repository
-off the variables' lists, so every lender's login and account id reach every repository a token
-was ever lent to, or every repository, or every private one, where an owner set the variables so.
+lists of repositories that may read the secret and the two variables, and takes a repository off
+the variables' lists only when a lender asks to take their own token back from it, whether or not
+their token reached it, or deletes their token (the control panel, below), and no other of the
+numbered slots SYMPHONY_CLAUDE_1 to SYMPHONY_CLAUDE_32 reaches it, none of them being on in every
+repository or in every private one, the workflow not counting the slot main, CLAUDE_CODE_OAUTH_TOKEN,
+whose reach it does not read, so that a repository only that secret still reaches loses the two
+variables too. So every lender's login and account id reach every repository a token was ever lent
+to and every repository an owner's Tokens page showed while it saved a token's settings or removed
+a slot (the control panel, below), save one the workflow took off so or an owner took off by hand,
+or every repository, or every private one, where an owner set the variables so.
 The repository's Claude workflows pass those settings to their steps, and GitHub prints a step's
-settings in its run's log, which anyone can read on a public repository. The same workflow reads
-the organization variable SYMPHONY_LEND_TO, where the owners list the repositories a token lent
-with no say runs on, and, for the person's own token alone, lists the repositories it reaches,
-takes it off one or deletes it. The Claude token is held on the runner, in a file only the runner's
+settings in its run's log, which anyone can read on a public repository; the one that answers a
+mention of @claude starts its job only where GitHub marks whoever wrote the comment, the review or
+the issue that mentions it as the repository's owner, a member of its organization or a
+collaborator, so for anyone else's mention GitHub still lists a run but marks its job skipped: no
+runner starts, no step runs or prints the settings, and the Claude token is not used. The Token
+workflow itself, on SymphonyBoard's token, reads the names and records of the organization's
+Actions secrets, never a value, which GitHub gives no one, to find a free slot and which slots hold
+a token; the public key GitHub gives for sealing them; the records of the two variables
+SYMPHONY_CLAUDE_ACCOUNTS and SYMPHONY_CLAUDE_SETTINGS, which hold their values, the second with
+every slot owner's login and account id; and the public GitHub record of the person it acts for,
+for their account id. For a lend with no say it reads the organization variable SYMPHONY_LEND_TO,
+where the owners list the repositories such a token runs on; where the control panel names another
+of the organization's repositories to lend the token to (below), it reads that repository's record
+and the person's permission on it; and, for the person's own token alone, it lists the repositories
+the token reaches, takes it off one or deletes it, reading for the last two which repositories each
+other numbered slot of the pool, SYMPHONY_CLAUDE_1 to SYMPHONY_CLAUDE_32, reaches, never which the
+slot main reaches, in the run's memory alone, to know whether to take the two variables off. The
+Claude token is held on the runner, in a file only the runner's
 user can read, from the sign-in to the step that seals it and writes the sealed box to GitHub and
 then deletes the file; it is never printed, posted or readable from GitHub. The App writes no other
 secret or variable of its own. GitHub never gives a secret's value back to anyone, the App
@@ -113,8 +134,7 @@ the organization stays allowed after the run, and repositories the organization 
 it; an owner turns it off under the organization's Settings, Actions, General, Workflow permissions.
 
 It uses Secrets and Variables for one thing only, lending the person who asked for the adoption their own Claude tokens of the organization's pool,
-a token they lent with no say among them, though otherwise only the organization's owners place
-such a token, and only where the installation on the
+never one they lent with no say, which only the organization's owners place, and only where the installation on the
 organization has them, which GitHub asks an owner of the organization to accept. In the adoption run
 of one of the organization's repositories, of either kind, the run first reads, with the Setup App's
 own key, its installation on the organization, to make a token with the organization permissions
@@ -128,12 +148,16 @@ login and account id, and keeps the slots whose owner is the person who asked by
 the account that opened the request's issue, compared without case, and that account's id, which the
 run takes from the issue. A slot that kept no account id is never lent, since a login passes to
 whoever takes it once an account is renamed or deleted, and a run given no account id reads none of
-the organization's secrets or variables. For each of those slots' organization secrets
-(SYMPHONY_CLAUDE_1 to SYMPHONY_CLAUDE_32, and CLAUDE_CODE_OAUTH_TOKEN for the slot main) it reads
-the secret's record, its name, when it was made and last changed, and whether it is shared with all
+the organization's secrets or variables. Nor is a slot ever lent whose settings carry the word
+organization, a token its owner lent with no say: the run counts it as none of the person's, reads
+no record of its secret and names it nowhere, so where the person has no other token in the pool
+that the run may lend, the pull request says, as below, that no token in it names them as its owner
+by their login and account id, and the log reads "token lending: no tokens lent". For each slot it
+keeps it reads the record of the slot's organization secret
+(SYMPHONY_CLAUDE_1 to SYMPHONY_CLAUDE_32, and CLAUDE_CODE_OAUTH_TOKEN for the slot main), its name, when it was made and last changed, and whether it is shared with all
 the organization's repositories, its private ones or selected ones, never which ones and never its
 value, which GitHub gives no one, and adds the repository to the repositories that may read it.
-Where one of them was lent so, or reaches the repository already, shared with all the organization's
+Where one of those secrets was lent so, or reaches the repository already, shared with all the organization's
 repositories or, for a private or internal repository, with its private ones, it does the same for
 the two variables SYMPHONY_CLAUDE_ACCOUNTS and SYMPHONY_CLAUDE_SETTINGS, whose records hold their
 values, so it reads the value of SYMPHONY_CLAUDE_ACCOUNTS, the list of the pool's slots, and the
@@ -170,7 +194,7 @@ lending: no tokens lent" and the adoption otherwise runs as before. An owner of 
 sees each secret's and variable's list, and takes a repository off it, under the organization's
 Settings, Secrets and variables, Actions, Repository access; a token's owner may take their own
 token off a repository from the control panel's Tokens page, unless they lent it with no say, which
-they may only delete, as the section on SymphonyBoard's pool says.
+they may only delete, as the section on the control panel says.
 
 It has no webhook and receives no event. It is meant to be
 installed on the repository being adopted. It stays installed after the run, after an adoption or
@@ -233,7 +257,7 @@ the repository's topics (the sign on the repository's page that it is adopted, w
 there and the Symphony browser extension reads from the page; your other topics stay), turns on secret scanning and push protection where your plan and visibility allow it, in a
 repository that takes the whole template ticks "Allow GitHub Actions to create and approve pull requests" where
 your organization and its enterprise allow it, in an organization's repository lends it your own
-Claude tokens of the organization's pool and, beside one of them, the pool's two variables (as the
+Claude tokens of the organization's pool, but none you lent with no say, and, beside one of them, the pool's two variables (as the
 section on what each App asks for says), and, in a repository that takes the whole template,
 once GitHub Actions has reported the check named "check" on the branch symphony/adopt, sets GitHub
 Actions as that check's only source in the ruleset it created, then revokes the Setup App's token;
@@ -374,7 +398,9 @@ sub-issues, the worker files under `.github/symphony/workers/`, the agents' list
 tokens the file `.github/symphony/accounts.json`, which names the token slots each agent may use,
 and the default branch's `tools/pool.py`, to see that it takes such a list before one is proposed,
 on the Tokens page the records on the branch `pool` of each slot's latest use (how much of its
-five-hour and seven-day windows it had used, when they reset, and when and by what it was read),
+five-hour and seven-day windows, and of any weekly limit of a single model, named by that model, it
+had used, when they reset, for a reading taken from a worker's run or a probe whether Claude's
+answer it was read from allowed or refused the request, and when and by what it was read),
 its open pull requests and the check
 runs on their heads, its Actions runs, the repository's own record (its default branch, whether it
 is private, its topics and, for one you name, its numeric id and its owner's, to build the App's
@@ -385,11 +411,22 @@ carrying the topic symphony, and, in the dialog "Add repository", the repositori
 installed on that you can reach, installation by installation, or, with a pasted token, the
 repositories that token reaches, to choose one to add to your list; on the Share tab, who has access
 to the repository (its direct collaborators in an organization's repository, all of them in a
-person's) with their roles, and the invitations waiting for an answer. Only when you
+person's) with their roles, the invitations waiting for an answer and, among its open issues, the
+requests to join, each an issue whose description begins with the line
+`<!-- symphony-access: request -->`, one row for each person who asked; and, before it opens a
+request to join for you, your own open issues there, so that it opens no second one. Only when you
 press the button that says so, they write what GitHub's own pages would: an issue (a task, an "Add a
-worker" issue, one that mentions @claude, or the assistant's, below), a comment (a question to the
-assistant among them), a label on an issue (and the label itself when it is not there yet), a
-workflow run started by hand, a merge, an issue closed as not planned, a pull request closed, a
+worker" issue, one that mentions @claude, the assistant's, below, or a request to join, which the
+page opens as you, titled "Access request: " and your login, with a description that names your
+login and the repository and says that you ask to join it as a collaborator, when you press "Ask to
+join" on the Share tab of a repository where GitHub will not show you who has access, or in the
+Tokens page's Add dialog for an organization's repository you may not write to, and which anyone who
+can read the repository can read, everyone where it is public), a comment (a question to the
+assistant among them, and, on a request to join that an administrator answers on the Share tab with
+Invite, or with its X to decline and confirm, one saying that they invited you, that you have access
+already or that an administrator declined), a label on an issue (and the label itself when it is not
+there yet), a workflow run started by hand, a merge, an issue closed as not planned or, for a request
+to join answered with Invite, as completed, a pull request closed, a
 pull request that changes or deletes a worker's file or deletes an agent's file and its line in
 agents.json, made as GitHub's own pages would make it (a branch of its own from the default branch's
 head, the files written or deleted on that branch, and the pull request opened, or the one already
@@ -401,7 +438,9 @@ pass where the repository allows auto-merge (the Notebooks tab, below, writes a 
 notebook's repository private when you ask), or, on
 the Share tab, an
 invitation to the GitHub user you
-name, with the role you pick, to collaborate on the repository, a new role for a collaborator or
+name, with the role you pick, or, when you answer their request to join with Invite, to the person
+who asked, with Write in an organization's repository and a collaborator's access in a person's, to
+collaborate on the repository, a new role for a collaborator or
 for an invitation waiting, a collaborator removed or an invitation withdrawn (the Folders tab,
 below, says what else). To find that user from an email address you type, the Share tab asks GitHub's user search
 for an account showing that address publicly; the
@@ -541,28 +580,38 @@ Administration permission (or, with a pasted token, the token's), and shows what
 changes nothing else about the repository. It writes nothing else: in your browser's storage only the width
 of its side panel, kept with the layout (above), and nothing to the drive, of which Microsoft is
 asked nothing. The
-repository a notebook names is made by the notebook skill in a Claude session, not by the page. What
-the tab writes stays on the private repository's branch, where GitHub keeps it as it keeps any file,
-readable by whoever may read that repository; the developer receives none of it.
+repository a notebook names is made by the notebook skill in a Claude session, not by the page. The
+file the tab writes stays on the private repository's branch, where GitHub keeps it as it keeps any
+file, readable by whoever may read that repository, and Make private changes only the visibility
+GitHub keeps for a notebook's repository; the developer receives none of either.
 
 The aggregates the collector reads are as the section on field metrics says, whether or not you use
-the pages. The pages never show a repository's Claude secret, which GitHub never gives back. The
-one Claude token they take is one you paste into the Tokens page's "Add or renew a slot": the page
-seals it in your browser with your organization's public key from GitHub (for a personal account's
-repository, the repository's), the way GitHub's own secrets page does, and sends GitHub only that
-sealed box, which GitHub alone can open, as the secret SYMPHONY_CLAUDE_1 to SYMPHONY_CLAUDE_8 or
-CLAUDE_CODE_OAUTH_TOKEN, seen by the repositories you tick. It then writes, as organization (or
-repository) variables, the slot's label if you gave one and the list SYMPHONY_CLAUDE_ACCOUNTS. The
-token goes nowhere else: not to the sign-in service, not to the developer, not into the browser's
-storage, a log or the page; the page empties its box once the token is sealed.
+the pages. The pages never show a repository's Claude secret, which GitHub never gives back, and they
+take no Claude token. The Tokens page has no box to paste one into. Its "+ Add Token" has the
+repository's workflow Token make the token on a runner instead, as the next paragraph says, so the
+most the page ever holds of it is the sealed box the run posts, which GitHub alone can open. Where
+the page makes the writes itself, it saves that box, as you, as the secret SYMPHONY_CLAUDE_1 to
+SYMPHONY_CLAUDE_32, or CLAUDE_CODE_OAUTH_TOKEN for the slot main. For an organization's repository
+that is an organization secret, seen by the repository the page shows beside the repositories it
+reached already; for a personal account's repository it is that repository's own secret. It then
+writes, as you, as an organization (or repository) variable, the list SYMPHONY_CLAUDE_ACCOUNTS; the
+slot's label, if you gave one, is written with the slot's settings, as below. The token goes nowhere
+else: not to the sign-in service, not to the developer, not into the browser's storage, a log or the
+page.
 
-"Add a Claude account" on the same page makes the token where it is needed instead of asking you to
-paste it. On your press, the page opens an issue on the repository, as you, and starts the
+"+ Add Token" on the same page makes the token where it is needed, through a run of the repository's
+workflow Token, so no Claude token is ever pasted into the page. On your press, the page opens an
+issue on the repository, as you, and starts the
 repository's workflow Token (the template's .github/workflows/token.yml) with the issue's number and
 the public key GitHub gives for your organization's secrets (for a personal account's repository,
-the repository's). The run is on GitHub Actions, on the repository's owner's Actions allowance, and
-holds no secret: it installs Claude Code, runs `claude setup-token`, and posts on the issue the
-claude.ai sign-in link that prints. The page shows that link as a button. You sign in to claude.ai as
+the repository's). The run is on GitHub Actions, on the repository's owner's Actions allowance: it
+installs Claude Code, runs `claude setup-token`, and posts on the issue the claude.ai sign-in link
+that prints. Where the page makes the writes itself (below), the run holds no secret; where the
+Token workflow makes them for you (below), the run also holds SymphonyBoard's private key, from
+which it mints the App's installation token once before Claude Code is installed, to look for a
+token of yours in the pool and lend it where it finds one, and revokes that token before the
+sign-in starts, and, where it found none, once more after Claude Code has gone, to make the writes.
+The page shows that link as a button. You sign in to claude.ai as
 the account to add and press Authorize, and claude.ai shows a code; you paste it into the page, which
 posts it on the issue as a comment of yours. The run reads it, deletes that comment, and hands it to
 `claude setup-token`; the code is good only once and only to that run, which holds the other half of
@@ -576,13 +625,32 @@ GitHub refuses you the write, so the Token workflow itself makes it on SymphonyB
 token (the section above): the same sealed slot, marked in the settings variable
 SYMPHONY_CLAUDE_SETTINGS as yours by your GitHub login and account id, the list
 SYMPHONY_CLAUDE_ACCOUNTS, and the repository on the lists of repositories that may read the three;
-where you have a token in the pool already, that one is lent to the repository instead and no
-sign-in is asked; and nothing else. The Claude token is never on the page, in the issue, in the run's log,
-at the sign-in service or shown to the developer by GitHub, though on that path it is held in the
-developer's own organization, with what that allows (the section above). The issue and its comments stay on your repository,
-as any issue does, and anyone who can read the repository can read them: the link, the sealed box
-or the slot's number with, where your token was in the pool already, the ids of every repository it
-is lent to, and, until the run deletes it, the code, none of which gives a Claude token to anyone else. Delete
+where you have a token in the pool already, that one is lent to the repository instead, unless it
+is in the organization's keeping (below), which such a lend lends nowhere more, and no sign-in is
+asked, the run recording your account id in that token's settings where they named you by your
+login alone, from before the pool kept account ids; and nothing else. Where the repository the page shows is an organization's and has no
+workflow Token of its own, as one adopted for the claim protocol alone has not, the page reads, as
+you, the records of up to a hundred of the organization's repositories you can see, the most
+recently pushed, and, one by one, whether each that is not archived, carries the topic symphony and
+takes your pushes has its workflow Token turned on, keeps the first such repository in the open
+page's memory, and opens the issue and starts the run there instead, the issue's text naming the repository the token is for. The token
+then goes to that repository and not to the one the run is on: through the page's own writes where
+you are an owner, and otherwise through the run, which the page gives that repository's id and
+which first reads, on SymphonyBoard's token, that repository's record, to see that it is the
+organization's, and your permission on it, to see that you may write to it, and lends nothing where
+either is not so. Only a run started by hand, as the page starts it, is given another repository; a
+run an issue starts lends only to the repository the issue is on or, for a lend with no say (below),
+only to the repositories the organization variable SYMPHONY_LEND_TO names. The Claude token is never
+on the page, in the issue, in the run's log, at the sign-in service or shown to the developer by
+GitHub, though on that path it is held in the developer's own organization, with what that allows
+(the section above). The issue and its comments stay on the repository the page opened it on, as
+any issue does, and anyone who can read that repository can read them, everyone where it is public:
+the link, the sealed box or the slot's number with, where your token was in the pool already, the
+ids of every repository it is lent to or, for a token in the organization's keeping, the word
+organization in their place, until the run deletes it, the code, and, where the page opened the
+issue on another of the organization's repositories, the name of the repository the token is for,
+which they read there even where that repository is private and they may not read it, none of which
+gives a Claude token to anyone else. Delete
 the issue on GitHub if you want it gone. Beside the button, the page links the Claude GitHub App's
 install page on GitHub, opened for the one repository, unless the page can see that App installed
 on all of the organization's repositories already; installing it is your own press on GitHub.
@@ -595,12 +663,19 @@ GitHub login and your account's id or, for a token stored before the pool kept a
 login alone, after which the run records your account id on it, and for no other: it posts on the
 issue the slot's number and
 the ids of the repositories the slot's secret reaches, never their names, since the issue's readers
-may not be allowed to see them; or takes the secret off the one repository you named; or deletes
-the slot's secret, its settings and its place in SYMPHONY_CLAUDE_ACCOUNTS. The page closes the
+may not be allowed to see them; or takes the secret off the one repository you named and, whether
+or not your token reached it, the two variables SYMPHONY_CLAUDE_ACCOUNTS and SYMPHONY_CLAUDE_SETTINGS
+with it where no other of the numbered slots SYMPHONY_CLAUDE_1 to SYMPHONY_CLAUDE_32 reaches that
+repository, whatever the slot main, CLAUDE_CODE_OAUTH_TOKEN, reaches (the section above), unless
+your token is in the organization's keeping (below), which the run refuses to take off a
+repository, saying that you may still delete it; or deletes the slot's secret first and then its
+settings and its place in SYMPHONY_CLAUDE_ACCOUNTS, leaving those of another token stored in the
+freed slot meanwhile, and takes the two variables off each repository the secret was lent to that no
+other of the numbered slots reaches, whatever the slot main reaches. The page closes the
 issue when the run has answered, and shows a listed repository by name only where your own token
 can read it. Deleting the secret does not revoke the token, which you revoke on claude.ai; a
-deletion that stops partway, after the settings are gone but before the secret, leaves the token in
-the pool marked as no one's, so revoke it on claude.ai then too.
+deletion that stops partway, after the secret is gone but before its settings, leaves your mark on
+a slot with no token, which the next store into that slot writes over.
 
 Both runs can also be started without the page, by an issue, since GitHub lets a workflow be started
 by hand only by someone who may write to the repository, while anyone who may open an issue there,
@@ -610,7 +685,8 @@ author: the run posts the claude.ai sign-in link as a comment on the issue, take
 from a comment of the author's, bare or under the page's mark, deletes that comment, seals the
 token and stores it in a free slot of the organization's pool as the author's, marked by login and
 account id and lent to the repository the issue is on; where the author has a token in the pool
-already, that one is lent instead and no sign-in is asked. An issue whose first line is
+already, that one is lent instead, unless it is in the organization's keeping (below), and no
+sign-in is asked. An issue whose first line is
 `<!-- symphony-token: manage -->` and whose second line says `list`, `revoke` and a repository's
 id, or `delete` does for the author's own token what the box above does; a token stored before the
 pool kept account ids is refused from an issue, since a login can pass to someone else once an
@@ -649,10 +725,16 @@ The page shows each token set as a tile, and on your press a tile's settings: a 
 thinking strength its runs take, a lesser model for when the model's weekly limit runs out, whether
 it comes back by itself when its limit resets, and Pause. The page writes them, as you, to the
 organization (or repository) variable SYMPHONY_CLAUDE_SETTINGS, which the repository's workers read,
-and the name to the slot's label variable; neither holds a token, and anyone who can read the
-repository's workflows can read them. A tile's X, after you confirm, deletes the slot's secret, its
-label, its settings and its place in SYMPHONY_CLAUDE_ACCOUNTS, as you; deleting the secret does not
-revoke the token, which you revoke on claude.ai. A slot can also be removed on GitHub under the
+and the name to the slot's label variable, and, in an organization, adds the repository the page
+shows to the repositories that may read each variable it writes where that variable is shared with
+selected repositories, or shares a variable it makes with that repository alone, whether or not any
+token is lent there; neither holds a token, and anyone who can read the workflows of a repository
+that may read them can read them, the settings giving the login of every token's owner and the
+account id of everyone whose token the Token run stored. A tile's X, after you confirm, deletes the
+slot's secret, its label, its settings and its place in SYMPHONY_CLAUDE_ACCOUNTS, as you, adding the
+repository the page shows, in the same way, to the repositories that may read each of
+SYMPHONY_CLAUDE_ACCOUNTS and SYMPHONY_CLAUDE_SETTINGS it rewrites rather than deletes, and taking no
+repository off them; deleting the secret does not revoke the token, which you revoke on claude.ai. A slot can also be removed on GitHub under the
 organization's Settings, Secrets and variables, Actions. Each token's settings also hold an id,
 eight random hexadecimal digits the page or the Token run makes, and the GitHub login of the person
 it belongs to; a token the Token run stores also holds that person's account id (since a login can
@@ -847,19 +929,26 @@ it for nothing else; Symphony Setup holds it where you
 installed it, uses it only during an adoption run, and stays installed until you uninstall it. They
 read your repository's code only as the
 adoption above says (the tree listing, a one-commit checkout of the default branch, and the few
-files named), never to keep or send it. They never write to a repository but the adoption's branch,
-pull request, labels, issue and settings, each of them yours to undo, and the README that begins a
-repository with no commit, and, in an organization whose Symphony Setup installation has Secrets and
-Variables, the lists of repositories that read the requester's own token slots and the pool's two
-variables, as the section on what each App asks for says; in the pool of Claude tokens of the
+files named), never to keep or send it. Apart from what the control panel writes as you, with
+SymphonyBoard's token, when you press the button that says so, as the section on the control panel
+says, of which a repository made private on the Notebooks tab is not wholly yours to undo, since
+GitHub erases its stars and watchers with the change and leaves a public repository's forks public
+and detached from it, or makes an internal repository's forks private and removes those of people
+without access to it, none of which making it public again brings back, they never write to a
+repository but the adoption's branch, pull request, labels, issue and settings, each of them yours
+to undo, and the README that begins a repository with no commit, and, in an organization whose
+Symphony Setup installation has Secrets and Variables, the lists of repositories that read the
+requester's own token slots and the pool's two variables, as the section on what each App asks for
+says; in the pool of Claude tokens of the
 developer's own organization, the
 only one holding SymphonyBoard's key, the Token workflow writes with SymphonyBoard's token only what
 the section on the control panel says, a slot, the two variables and the lists of repositories that
 read them, for the person who lends or manages the token.
-They never read a Claude credential (a token you paste into the Tokens page is sealed in your browser
-for GitHub, and neither App nor the developer can read it; a token the Token workflow stores for a
-lender is plain only on the runner, beside SymphonyBoard's token, until it is sealed, as the section
-on organization permissions says), and nothing here runs on
+They never read a Claude credential (the control panel's pages never see one, only, where a page
+saves the token itself, the sealed box the Token workflow posts, which GitHub alone can open; a
+token the Token workflow makes is plain only on the runner until it is sealed, beside
+SymphonyBoard's token where the run stores it for a lender, as the section on organization
+permissions says), and nothing here runs on
 anyone's Claude account but the one a project's own maintainer chooses to run the judge with. The
 control panel's Folders tab and the sign-in service, neither of them an App, talk to Microsoft for
 the OneDrive you connect, as the section on the Folders tab says; the Apps themselves send Microsoft
@@ -887,11 +976,71 @@ Version 33 adds the Notebooks tab's Make private, the owner's choice of 2026-10-
 repository is public or internal, a button in its side panel makes it private on GitHub, as you, once
 you confirm, which SymphonyBoard's repository permission Administration allows, as it allows the Share
 tab's changes; the tab also reads, from the answer it already asked for, whether GitHub counts you the
-repository's administrator, and offers the button only where GitHub does not say you are not. The list
+repository's administrator, and offers the button only where GitHub does not say you are not. So the
+section on what the Apps never do no longer says that SymphonyBoard changes no setting with
+Administration, and the list of what SymphonyBoard asks for no longer says that it holds
+Administration for one thing only: Make private changes a repository's visibility, when you press it
+and confirm. That section now also sets what the control panel writes as you, with SymphonyBoard's
+token, apart from the writes it says the Apps never make, and says that a repository made private is
+not wholly yours to undo, since GitHub erases its stars and watchers and changes or removes its
+forks, none of which making it public again brings back. The list
 of what SymphonyBoard asks for, and the section on what the Apps never do, now name in full what the
 Share tab does with Administration (it reads the invitations waiting, invites, changes a role, removes
-a collaborator and withdraws an invitation), where earlier versions named only the invitation; the
-Share tab itself does what it did. Nothing the developer receives or keeps changed.
+a collaborator and withdraws an invitation), where earlier versions named only the invitation, and
+the section on the control panel names, as no earlier version did, the request to join that the
+Share tab and the Tokens page's Add dialog open as an issue, as you, titled with your login and
+naming the repository, which anyone who can read the repository can read, which the Share tab lists
+from the repository's open issues, and which an administrator answers there with Invite or a
+decline, each a comment on the issue and its close; the Share tab otherwise does what it did. It
+corrects version 32, which said that an adoption lends the
+person who asked a token they lent with no say: as symphony-start#72 was merged, the adoption never
+lends a token in the organization's keeping, which only the organization's owners place, counts it
+as none of the person's and names it nowhere, so that where the person has no other token the run
+may lend, the pull request says that no token in the pool names them as its owner and the log says
+that no tokens were lent. The Version 32 entry below now names symphony-template#254, not #253, as
+the pull request that brought the Token workflow its rule for a token in the organization's
+keeping, and this version says so too where it describes the Token workflow's lends and take-backs:
+a lend that is not one with no say lends such a token nowhere more, and a take-back of it is
+refused. From symphony-template#253, it says that the Token workflow's take-back and deletion take
+the two variables SYMPHONY_CLAUDE_ACCOUNTS and SYMPHONY_CLAUDE_SETTINGS off a repository no other of
+the numbered slots SYMPHONY_CLAUDE_1 to SYMPHONY_CLAUDE_32 reaches, whatever the slot main,
+CLAUDE_CODE_OAUTH_TOKEN, reaches, and a take-back whether or not the token reached that repository,
+reading for that which repositories each of those other slots reaches, where earlier versions said
+the workflow never took a repository off them; that a deletion removes the secret first and its
+settings after, so that one stopped partway leaves a mark on an empty slot and no longer a token
+marked as no one's; and that a deletion leaves the settings and the place in
+SYMPHONY_CLAUDE_ACCOUNTS of another token stored in the freed slot meanwhile. Until
+symphony-template#253 a deletion, or the recording of an account id on a slot stored before the
+pool kept them, also put the repository the run was on onto the lists of repositories that may read
+the variables it changed, which earlier versions did not say; the workflow no longer does, so what
+the text says the workflow adds to those lists, the repositories a token is lent to, needed no
+change for it. From symphony-template#249, it says that where the repository the
+control panel shows has no workflow Token of its own, the page reads the organization's repositories
+to find one that has it, opens the issue and starts the run there, the issue's text naming the
+repository the token is for, which anyone who can read the repository the issue is on can read,
+even where the repository the token is for is private, and lends the token to the
+repository it shows, or has the run lend it there once the run has read that repository's record
+and the person's permission on it. From symphony-template#251, it says that the template's Claude
+workflow starts its job for a mention of @claude only by the repository's owner, a member of its
+organization or a collaborator, so for anyone else's mention GitHub marks the job skipped and no
+step runs. It also corrects what earlier versions said of the Tokens page and the Token workflow.
+The page has no box "Add or renew a slot" to paste a Claude token into, as earlier versions said,
+and seals nothing in your browser: its "+ Add Token", which earlier versions called "Add a Claude
+account", has the Token workflow make the token, the page holds at most the sealed box the run
+posts, the slots run to SYMPHONY_CLAUDE_32, and a secret the page saves is seen by the repository it
+shows, not by repositories you tick; the Actions permission names the page's buttons by the names
+they have, "Read use now" and "Add Token", and the box "Your token"; and a run that makes the writes
+for you holds SymphonyBoard's private key, where earlier versions said the run holds no secret. The
+Token workflow's reads are now named in full: the names and records of all the organization's
+Actions secrets, the value of SYMPHONY_CLAUDE_SETTINGS with every slot owner's login and account id,
+and the GitHub record of the person it acts for, and SYMPHONY_LEND_TO only for a lend with no say;
+a lend from the page of a token already in the pool records its lender's account id where its
+settings named them by login alone; and the issue of a token in the organization's keeping carries
+the word organization in place of the repositories' ids. The records on the branch pool the page
+reads also hold each single model's weekly limit and whether Claude's answer allowed the request.
+And a tile's save and its X, in an organization, add the repository the page shows to the
+repositories that may read the variables they write, so every token owner's login and account id
+reach that repository too, which earlier versions did not say. Nothing the developer receives or keeps changed.
 
 Version 32 adds Symphony Setup's two organization permissions Secrets and Variables (read and
 write), used only in an adoption run to add the adopted repository to the lists of repositories that
@@ -908,7 +1057,7 @@ Tokens page writes the organization variable SYMPHONY_LEND_TO readable by no rep
 where version 31 said the private repositories' workflows could read it, and closes a list an
 earlier page left readable by them or by every repository. It says too that a token in the
 organization's keeping, one lent with no say, is placed by the organization's owners alone, as the
-Token workflow has done since symphony-template#253: its lender may delete it, and no longer takes
+Token workflow has done since symphony-template#254: its lender may delete it, and no longer takes
 it off a repository or lends it further with an ordinary lend. Nothing the developer receives or
 keeps changed.
 

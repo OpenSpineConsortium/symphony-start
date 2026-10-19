@@ -692,7 +692,7 @@ def owned_secrets(settings_text, requester, requester_id):
     deleted, so a slot that kept no account id is never lent, as the
     template's Token run refuses it from an issue. A slot in the
     organization's keeping, lent with no say, is placed by the
-    organization's owners alone (symphony-template#253), so it is never
+    organization's owners alone (symphony-template#254), so it is never
     lent here either. A value that is not the
     settings' shape owns nothing, and neither does a requester whose login
     or account id is not one."""
