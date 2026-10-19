@@ -1,6 +1,6 @@
 # Symphony GitHub Apps privacy statement
 
-Version 27, 2026-10-18. This text is also at https://openspineconsortium.com/symphony/apps-privacy.html.
+Version 28, 2026-10-19. This text is also at https://openspineconsortium.com/symphony/apps-privacy.html.
 The Symphony browser extension has a statement of its own, at https://openspineconsortium.com/symphony/privacy.html.
 
 Who makes the Apps: Gregory Schwing, trading as OpenSpineConsortium ("the developer"). Questions:
@@ -50,10 +50,17 @@ it is turned on.
 
 On an organization, SymphonyBoard also asks for two organization permissions: Secrets (read and
 write) and Variables (read and write), for the control panel's Tokens page, which saves a Claude
-account's token as one of the organization's Actions secrets when an owner of the organization asks
-it to (the control panel, below). The App itself never reads or writes a secret or a variable: only
-a page you are signed in to does, as you, and GitHub lets it only where you are an owner of the
-organization. GitHub never gives a secret's value back to anyone, the App included.
+account's token as one of the organization's Actions secrets (the control panel, below). A page you
+are signed in to makes those writes, as you, where you are an owner of the organization. The one
+thing the App itself writes is a Claude slot a collaborator mints: where you work on an
+organization's repository but are not an owner of the organization, GitHub would refuse you the
+write, so the organization's own Token workflow makes it for you, on SymphonyBoard's installation
+token, when you press "Add a Claude account" (the control panel, below): one organization secret,
+the next free slot SYMPHONY_CLAUDE_n, and two organization variables, the list SYMPHONY_CLAUDE_ACCOUNTS
+and the slot's settings SYMPHONY_CLAUDE_SETTINGS (a random id and the login of the person who added
+it). The Claude token is sealed before it is written and is never readable on that path, and the App
+writes no other secret or variable of its own. GitHub never gives a secret's value back to anyone,
+the App included.
 
 SymphonyBoard also asks for one account permission, Codespaces user secrets (read and write), which
 GitHub asks each person for when they sign in with GitHub on the control panel. The Tokens page used
@@ -408,7 +415,11 @@ the sign-in. The run takes the Claude token out of what Claude Code prints befor
 written to its log, seals it there with the public key the page gave, and posts only the sealed box
 on the issue, which GitHub alone can open. The page saves that box as the next free slot and, while
 CLAUDE_CODE_OAUTH_TOKEN is not set, as that secret too, writes the list SYMPHONY_CLAUDE_ACCOUNTS as
-above, and closes the issue. The Claude token is never on the page, in the issue, in the run's log,
+above, and closes the issue. On an organization's repository, where you are an owner of the
+organization the page makes those writes as you; where you are a collaborator but not an owner,
+GitHub refuses you the write, so the Token workflow itself makes it on SymphonyBoard's installation
+token (the section above): the same sealed slot, the list SYMPHONY_CLAUDE_ACCOUNTS and the settings
+variable SYMPHONY_CLAUDE_SETTINGS, and nothing else. The Claude token is never on the page, in the issue, in the run's log,
 at the sign-in service or with the developer. The issue and its comments stay on your repository,
 as any issue does, and anyone who can read the repository can read them: the link, the sealed box,
 and, until the run deletes it, the code, none of which gives a Claude token to anyone else. Delete
@@ -630,6 +641,14 @@ Symphony is for people who administer GitHub repositories. It is not directed at
 A new version of this statement is published at https://openspineconsortium.com/symphony/apps-privacy.html
 and in the front door repository, github.com/OpenSpineConsortium/symphony-start, whose PRIVACY.md is
 this text.
+
+Version 28 adds the one write SymphonyBoard makes of its own: where a collaborator who is not an
+owner of the organization presses "Add a Claude account", the organization's own Token workflow,
+on the App's installation token, writes the minted slot as an organization secret and writes the
+organization variables SYMPHONY_CLAUDE_ACCOUNTS and SYMPHONY_CLAUDE_SETTINGS, so a collaborator can
+add a Claude slot GitHub would otherwise let only an owner add; the Claude token is sealed before it
+is written and the App reads and writes no other secret or variable of its own. Nothing the
+developer receives or keeps changed.
 
 Version 27 adds SymphonyBoard's repository permission Variables (read and write), for the control
 panel's Tokens page on a personal account's repository, which holds a Claude slot's settings and the
