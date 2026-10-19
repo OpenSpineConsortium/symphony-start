@@ -109,15 +109,17 @@ it on the repository. With Administration it reads and changes no other setting 
 the organization stays allowed after the run, and repositories the organization makes later inherit
 it; an owner turns it off under the organization's Settings, Actions, General, Workflow permissions.
 
-It uses Secrets and Variables for one thing only, lending the person who asked for the adoption
-their own Claude tokens of the organization's pool, and only where the installation on the
+It uses Secrets and Variables for one thing only, lending the person who asked for the adoption their own Claude tokens of the organization's pool,
+a token they lent with no say, in the organization's keeping, among them, as any later lend of
+theirs lends it, and only where the installation on the
 organization has them, which GitHub asks an owner of the organization to accept. In the adoption run
 of one of the organization's repositories, of either kind, the run first reads, with the Setup App's
 own key, its installation on the organization, to make a token with the organization permissions
 Secrets and Variables (write), which reach every secret and variable of the organization though the
 run touches only those named here, and the repository permission Metadata (read) on the one
 repository; the token is kept in a file in the run's temporary directory and never in its log, and
-is revoked once the settings are applied. With it, before the pull request is opened, the run reads
+is revoked once the settings are applied or, where GitHub refuses the revocation, which the run
+does not say, runs out within the hour. With it, before the pull request is opened, the run reads
 the value of the organization variable SYMPHONY_CLAUDE_SETTINGS, which gives each slot's owner by
 login and account id, and keeps the slots whose owner is the person who asked by both: the login of
 the account that opened the request's issue, compared without case, and that account's id, which the
@@ -132,7 +134,9 @@ Where one of them was lent so, or reaches the repository already, shared with al
 repositories or, for a private or internal repository, with its private ones, it does the same for
 the two variables SYMPHONY_CLAUDE_ACCOUNTS and SYMPHONY_CLAUDE_SETTINGS, whose records hold their
 values, so it reads the value of SYMPHONY_CLAUDE_ACCOUNTS, the list of the pool's slots, and the
-settings again. The repository's Claude workflows can then run on those tokens, and, as with any
+settings again. The repository's Claude workflows can then run on those tokens, except in a private repository of
+an organization on GitHub Free, which GitHub lets read no organization secret or variable, though
+the run, which reads no plan, lends them all the same and calls them lent or left as they were; and, as with any
 Actions secret, whoever may write to that repository can have a workflow there use your token or
 send it elsewhere. It adds a repository only to the list of a secret or a variable that exists and
 is shared with selected repositories: it changes no visibility, creates nothing and lends no one
@@ -141,20 +145,28 @@ for this, "token lending: tokens lent" or "token lending: no tokens lent", and s
 nor how many, nor why none was lent; since only the asker's own tokens are lent, "tokens lent" does
 tell anyone who reads it that the person who opened the request holds a token of the organization's
 pool and that the installation has the two permissions. The pull request in your repository, which
-anyone who can read the repository reads, everyone where it is public, names each of your secrets
-and each of the two variables with what became of it (lent, left as it was, not reaching the
-repository, missing, or refused, with GitHub's answer), and says why where none was lent. Where none
+anyone who can read the repository reads, everyone where it is public, names each of your secrets and, where one of them was lent or reaches the repository already, each
+of the two variables, with what became of it (lent, left as it was, not reaching the repository,
+missing, or not lent, refused or with GitHub out of reach, with GitHub's answer to the first not
+lent), and says why where none was lent. Where none
 of the pool's tokens is yours, it says so with the same hint every time, to press Add Token on the
 control panel's Tokens page, so it never says whether a slot names your login. Once the two
 variables are lent, the settings variable, with every slot owner's login and account id, reaches the
 repository too, even where the log says "no tokens lent", as the section on SymphonyBoard's pool
 says of every repository a token is lent to. What is lent stays lent whatever becomes of the pull
 request, closed without merging or never opened; where the run stops after lending and before it
-opens the pull request, nothing the run writes names what it lent, and where the settings step
-itself stopped, the log reads "token lending: no tokens lent". Where the installation has not these
-two permissions, or for a person's own repository, nothing is lent and the adoption runs as before;
-an owner of the organization sees each secret's and variable's list, and takes a repository off it,
-under the organization's Settings, Secrets and variables, Actions, Repository access.
+opens the pull request, nothing the run writes names what it lent; where the settings step itself failed after lending,
+the log reads "token lending: no tokens lent" and the pull request, opened all the same, says only
+that some settings may be applied and names nothing lent; and where the run is cancelled or runs
+out of time in that step, its log has no line for the lending. Where the installation has not
+these two permissions, the run still reads the installation and asks GitHub for the token, lends
+nothing, and the pull request says your tokens were not lent and where an owner accepts the
+permissions; for a person's own repository none of this runs; either way the log reads "token
+lending: no tokens lent" and the adoption otherwise runs as before. An owner of the organization
+sees each secret's and variable's list, and takes a repository off it, under the organization's
+Settings, Secrets and variables, Actions, Repository access; a token's owner may take their own
+token off a repository from the control panel's Tokens page, as the section on SymphonyBoard's
+pool says.
 
 It has no webhook and receives no event. It is meant to be
 installed on the repository being adopted. It stays installed after the run, after an adoption or
@@ -175,11 +187,11 @@ github.com/OpenSpineConsortium/symphony-start. Pressing Create there opens a pub
 GitHub name; the issue carries what the form held (your installation's number, or a repository name
 you typed, the kind, the merge choice and one box) and the run's answers, and it is closed when the run is done,
 never deleted. A repository the run learns only by its number is never named on the front door: its
-name, its owner's, its default branch's and your login are masked in the run's public log after its
-first step, whose settings show your login and your account's id as the issue you opened gives them,
-and the issue is answered with "your repository". A name you typed into the form is public already, and the
-run names it in its answers, and its public log shows your login and your account's id in each
-step's settings. The front door's public logs do show the installation's number, the repository's
+name, its owner's, its default branch's and your login are masked in the adoption job's public log after the step that names the repository, whose settings
+show your login and your account's id as the issue you opened gives them (the request job's step
+that resolves the installation, before it, shows your login too), and the issue is answered with "your repository". A name you typed into the form is public already, and the
+run names it in its answers, and its public log shows your login and your account's id in the settings of each step from the
+one that names the repository on. The front door's public logs do show the installation's number, the repository's
 numeric id, whether the repository belongs to an organization, which the steps of the token lending
 run for or skip, the kind the run read (whether the repository was empty), how many files
 it added, replaced, kept or skipped, and the commit ids of your default branch and of the template.
@@ -190,8 +202,10 @@ whether a branch `symphony/adopt` exists and has a pull request, whether `docs/a
 exists, the one word in `.github/symphony-adopt` and `.github/symphony-metrics` and in each under
 its name before the rename to Symphony, `.github/sdlc-adopt` and `.github/sdlc-metrics`, the full
 listing of the default branch's tree (to decide the kind), a checkout of that branch at depth one (to add the
-files) and whether you administer the repository. With Symphony Setup installed, the run also reads the repository's rulesets, its
-topics and its workflow permissions for GitHub Actions, to leave what is there as it is. When the
+files) and whether you administer the repository. With Symphony Setup installed, the run also reads the repository's record (its id and whether it
+is public, private or internal), its rulesets, its topics and its workflow permissions for GitHub
+Actions, to leave what is there as it is and, in an organization's repository, to know which of
+the organization's secrets reach it already. When the
 form carries an installation's number and no name, the run reads that installation's record and,
 when the number is Symphony Setup's, SymphonyBoard's own list of its installations, to find the one
 on the same account; then it asks the same of each repository both Apps reach, and whether you
@@ -210,18 +224,19 @@ setting, which may name your account's plan; in an organization's new repository
 also writes that login into `.github/CODEOWNERS`. With Symphony Setup installed, the run creates the
 default branch's ruleset, turns on delete-head-branches and auto-merge, adds the topic `symphony` to
 the repository's topics (the sign on the repository's page that it is adopted, which anyone can see
-there and the Symphony browser extension reads from the page; your other topics stay), turns on
-secret scanning and push protection where your plan and visibility allow it, and, in a repository
-that takes the whole template, ticks "Allow GitHub Actions to create and approve pull requests" where
+there and the Symphony browser extension reads from the page; your other topics stay), turns on secret scanning and push protection where your plan and visibility allow it, in an
+organization's repository lends it your own Claude tokens of the organization's pool and, beside
+one of them, the pool's two variables (as the section on what each App asks for says), and, in a
+repository that takes the whole template, ticks "Allow GitHub Actions to create and approve pull requests" where
 your organization and its enterprise allow it, and, in a repository that takes the whole template,
 once GitHub Actions has reported the check named "check" on the branch symphony/adopt, sets GitHub
 Actions as that check's only source in the ruleset it created, then revokes the Setup App's token;
 the Setup App stays installed. Unless you chose on the form to review the pull request first, the
 run merges it or arms auto-merge. Everything else lands only when you merge. Closing the pull
 request instead leaves the labels, the README the run made in a
-repository that had no commit, the branch, the settings, the topic, in an organization's repository
-the tokens and the two variables lent to it (as the section on what each App asks for says), and the
-issue for you to undo.
+repository that had no commit, the branch, the settings, the topic and the issue for you to undo, and, in an organization's
+repository, the tokens and the two variables lent to it (as the section on what each App asks for
+says), which an owner of the organization takes off, as a token's owner may take their own.
 
 The adoption's files come from the developer's private template repository, read with a token that
 holds Contents read on that one repository and is revoked right after the checkout; only the files
@@ -850,13 +865,14 @@ this text.
 Version 32 adds Symphony Setup's two organization permissions Secrets and Variables (read and
 write), used only in an adoption run to add the adopted repository to the lists of repositories that
 read the token slots of the organization's pool owned by the person who asked, by their login and
-account id, and, beside one of them, the pool's two variables, as the section on what each App asks
+account id, one they lent with no say among them, and, beside one of them, the pool's two variables, as the section on what each App asks
 for says; it reads Symphony Setup's installation on the organization, the settings variable, which
 names each slot's owner, and the records of those secrets and of the two variables, the variables'
 values among them, and no secret's value. It says what the public log and the pull request then say,
-and that the lending stays whatever becomes of the pull request. It corrects what the run's public
-log shows: your login and account id in its first step's settings, and in every step's for a
-repository you named, and whether the repository belongs to an organization. It also says that the
+and that the lending stays whatever becomes of the pull request. It says what the run's public log shows, now with your account id beside your login: both in the
+settings of the step that names the repository (your login in the step that resolves an
+installation too) and of every later step for a repository you named, and whether the repository
+belongs to an organization. It also says that the
 Tokens page writes the organization variable SYMPHONY_LEND_TO readable by no repository's workflows,
 where version 31 said the private repositories' workflows could read it, and closes a list an
 earlier page left readable by them or by every repository. Nothing the developer receives or keeps
