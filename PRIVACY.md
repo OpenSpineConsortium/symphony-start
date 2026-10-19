@@ -571,8 +571,10 @@ A lend whose second line says `organization` is a lend with no say: the token is
 way, its settings also marked with the word organization, and lent not to the issue's repository
 but to the repositories the organization variable SYMPHONY_LEND_TO names, a list of repository ids
 the organization's owners keep on the Tokens page under "Tokens lent with no say run on", which the
-page writes as them, readable by the workflows of the organization's private repositories; or to
-none while that list is empty, for an owner to place from the slot's tile. Such a lender is told
+page writes as them, readable by no repository's workflows, since the run reads it with the App's
+token (a list an earlier page wrote readable by the private repositories' workflows is closed so
+when an owner next opens the Tokens tab, its value kept); or to none while that list is empty, for
+an owner to place from the slot's tile. Such a lender is told
 the slot's number when the token is stored and, when they list it or when a lend touches a token of
 theirs already in the pool, that it is in the organization's keeping, and learns no repository's
 name or id from the run. A lend with no say from someone who has a token in the pool already puts
@@ -833,7 +835,10 @@ Version 32 adds Symphony Setup's two organization permissions Secrets and Variab
 used only in an adoption run to add the new repository to the lists of repositories that read the
 token slots of the organization's pool the requester owns and the pool's two variables, as the
 section on what each App asks for says; it reads the settings variable, which names each slot's owner,
-and no secret's value. Nothing the developer receives or keeps changed.
+and no secret's value. It also says that the Tokens page writes the organization variable
+SYMPHONY_LEND_TO readable by no repository's workflows, where version 31 said the private
+repositories' workflows could read it, and closes a list an earlier page left readable so. Nothing
+the developer receives or keeps changed.
 
 Version 31 adds the control panel's Notebooks tab, as the section on the control panel says: it reads
 the drive organizer's proposal of notebooks and its catalog from the branch drive-catalog of a private
