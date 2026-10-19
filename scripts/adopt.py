@@ -208,6 +208,10 @@ THE_SETTINGS = ("the default branch's ruleset", "delete-on-merge and auto-merge"
 # existing repository's box as it is.
 ACTIONS_SETTING = "letting GitHub Actions create and approve pull requests"
 ACTIONS_LABEL = "Allow GitHub Actions to create and approve pull requests"
+# Mode new's ruleset requires the check named "check"; scripts/setup.py
+# then pins it to GitHub Actions, which GitHub takes only once GitHub
+# Actions has reported it, so the pin may be left for the person.
+CHECK_SOURCE = "check_source"
 # The box's API path, which the template's scripts/setup-repo.sh calls since
 # it ticks the box too, and never called before. The run copies the
 # template's default branch and a repository keeps the script it was
@@ -1564,14 +1568,27 @@ def github_said(report, key):
     return f" (GitHub said: {detail})" if detail else ""
 
 
+def pin_expected(report):
+    """Whether the report's pin of the check to GitHub Actions is one the
+    run tried to make: on a ruleset it created that requires the check. A
+    report with no word on the pin, as one from before it, expects none."""
+    return (setting_state(report, CHECK_SOURCE) is not None and setting_state(report, "ruleset") == "done"
+            and bool(report.get("required_check")))
+
+
+def pin_settled(report):
+    return not pin_expected(report) or setting_state(report, CHECK_SOURCE) in ("done", "exists")
+
+
 def settings_done(report):
     """Whether the Setup App left nothing of the settings to do by hand:
     secret scanning aside, which the plan or the visibility may refuse, and
     the box for GitHub Actions' pull requests, which the organization or
-    its enterprise may forbid; the section says so of each."""
+    its enterprise may forbid; the section says so of each. A check not
+    pinned to GitHub Actions is left by hand, since setup-repo.sh pins it."""
     return (report is not None and report["outcome"] == "applied"
             and setting_state(report, "ruleset") in ("done", "exists") and setting_state(report, "toggles") == "done"
-            and setting_state(report, "topic") == "done")
+            and setting_state(report, "topic") == "done" and pin_settled(report))
 
 
 def every_setting_done(manifest, report):
@@ -1621,6 +1638,33 @@ def ruleset_line(manifest, report):
                 " deletions.")
     return (f"- The ruleset \"{name}\": not created{github_said(report, 'ruleset')}. Protect the default branch, and"
             f" only it, at {rules}: require a pull request and your checks, and block force pushes and deletions.")
+
+
+def check_source_line(manifest, report):
+    """The check's source in the ruleset this run created, in mode new:
+    pinned to GitHub Actions, and why that matters; else why not, and the
+    two ways to pin it, on the ruleset's page or with the setup script."""
+    if not pin_expected(report):
+        return None
+    state = setting_state(report, CHECK_SOURCE)
+    if state == "done":
+        return ("- The check \"check\" in that ruleset: taken from GitHub Actions alone, so only a workflow run"
+                " satisfies it, and a commit status named \"check\", which anyone with write access can post, does"
+                " not.")
+    if state == "exists":
+        return "- The check \"check\" in that ruleset: it named its source already, which was left as it is."
+    detail = report["settings"][CHECK_SOURCE].get("detail")
+    if state == "failed":
+        why = f"not pinned to GitHub Actions{github_said(report, CHECK_SOURCE)}"
+    else:
+        why = "not pinned to GitHub Actions" + (" yet" if state == "not-yet" else "") + (f": {detail}" if detail else "")
+    name = report.get("ruleset_name") or "Protect the default branch"
+    return (f"- The check \"check\" in that ruleset: {why}. Until it is, a commit status named \"check\", which"
+            " anyone with write access can post, satisfies the ruleset as well as GitHub Actions' run does. In the"
+            f" repository's Settings, Rules, open the ruleset \"{name}\" at"
+            f" https://github.com/{manifest['repository']}/settings/rules and, beside \"check\", pick GitHub Actions"
+            " as the source; or, once this pull request's check has run on the default branch after the merge, run"
+            f" `bash {SETUP_SCRIPT}` from a clone, which pins it too.")
 
 
 def toggles_line(manifest, report):
@@ -1739,8 +1783,9 @@ def settings_section(manifest, report):
         parts.append(f"The {SETUP_APP} App, which you installed on this repository, {did} {what}; what it could do"
                      " does not wait for the merge, and closing this pull request leaves it as it is:")
         parts.append("")
-        parts += [ruleset_line(manifest, report), toggles_line(manifest, report), topic_line(manifest, report),
-                  scanning_line(manifest, report)]
+        pin = check_source_line(manifest, report) if manifest["mode"] == "new" else None
+        parts += [ruleset_line(manifest, report), *([pin] if pin else []), toggles_line(manifest, report),
+                  topic_line(manifest, report), scanning_line(manifest, report)]
         if manifest["mode"] == "new":
             parts.append(actions_line(manifest, report))
         parts.append("")

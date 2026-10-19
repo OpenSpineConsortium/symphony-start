@@ -37,6 +37,16 @@ MEANWHILE = ("Until it is on, `protocol.yml` brings each new release as an issue
 # The pull request's sentence on the counts of parallel work, which is true
 # only of a landed script that counts by setting.
 PARALLEL = "Some of those counts say how the work ran in parallel"
+# The check pinned to GitHub Actions in mode new's ruleset, and the two ways
+# to pin it where the run could not.
+PIN_DONE = ("- The check \"check\" in that ruleset: taken from GitHub Actions alone, so only a workflow run"
+            " satisfies it, and a commit status named \"check\", which anyone with write access can post, does"
+            " not.")
+PIN_FIX = ("Until it is, a commit status named \"check\", which anyone with write access can post, satisfies the"
+           " ruleset as well as GitHub Actions' run does. In the repository's Settings, Rules, open the ruleset"
+           f" \"Protect the default branch\" at {RULES} and, beside \"check\", pick GitHub Actions as the source;"
+           " or, once this pull request's check has run on the default branch after the merge, run"
+           " `bash scripts/setup-repo.sh` from a clone, which pins it too.")
 
 
 def report(outcome="applied", states=ALL_DONE, details=None, mode="new", private=False, required_check=True):
@@ -660,6 +670,59 @@ class Body(unittest.TestCase):
         self.assertNotIn("GitHub Actions", body)
         body = self.body(THEIR_FILES, mode="existing", settings=report(outcome="not-installed", mode="existing"))
         self.assertNotIn("GitHub Actions", body)
+
+    def test_the_check_pinned_to_github_actions_says_why_it_matters(self):
+        body = self.body(settings=report(states=dict(ALL_DONE, check_source="done")))
+        self.assertIn(f"at {RULES}.\n{PIN_DONE}\n- Delete head branches", body)
+        self.assertIn("applied in this run the settings", body)
+        self.assertIn("2. The GitHub side is set up (Settings above)", body)
+        body = self.body(settings=report(states=dict(ALL_DONE, check_source="exists")))
+        self.assertIn("- The check \"check\" in that ruleset: it named its source already, which was left as it is.",
+                      body)
+        self.assertIn("2. The GitHub side is set up (Settings above)", body)
+
+    def test_a_check_not_pinned_says_how_to_pin_it(self):
+        """Not yet, refused or not tried: why, in GitHub's words where they
+        are GitHub's, what it leaves open, and the two ways to pin it; the
+        setup script is then what step 2 runs for what is left."""
+        cases = (
+            ("not-yet", "GitHub Actions had not reported the check named \"check\" on the branch symphony/adopt"
+             " within 10 minutes", "not pinned to GitHub Actions yet: GitHub Actions had not reported the check"
+             " named \"check\" on the branch symphony/adopt within 10 minutes."),
+            ("failed", "HTTP 422: Validation Failed", "not pinned to GitHub Actions (GitHub said: HTTP 422:"
+             " Validation Failed)."),
+            ("not-tried", "no token that reads check runs could be made for this run", "not pinned to GitHub"
+             " Actions: no token that reads check runs could be made for this run."),
+        )
+        for state, detail, said in cases:
+            with self.subTest(state=state):
+                body = self.body(settings=report(states=dict(ALL_DONE, check_source=state),
+                                                 details={"check_source": detail}))
+                self.assertIn(f"- The check \"check\" in that ruleset: {said} {PIN_FIX}", body)
+                self.assertIn("was used in this run for the settings", body)
+                self.assertIn("2. For what the Settings above could not do: from a clone", body)
+                self.assertNotIn("2. The GitHub side is set up", body)
+
+    def test_no_pin_line_where_no_pin_was_expected(self):
+        """A ruleset left as it was, one not created, one that requires no
+        check, mode existing, and a report from before the pin: no line, and
+        nothing of the pin keeps the settings from reading as applied."""
+        left = dict(ALL_DONE, ruleset="exists", check_source="not-tried")
+        body = self.body(settings=report(states=left, details={
+            "check_source": "the ruleset of that name was there already and is left as it is"}))
+        self.assertNotIn("in that ruleset", body)
+        self.assertIn("2. The GitHub side is set up", body)
+        body = self.body(settings=report(states=dict(ALL_DONE, ruleset="failed", check_source="not-tried")))
+        self.assertNotIn("in that ruleset", body)
+        details = {"actions_pull_requests": "the protocol alone opens no pull request with GitHub Actions",
+                   "check_source": "the protocol alone brings no check, and its ruleset requires none"}
+        settings = report(mode="existing", required_check=False, details=details,
+                          states=dict(ALL_DONE, actions_pull_requests="not-tried", check_source="not-tried"))
+        body = self.body(THEIR_FILES, mode="existing", settings=settings)
+        self.assertNotIn("in that ruleset", body)
+        self.assertNotIn("GitHub Actions", body)
+        self.assertIn("applied in this run the settings", body)
+        self.assertNotIn("in that ruleset", self.body(settings=report()))
 
     def test_the_setup_app_not_installed(self):
         body = self.body(settings=report(outcome="not-installed"))

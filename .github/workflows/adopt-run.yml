@@ -89,7 +89,9 @@ permissions:
 jobs:
   adopt:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    # Fifteen minutes for the run, and ten more for the settings step's
+    # bound on the wait for the check run it pins the ruleset's check to.
+    timeout-minutes: 25
     # Keyed on the request and the repository, so an installation's several
     # repositories run side by side and two requests for one repository
     # both run, the push of symphony/adopt settling them.
@@ -414,7 +416,9 @@ jobs:
       # actions/checkout leaves when it keeps its credentials, masked before
       # use; the remote URL never holds the token. git's messages name files
       # and commits, so they go to a file of the run and not to this public
-      # log, which gets a fixed line instead.
+      # log, which gets a fixed line instead. The pushed head's sha goes to
+      # the environment, unprinted, for the settings step, which waits for
+      # the check run GitHub Actions starts on it; a sha names nothing.
       - name: Commit on symphony/adopt and push it as the App
         if: env.REFUSED != 'true'
         env:
@@ -463,6 +467,8 @@ jobs:
             else
               bash "$refuse" "Nothing was done: GitHub refused the push of the branch symphony/adopt to $SAID; a ruleset or a branch protection there may stand in its way. Let the App push that branch, then open a new request with the form; this one is closed."
             fi
+          else
+            echo "ADOPT_HEAD=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
           fi
 
       # Only whether the Setup App's key is set reaches the shell, never
@@ -520,6 +526,27 @@ jobs:
           permission-organization-administration: write
           skip-token-revoke: true
 
+      # For mode new, a token of the main App's, SymphonyBoard's, with
+      # Checks read alone, for this one repository: setup.py reads with it
+      # whether GitHub Actions has reported the check named "check" on the
+      # head pushed above, since GitHub pins a required check to an app
+      # only once that app has reported it, and the Setup App holds no
+      # Checks permission. A separate mint, so an installation that has not
+      # accepted Checks still adopts and only the pin is left by hand; the
+      # write that pins goes with the Setup App's token. Revoked with the
+      # Setup App's.
+      - uses: actions/create-github-app-token@v1
+        id: checks-token
+        if: env.REFUSED != 'true' && env.SETUP_APP == 'present' && steps.setup-token.outcome == 'success' && env.MODE == 'new'
+        continue-on-error: true
+        with:
+          app-id: ${{ vars.SDLC_APP_ID }}
+          private-key: ${{ secrets.SDLC_APP_PRIVATE_KEY }}
+          owner: ${{ env.OWNER }}
+          repositories: ${{ env.NAME }}
+          permission-checks: read
+          skip-token-revoke: true
+
       # Only after that mint failed, on the owner's own installation of
       # the Setup App, which is on this repository and nothing else, with
       # metadata read: a failure here is the Setup App's id or key, not the
@@ -541,7 +568,9 @@ jobs:
       # line per setting. The step never fails the request: the pull
       # request is the place that says what happened, and a step that
       # dies before writing the report leaves the pull request's text
-      # without its section, which the next step says.
+      # without its section, which the next step says. In mode new it may
+      # wait up to ten minutes for the check run it pins the ruleset's
+      # check to, usually under one, which the job's timeout allows for.
       - name: Apply the repository's settings where the Setup App is installed
         if: env.REFUSED != 'true'
         continue-on-error: true
@@ -550,10 +579,11 @@ jobs:
           PROBE_OUTCOME: ${{ steps.setup-probe.outcome }}
           GH_TOKEN: ${{ steps.setup-token.outputs.token }}
           GH_ORG_TOKEN: ${{ steps.setup-org-token.outputs.token }}
+          GH_CHECKS_TOKEN: ${{ steps.checks-token.outputs.token }}
           TARGET: ${{ env.TARGET }}
         run: |
           if [ "$SETUP_APP" = present ] && [ "$SETUP_OUTCOME" = success ]; then
-            python3 start/scripts/setup.py apply --repo "$TARGET" --mode "$MODE" \
+            python3 start/scripts/setup.py apply --repo "$TARGET" --mode "$MODE" --head "${ADOPT_HEAD:-}" \
               --ruleset template/docs/setup/ruleset-main.json --report "$RUNNER_TEMP/settings.json"
           else
             if [ "$SETUP_APP" != present ]; then
@@ -585,6 +615,14 @@ jobs:
         run: |
           gh api --method DELETE installation/token --silent \
             || echo "::warning::the Setup App's organization token could not be revoked; it expires within the hour"
+
+      - name: Revoke the token that reads the check runs
+        if: always() && steps.checks-token.outputs.token != ''
+        env:
+          GH_TOKEN: ${{ steps.checks-token.outputs.token }}
+        run: |
+          gh api --method DELETE installation/token --silent \
+            || echo "::warning::the token that reads the check runs could not be revoked; it expires within the hour"
 
       # Its one job done, the Setup App uninstalls itself, which an App may
       # do with its own JWT, when its installation reaches this repository
