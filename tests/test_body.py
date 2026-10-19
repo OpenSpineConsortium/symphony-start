@@ -505,7 +505,7 @@ class Body(unittest.TestCase):
                       " organization's private and internal repositories or in another way than with selected ones,"
                       " and the run changes no visibility; an owner of the organization switches it to selected"
                       " repositories to lend it here; `CLAUDE_CODE_OAUTH_TOKEN` is not among the organization's"
-                      " secrets, and the run makes none.", body)
+                      " secrets and variables, and the run makes none.", body)
 
     def test_a_requester_with_no_token_is_told_how_to_lend_one(self):
         detail = "press Add Token on the control panel's Tokens page to lend one of yours"
@@ -523,10 +523,10 @@ class Body(unittest.TestCase):
 
     def test_tokens_not_lent_say_why_and_how(self):
         body = self.body(settings=self.lending_report("not-granted"), owner_type="Organization")
-        self.assertIn(f"{LENDING} not lent, since the Symphony Setup App's installation on the organization has not"
-                      " granted the organization permissions Secrets and Variables (Read and write); an owner of the"
-                      " organization accepts them at https://github.com/organizations/octo-org/settings/installations."
-                      f"{LEND_MORE}", body)
+        self.assertIn(f"{LENDING} not lent, since the run could not make a token with the organization permissions"
+                      " Secrets and Variables (Read and write), most often because the Symphony Setup App's installation"
+                      " on the organization has not granted them; an owner of the organization accepts them at"
+                      f" https://github.com/organizations/octo-org/settings/installations.{LEND_MORE}", body)
         body = self.body(settings=self.lending_report("none-owned", mode="existing"), mode="existing",
                          files=THEIR_FILES, owner_type="Organization")
         self.assertIn(f"{LENDING} none lent, since no token in it names you as its owner", body)
@@ -538,7 +538,7 @@ class Body(unittest.TestCase):
         self.assertIn(f"{LENDING} not lent (the repository's id could not be read).", body)
         body = self.body(settings=self.lending_report("not-granted", detail="HTTP 403: Resource not accessible"),
                          owner_type="Organization")
-        self.assertIn("(Read and write) (GitHub said: HTTP 403: Resource not accessible);", body)
+        self.assertIn("(Read and write) (GitHub said: HTTP 403: Resource not accessible), most often", body)
 
     def test_no_lending_line_for_a_personal_account_or_an_older_report(self):
         body = self.body(settings=self.lending_report("not-tried"))

@@ -1708,9 +1708,10 @@ def token_lending_line(manifest, report):
     said = github_said(report, TOKEN_LENDING) if detail.startswith("HTTP ") or ": HTTP " in detail else (
         f" ({detail})" if detail else "")
     if state == "not-granted":
-        return (f"{head} not lent, since the {SETUP_APP} App's installation on the organization has not granted the"
-                f" organization permissions Secrets and Variables (Read and write){said};"
-                f" an owner of the organization accepts them at {installations_page(manifest)}.{by_hand}")
+        return (f"{head} not lent, since the run could not make a token with the organization permissions Secrets and"
+                f" Variables (Read and write){said}, most often because the {SETUP_APP} App's installation on the"
+                f" organization has not granted them; an owner of the organization accepts them at"
+                f" {installations_page(manifest)}.{by_hand}")
     if state == "none-owned":
         why = f"; {detail}" if detail else ""
         return (f"{head} none lent, since no token in it names you as its owner by your login and account id: the"
@@ -1730,7 +1731,7 @@ def token_lending_line(manifest, report):
                      " switches it to selected repositories to lend it here")
     if missing:
         parts.append(f"{code_list(missing)} {'is' if len(missing) == 1 else 'are'} not among the organization's"
-                     " secrets, and the run makes none")
+                     " secrets and variables, and the run makes none")
     if failed:
         parts.append(f"not lent: {code_list(failed)}{said}")
     what = "; ".join(parts) if parts else f"not lent{said}"

@@ -690,13 +690,17 @@ def owned_secrets(settings_text, requester, requester_id):
     the requester by login and by account id, in the pool's order, main
     last. A login passes to whoever takes it once an account is renamed or
     deleted, so a slot that kept no account id is never lent, as the
-    template's Token run refuses it from an issue. A value that is not the
+    template's Token run refuses it from an issue. A slot in the
+    organization's keeping, lent with no say, is placed by the
+    organization's owners alone (symphony-template#253), so it is never
+    lent here either. A value that is not the
     settings' shape owns nothing, and neither does a requester whose login
     or account id is not one."""
     if not LOGIN.fullmatch(requester or "") or not ACCOUNT_ID.fullmatch(requester_id or ""):
         return []
     return [secret_of(slot) for slot, setting in pool_slots(settings_text)
-            if owned_by_login(setting, requester) and str(kept_account_id(setting)) == requester_id]
+            if owned_by_login(setting, requester) and str(kept_account_id(setting)) == requester_id
+            and setting.get("keeping") != "organization"]
 
 
 def reaches(visibility, repo_visibility):
