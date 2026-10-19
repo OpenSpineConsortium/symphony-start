@@ -61,7 +61,33 @@ hand:
      token of the main App's with Checks read alone, GH_CHECKS_TOKEN, and
      the write the Setup App's. A ruleset of that name the repository had
      already is left as it is, unpinned, as step 1 says it is, and so is
-     an organization's ruleset of that name, which only its owners edit.
+     an organization's ruleset of that name, which only its owners edit;
+  7. for an organization's repository, in either mode, the requester's
+     own Claude tokens lent to it: the repository is added to the
+     selected repositories of each organization secret of the token pool
+     (SYMPHONY_CLAUDE_1 to SYMPHONY_CLAUDE_32, and CLAUDE_CODE_OAUTH_TOKEN
+     as the slot main) whose owner in the organization variable
+     SYMPHONY_CLAUDE_SETTINGS is the requester by login and by account
+     id, since a login passes to whoever takes it after a rename, so a
+     slot that kept no account id is never lent; and, only where one of
+     those secrets was lent or reaches the repository already, of the two
+     variables SYMPHONY_CLAUDE_ACCOUNTS and SYMPHONY_CLAUDE_SETTINGS, so
+     the repository's workflows can read the pool. It runs with a third
+     token, GH_LEND_TOKEN, with the organization permissions Secrets and
+     Variables (write) and Metadata (read), minted only where the
+     installation granted them; without it the step says so and nothing
+     is touched. It reads the value of SYMPHONY_CLAUDE_SETTINGS, which
+     holds the slots' owners, and the records of the requester's secrets
+     and the two variables, and never a secret's value, which GitHub
+     gives no one. Only a secret or a variable that exists and whose
+     visibility is selected is written, and only its list of
+     repositories: never a value, a visibility or another person's slot,
+     and nothing is created. It comes before the pin, which may wait
+     minutes.
+
+settings.json at the repository's root is the list of every setting, in
+this order, with its API call and the permission it needs; the tests hold
+SETTINGS below to it.
 
 The labels are the workflow's, made with the main App's token; the
 template's variables are optional and none is set here; the Claude token
@@ -82,7 +108,7 @@ is the person's own and never asked for; and GitHub's reading of
          request's text has one source for all of it.
 
 Python 3.12 or later, standard library only. The tokens are read from
-GH_TOKEN, GH_ORG_TOKEN and GH_CHECKS_TOKEN and never printed.
+GH_TOKEN, GH_ORG_TOKEN, GH_CHECKS_TOKEN and GH_LEND_TOKEN and never printed.
 """
 
 import argparse
@@ -120,6 +146,12 @@ EXISTS = "exists"
 FAILED = "failed"
 FORBIDDEN = "forbidden"
 NOT_TRIED = "not-tried"
+# The token lending only: the requester owns no token of the pool, the
+# installation did not grant the organization permissions it needs, or the
+# requester owns tokens and none of them could reach the repository.
+NONE_OWNED = "none-owned"
+NOT_GRANTED = "not-granted"
+NONE_LENT = "none-lent"
 # The check's pin only: no check run of GitHub Actions came within the
 # bound, so the ruleset still takes the check from any source.
 NOT_YET = "not-yet"
@@ -131,9 +163,11 @@ SECRET_SCANNING = "secret_scanning"
 PUSH_PROTECTION = "push_protection"
 ACTIONS_PULL_REQUESTS = "actions_pull_requests"
 CHECK_SOURCE = "check_source"
+TOKEN_LENDING = "token_lending"
 # The pin comes last, though it belongs to the ruleset, since it may wait
 # minutes for the check run and every other setting is applied meanwhile.
-SETTINGS = (RULESET, TOGGLES, TOPIC, SECRET_SCANNING, PUSH_PROTECTION, ACTIONS_PULL_REQUESTS, CHECK_SOURCE)
+SETTINGS = (RULESET, TOGGLES, TOPIC, SECRET_SCANNING, PUSH_PROTECTION, ACTIONS_PULL_REQUESTS, TOKEN_LENDING,
+            CHECK_SOURCE)
 # The topic an adopted repository carries, which the template's own
 # scripts/setup-repo.sh adds too.
 TOPIC_NAME = "symphony"
@@ -154,6 +188,28 @@ RULESET_KEYS = ("name", "target", "enforcement", "conditions", "rules", "bypass_
 UNPROCESSABLE = 422
 TOO_MANY = 429
 HEAD = re.compile(r"[0-9a-f]{40}|[0-9a-f]{64}")
+# The token pool, as the template's tools/pool.py reads it: the slots'
+# secrets, main's among them, and the two variables that list the slots
+# and say, per slot, whose token it is.
+POOL_SLOTS = tuple(str(slot) for slot in range(1, 33)) + ("main",)
+POOL_SECRET = "SYMPHONY_CLAUDE_"
+MAIN_SECRET = "CLAUDE_CODE_OAUTH_TOKEN"
+POOL_ACCOUNTS = "SYMPHONY_CLAUDE_ACCOUNTS"
+POOL_SETTINGS = "SYMPHONY_CLAUDE_SETTINGS"
+POOL_VARIABLES = (POOL_ACCOUNTS, POOL_SETTINGS)
+LOGIN = re.compile(r"[A-Za-z0-9](?:[A-Za-z0-9]|-(?=[A-Za-z0-9])){0,38}")
+# A GitHub account id as the workflow passes it: ASCII digits, bounded,
+# with no leading zero.
+ACCOUNT_ID = re.compile(r"[1-9][0-9]{0,19}")
+# What became of one secret or variable: lent here now; left as it is,
+# since its visibility is not selected and it reaches this repository
+# already (all repositories, or private ones where this one is private or
+# internal); not reaching this repository, its visibility not selected and
+# not covering it, which the run never changes; or not there.
+LENT = "lent"
+LEFT = "left"
+UNREACHED = "unreached"
+MISSING = "missing"
 
 
 def organization_first(org):
@@ -275,6 +331,7 @@ def new_report(outcome, mode):
         "ruleset_name": None,
         "required_check": False,
         "settings": {},
+        "lending": {LENT: [], LEFT: [], UNREACHED: [], MISSING: [], FAILED: []},
     }
 
 
@@ -309,11 +366,20 @@ def read_visibility(github, repo, report):
     needs: GitHub Free writes a private repository's ruleset but does not
     enforce it. The visibility, not the flag private, which an internal
     repository carries too. Unknown when the read fails; the settings are
-    tried anyway."""
+    tried anyway. Returns the repository's id, which the token lending
+    names it by, or None, and its visibility, which says whether a secret
+    shared with the organization's private repositories reaches it, or an
+    empty string."""
     try:
-        report["private"] = github.call("GET", f"/repos/{repo}").get("visibility") == "private"
+        answer = github.call("GET", f"/repos/{repo}")
     except GitHubError:
         report["private"] = None
+        return None, ""
+    answer = answer if isinstance(answer, dict) else {}
+    visibility = answer.get("visibility") if isinstance(answer.get("visibility"), str) else ""
+    report["private"] = visibility == "private"
+    ident = answer.get("id")
+    return (ident if isinstance(ident, int) and not isinstance(ident, bool) and ident > 0 else None), visibility
 
 
 def apply_ruleset(github, repo, ruleset, report):
@@ -582,12 +648,169 @@ def apply_check_source(github, checks_github, repo, head, report, waiting):
         pin_check_source(github, checks_github, repo, report["ruleset_name"], head, report, waiting)
 
 
-def apply_settings(github, repo, ruleset, mode, org_github=None, checks_github=None, head=None, waiting=None):
+# The run's own hint, for the pull request, whenever none of the pool's
+# tokens is the requester's. It is the same whatever the pool holds, so a
+# login taken over from a renamed account learns nothing of the old owner's
+# slots.
+NONE_OWNED_HINT = "press Add Token on the control panel's Tokens page to lend one of yours"
+
+
+def secret_of(slot):
+    return MAIN_SECRET if slot == "main" else POOL_SECRET + slot
+
+
+def pool_slots(settings_text):
+    """The slots of SYMPHONY_CLAUDE_SETTINGS that are the settings' shape,
+    in the pool's order, main last, as (slot, setting) pairs."""
+    try:
+        data = json.loads(settings_text or "")
+    except (ValueError, TypeError):
+        return []
+    if not isinstance(data, dict):
+        return []
+    return [(slot, data[slot]) for slot in POOL_SLOTS if isinstance(data.get(slot), dict)]
+
+
+def owned_by_login(setting, requester):
+    """Whether the slot's owner is the requester's login; GitHub's logins
+    compare without case."""
+    owner = setting.get("owner")
+    return isinstance(owner, str) and bool(LOGIN.fullmatch(owner)) and owner.casefold() == requester.casefold()
+
+
+def kept_account_id(setting):
+    """The account id the slot kept, as the template's tools/token_run.py
+    writes it (an integer under uid), or None."""
+    uid = setting.get("uid")
+    return uid if isinstance(uid, int) and not isinstance(uid, bool) and uid > 0 else None
+
+
+def owned_secrets(settings_text, requester, requester_id):
+    """The secrets of the slots whose owner in SYMPHONY_CLAUDE_SETTINGS is
+    the requester by login and by account id, in the pool's order, main
+    last. A login passes to whoever takes it once an account is renamed or
+    deleted, so a slot that kept no account id is never lent, as the
+    template's Token run refuses it from an issue. A slot in the
+    organization's keeping, lent with no say, is placed by the
+    organization's owners alone (symphony-template#253), so it is never
+    lent here either. A value that is not the
+    settings' shape owns nothing, and neither does a requester whose login
+    or account id is not one."""
+    if not LOGIN.fullmatch(requester or "") or not ACCOUNT_ID.fullmatch(requester_id or ""):
+        return []
+    return [secret_of(slot) for slot, setting in pool_slots(settings_text)
+            if owned_by_login(setting, requester) and str(kept_account_id(setting)) == requester_id
+            and setting.get("keeping") != "organization"]
+
+
+def reaches(visibility, repo_visibility):
+    """Whether an organization secret or variable of that visibility, other
+    than selected, reaches a repository of that visibility: all does; private
+    reaches the organization's private and internal repositories only, so not
+    a public one, nor one whose visibility could not be read."""
+    return visibility == "all" or (visibility == "private" and repo_visibility in ("private", "internal"))
+
+
+def lend_one(lend_github, org, kind, name, repo_id, repo_visibility):
+    """Add the repository to one organization secret's or variable's
+    selected repositories (kind is secrets or variables): LENT; else, where
+    its visibility is not selected, which the run never changes, LEFT where
+    it reaches the repository already and UNREACHED where it does not; or
+    MISSING where the organization has none of that name, which the run
+    never creates. Any other refusal is raised."""
+    try:
+        item = lend_github.call("GET", f"/orgs/{org}/actions/{kind}/{name}")
+    except GitHubError as said:
+        if said.status == 404:
+            return MISSING
+        raise
+    visibility = item.get("visibility") if isinstance(item, dict) else None
+    if visibility != "selected":
+        return LEFT if reaches(visibility, repo_visibility) else UNREACHED
+    lend_github.call("PUT", f"/orgs/{org}/actions/{kind}/{name}/repositories/{repo_id}", {})
+    return LENT
+
+
+def lend_each(lend_github, org, kind, names, repo_id, repo_visibility, report):
+    """lend_one over names, each on its own; the first refusal's words, or
+    an empty string."""
+    refused = ""
+    for name in names:
+        try:
+            outcome = lend_one(lend_github, org, kind, name, repo_id, repo_visibility)
+        except GitHubError as said:
+            outcome, refused = FAILED, refused or f"{name}: {said}"
+        report["lending"][outcome].append(name)
+    return refused
+
+
+def read_pool_settings(lend_github, org):
+    """The value of the organization's SYMPHONY_CLAUDE_SETTINGS, or None
+    where it has none. Any other refusal is raised."""
+    try:
+        answer = lend_github.call("GET", f"/orgs/{org}/actions/variables/{POOL_SETTINGS}")
+    except GitHubError as said:
+        if said.status == 404:
+            return None
+        raise
+    value = answer.get("value") if isinstance(answer, dict) else None
+    return value if isinstance(value, str) else ""
+
+
+def secrets_reaching(report):
+    """The requester's secrets that this run lent or found reaching the
+    repository already: the variables are lent only beside one."""
+    return [name for name in report["lending"][LENT] + report["lending"][LEFT] if name not in POOL_VARIABLES]
+
+
+def apply_token_lending(lend_github, repo, repo_id, repo_visibility, owner_type, requester, requester_id, report):
+    """Lend the requester's own tokens of the organization's pool to the
+    repository, with the two variables that make the pool readable there.
+    Nothing is tried for a personal account's repository, whose secrets are
+    its own, or without the requester's account id, and nothing is touched
+    without the organization's token; the variables are lent only where one
+    of the requester's tokens was lent or reaches the repository already,
+    since without one the pool's settings, which name every slot's owner,
+    serve this repository nothing."""
+    if owner_type != "Organization":
+        record(report, TOKEN_LENDING, NOT_TRIED, "the repository belongs to a personal account")
+        return
+    if not ACCOUNT_ID.fullmatch(requester_id or ""):
+        record(report, TOKEN_LENDING, NOT_TRIED, "the requester's account id was not given")
+        return
+    if lend_github is None:
+        record(report, TOKEN_LENDING, NOT_GRANTED)
+        return
+    if repo_id is None:
+        record(report, TOKEN_LENDING, FAILED, "the repository's id could not be read")
+        return
+    org = repo.split("/")[0]
+    try:
+        value = read_pool_settings(lend_github, org)
+    except GitHubError as said:
+        record(report, TOKEN_LENDING, NOT_GRANTED if said.status == 403 else FAILED, str(said))
+        return
+    owned = owned_secrets(value, requester, requester_id)
+    if not owned:
+        record(report, TOKEN_LENDING, NONE_OWNED, NONE_OWNED_HINT)
+        return
+    refused = lend_each(lend_github, org, "secrets", owned, repo_id, repo_visibility, report)
+    if not secrets_reaching(report):
+        record(report, TOKEN_LENDING, FAILED if refused else NONE_LENT, refused)
+        return
+    refused = lend_each(lend_github, org, "variables", POOL_VARIABLES, repo_id, repo_visibility, report) or refused
+    record(report, TOKEN_LENDING, FAILED if refused else DONE, refused)
+
+
+def apply_settings(github, repo, ruleset, mode, org_github=None, checks_github=None, head=None, waiting=None,
+                   lending=None):
     """Every setting, each on its own: one that fails costs itself and
     nothing else. ruleset is the dict, or the one-line reason it could not
-    be read."""
+    be read. lending is (the organization's token or None, the owner's
+    type, the requester's login, the requester's account id); without it
+    the lending is not tried."""
     report = new_report(APPLIED, mode)
-    read_visibility(github, repo, report)
+    repo_id, repo_visibility = read_visibility(github, repo, report)
     if isinstance(ruleset, dict):
         report["ruleset_name"] = ruleset["name"]
         report["required_check"] = requires_check(ruleset)
@@ -602,6 +825,8 @@ def apply_settings(github, repo, ruleset, mode, org_github=None, checks_github=N
         apply_actions_pull_requests(github, repo, report, org_github)
     else:
         record(report, ACTIONS_PULL_REQUESTS, NOT_TRIED, "the protocol alone opens no pull request with GitHub Actions")
+    lend_github, owner_type, requester, requester_id = lending or (None, "", "", "")
+    apply_token_lending(lend_github, repo, repo_id, repo_visibility, owner_type, requester, requester_id, report)
     # Only the whole template brings the CI job that reports the check (6).
     if mode == "new":
         apply_check_source(github, checks_github, repo, head, report, waiting or WAITING)
@@ -629,12 +854,25 @@ LOG_LINES = {
                    FAILED: "the check's source: not set", NOT_YET: "the check's source: not set yet",
                    NOT_TRIED: "the check's source: not tried"},
 }
+# The token lending has one line of two, whatever happened and whoever
+# asked: whose tokens, which, how many, whether the requester holds any
+# and whether the installation granted the permissions stay out of the
+# log, and the reasons go to the pull request alone.
+TOKENS_LENT = "token lending: tokens lent"
+NO_TOKENS_LENT = "token lending: no tokens lent"
+
+
+def lending_line(report):
+    lent = report.get("lending", {}).get(LENT, [])
+    return TOKENS_LENT if any(name not in POOL_VARIABLES for name in lent) else NO_TOKENS_LENT
 
 
 def log_lines(report):
     for key in SETTINGS:
         setting = report["settings"].get(key)
-        if setting:
+        if key == TOKEN_LENDING:
+            yield lending_line(report)
+        elif setting:
             yield "settings: " + LOG_LINES[key][setting["state"]]
 
 
@@ -663,8 +901,15 @@ def command_apply(options, transport=urllib_transport):
     # the Setup App holds no Checks permission to read the check run with.
     checks_token = os.environ.get("GH_CHECKS_TOKEN", "")
     checks_github = GitHub(checks_token, transport, options.api) if checks_token else None
+    # The Setup App's token with the organization permissions Secrets and
+    # Variables (write), minted only for an organization's repository
+    # whose installation granted them.
+    lend_token = os.environ.get("GH_LEND_TOKEN", "")
+    lend_github = GitHub(lend_token, transport, options.api) if lend_token else None
+    lending = (lend_github, options.owner_type, options.requester, options.requester_id)
     try:
-        report = apply_settings(github, options.repo, ruleset, options.mode, org_github, checks_github, options.head)
+        report = apply_settings(github, options.repo, ruleset, options.mode, org_github, checks_github, options.head,
+                                lending=lending)
         write_report(options.report, report)
     except OSError as problem:
         print(f"setup: {problem}", file=sys.stderr)
@@ -681,6 +926,7 @@ def command_skip(options, transport=None):
         print(f"setup: {problem}", file=sys.stderr)
         return 1
     print(f"settings: none applied ({options.why})")
+    print(NO_TOKENS_LENT)
     return 0
 
 
@@ -694,6 +940,9 @@ def parse_args(argv):
     applying.add_argument("--mode", required=True, choices=("new", "existing"))
     applying.add_argument("--report", required=True, help="where to write the report")
     applying.add_argument("--head", default="", help="the sha of the branch symphony/adopt the run pushed")
+    applying.add_argument("--owner-type", default="", help="the repository owner's type, Organization or User")
+    applying.add_argument("--requester", default="", help="the login of the administrator who asked")
+    applying.add_argument("--requester-id", default="", help="the account id of the administrator who asked")
     applying.add_argument("--api", default=API, help=argparse.SUPPRESS)
 
     skipping = commands.add_parser("skip", help="write a report that says why nothing was applied")

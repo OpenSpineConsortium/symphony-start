@@ -84,6 +84,9 @@ GIVEN_BACK = dict(json.loads(json.dumps(RULESET)), id=RULESET_ID, source_type="R
 PINNED = json.loads(json.dumps(RULESET))
 PINNED["rules"][2]["parameters"]["required_status_checks"] = [{"context": "check", "integration_id": 15368}]
 PIN_LOG = "settings: the check's source: "
+# The token lending's one line of two, the same for every requester.
+LENT_LOG = "token lending: tokens lent"
+NOT_LENT_LOG = "token lending: no tokens lent"
 
 
 class FakeClock:
@@ -187,7 +190,10 @@ class Apply(unittest.TestCase):
         return code, report, out.getvalue(), err.getvalue()
 
     def states(self, report):
-        return {key: setting["state"] for key, setting in report["settings"].items()}
+        """Each setting's state but the token lending's, which these tests
+        leave untried, as a run for a personal account's repository does,
+        and the class Lending tests on its own."""
+        return {key: setting["state"] for key, setting in report["settings"].items() if key != "token_lending"}
 
     def test_new_mode_applies_every_setting_in_order(self):
         github = FakeGitHub()
@@ -217,6 +223,7 @@ class Apply(unittest.TestCase):
             "settings: secret scanning: on",
             "settings: push protection: on",
             ACTIONS_LOG + "on",
+            NOT_LENT_LOG,
             PIN_LOG + "GitHub Actions",
         ])
 
@@ -581,15 +588,21 @@ class Apply(unittest.TestCase):
         self.assertEqual(report["settings"]["actions_pull_requests"],
                          {"state": "not-tried", "detail": NOT_TRIED_IN_EXISTING})
         self.assertEqual(list(report["settings"]), list(setup.SETTINGS))
-        self.assertEqual(out.splitlines()[-2:], [ACTIONS_LOG + "not tried", PIN_LOG + "not tried"])
+        self.assertEqual(out.splitlines()[-3:], [ACTIONS_LOG + "not tried", NOT_LENT_LOG,
+                                                 PIN_LOG + "not tried"])
 
     def test_the_log_has_a_line_for_every_setting_done_or_refused(self):
         self.assertEqual(setup.SETTINGS, ("ruleset", "toggles", "topic", "secret_scanning", "push_protection",
-                                          "actions_pull_requests", "check_source"))
+                                          "actions_pull_requests", "token_lending", "check_source"))
         for key in setup.SETTINGS:
+            if key == setup.TOKEN_LENDING:
+                continue
             with self.subTest(setting=key):
                 self.assertIn(setup.DONE, setup.LOG_LINES[key])
                 self.assertIn(setup.FAILED, setup.LOG_LINES[key])
+        # The token lending has one line of two, whatever its state.
+        self.assertNotIn(setup.TOKEN_LENDING, setup.LOG_LINES)
+        self.assertEqual((setup.TOKENS_LENT, setup.NO_TOKENS_LENT), (LENT_LOG, NOT_LENT_LOG))
         # The box can be forbidden, or not tried in mode existing, and the
         # log tells the owner's policy from no other refusal.
         lines = setup.LOG_LINES[setup.ACTIONS_PULL_REQUESTS]
@@ -622,6 +635,7 @@ class Apply(unittest.TestCase):
             "settings: secret scanning: not turned on",
             "settings: push protection: not tried",
             ACTIONS_LOG + "not turned on",
+            NOT_LENT_LOG,
             PIN_LOG + "not tried",
         ])
         self.assertNotIn("integration", out)
@@ -876,6 +890,319 @@ class Apply(unittest.TestCase):
         self.assertEqual(adopt.read_report(self.report)["settings"]["toggles"]["state"], "done")
 
 
+# The token lending: the organization's pool as the template's tools/pool.py
+# reads it, the requester's login, which matches its owner without case,
+# and the token with the organization permissions Secrets and Variables.
+LEND_TOKEN = "ghs_lend_token_for_tests"
+REQUESTER = "Mona"
+REQUESTER_ID = "583231"
+REPO_ID = 4242
+ORG = "/orgs/octo-org/actions"
+POOL_SETTINGS = {"3": {"owner": "mona", "uid": 583231, "model": "claude-opus-5-5"}, "4": {"owner": "hubot", "uid": 1},
+                 "main": {"owner": "MONA", "uid": 583231}, "7": {"id": "0a1b2c3d"}, "9": "not a setting"}
+
+
+def secret(name):
+    return f"{ORG}/secrets/{name}"
+
+
+def variable(name):
+    return f"{ORG}/variables/{name}"
+
+
+def lent(path):
+    return f"{path}/repositories/{REPO_ID}"
+
+
+def pool_answers(settings=None, visibility="selected", extra=None, repo_visibility="public"):
+    """GitHub's answers for an organization whose pool holds the slots 3, 4
+    and main, every secret and both variables of selected visibility."""
+    answers = {
+        ("GET", f"/repos/{REPO}"): (200, {"id": REPO_ID, "visibility": repo_visibility}),
+        ("GET", variable("SYMPHONY_CLAUDE_SETTINGS")): (200, {
+            "name": "SYMPHONY_CLAUDE_SETTINGS", "visibility": visibility,
+            "value": json.dumps(POOL_SETTINGS if settings is None else settings)}),
+        ("GET", variable("SYMPHONY_CLAUDE_ACCOUNTS")): (200, {"name": "SYMPHONY_CLAUDE_ACCOUNTS", "value": "3,4",
+                                                               "visibility": visibility}),
+    }
+    for name in ("SYMPHONY_CLAUDE_3", "SYMPHONY_CLAUDE_4", "CLAUDE_CODE_OAUTH_TOKEN"):
+        answers[("GET", secret(name))] = (200, {"name": name, "visibility": visibility})
+    for path in [secret(name) for name in ("SYMPHONY_CLAUDE_3", "SYMPHONY_CLAUDE_4", "CLAUDE_CODE_OAUTH_TOKEN")] + [
+            variable(name) for name in ("SYMPHONY_CLAUDE_ACCOUNTS", "SYMPHONY_CLAUDE_SETTINGS")]:
+        answers[("PUT", lent(path))] = (204, None)
+    answers.update(extra or {})
+    return answers
+
+
+class Lending(unittest.TestCase):
+    """For an organization's repository, the requester's own tokens of the
+    pool and the two variables that make it readable are lent to the
+    repository: its id added to each one's selected repositories, and
+    nothing else written. Another person's slot, a secret of another
+    visibility and one that is not there are left as they are; the log
+    says the same fixed words for every requester."""
+
+    def setUp(self):
+        self.scratch = tempfile.TemporaryDirectory()
+        self.addCleanup(self.scratch.cleanup)
+        self.root = Path(self.scratch.name)
+        self.ruleset = self.root / "ruleset-main.json"
+        self.ruleset.write_text(json.dumps(RULESET) + "\n", encoding="utf-8")
+        self.report = self.root / "settings.json"
+        patcher = mock.patch.dict(os.environ, {"GH_TOKEN": "ghs_token_for_tests"})
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
+    def lend(self, github, owner_type="Organization", requester=REQUESTER, token=LEND_TOKEN, mode="existing",
+             requester_id=REQUESTER_ID):
+        environment = {"GH_LEND_TOKEN": token} if token else {}
+        out = io.StringIO()
+        with mock.patch.dict(os.environ, environment), contextlib.redirect_stdout(out):
+            code = setup.main(["apply", "--repo", REPO, "--mode", mode, "--ruleset", str(self.ruleset),
+                               "--report", str(self.report), "--owner-type", owner_type, f"--requester={requester}",
+                               f"--requester-id={requester_id}"],
+                              transport=github)
+        self.assertEqual(code, 0)
+        return json.loads(self.report.read_text(encoding="utf-8")), out.getvalue()
+
+    def organization_writes(self, github):
+        return [(method, path) for method, path, _ in github.writes() if path.startswith("/orgs/")]
+
+    def test_the_requesters_own_tokens_and_the_two_variables_are_lent(self):
+        github = FakeGitHub(pool_answers())
+        report, out = self.lend(github)
+        self.assertEqual(report["settings"]["token_lending"], {"state": "done", "detail": ""})
+        self.assertEqual(self.organization_writes(github), [
+            ("PUT", lent(secret("SYMPHONY_CLAUDE_3"))),
+            ("PUT", lent(secret("CLAUDE_CODE_OAUTH_TOKEN"))),
+            ("PUT", lent(variable("SYMPHONY_CLAUDE_ACCOUNTS"))),
+            ("PUT", lent(variable("SYMPHONY_CLAUDE_SETTINGS"))),
+        ])
+        self.assertEqual(report["lending"], {
+            "lent": ["SYMPHONY_CLAUDE_3", "CLAUDE_CODE_OAUTH_TOKEN", "SYMPHONY_CLAUDE_ACCOUNTS",
+                     "SYMPHONY_CLAUDE_SETTINGS"], "left": [], "unreached": [], "missing": [], "failed": []})
+        self.assertEqual([line for line in out.splitlines() if "token lending" in line], [LENT_LOG])
+
+    def test_another_persons_slot_is_never_read_or_touched(self):
+        github = FakeGitHub(pool_answers())
+        self.lend(github)
+        touched = " ".join(path for _, path, _, _ in github.calls)
+        self.assertNotIn("SYMPHONY_CLAUDE_4", touched)
+        self.assertNotIn("SYMPHONY_CLAUDE_7", touched)
+
+    def test_the_organization_calls_carry_the_lending_token(self):
+        github = FakeGitHub(pool_answers())
+        self.lend(github)
+        for method, path, headers, _ in github.calls:
+            with self.subTest(call=(method, path)):
+                token = LEND_TOKEN if path.startswith("/orgs/") else "ghs_token_for_tests"
+                self.assertEqual(headers["Authorization"], f"Bearer {token}")
+
+    def test_the_log_names_no_one_and_no_slot(self):
+        github = FakeGitHub(pool_answers(extra={("PUT", lent(secret("SYMPHONY_CLAUDE_3"))): (500, {"message": "boom"})}))
+        report, out = self.lend(github)
+        self.assertEqual(report["settings"]["token_lending"]["state"], "failed")
+        for word in ("SYMPHONY_CLAUDE", "CLAUDE_CODE_OAUTH_TOKEN", "mona", "Mona", "octo-org", str(REPO_ID), "boom",
+                     REQUESTER_ID, "granted", "pool"):
+            self.assertNotIn(word, out)
+        # main was lent, so tokens were lent, though not all.
+        self.assertEqual([line for line in out.splitlines() if "token lending" in line], [LENT_LOG])
+
+    def test_a_refused_loan_costs_itself_and_the_others_are_still_lent(self):
+        github = FakeGitHub(pool_answers(extra={("PUT", lent(secret("SYMPHONY_CLAUDE_3"))): (500, {"message": "boom"})}))
+        report, _ = self.lend(github)
+        self.assertEqual(report["settings"]["token_lending"],
+                         {"state": "failed", "detail": "SYMPHONY_CLAUDE_3: HTTP 500: boom"})
+        self.assertEqual(report["lending"]["failed"], ["SYMPHONY_CLAUDE_3"])
+        self.assertEqual(report["lending"]["lent"], ["CLAUDE_CODE_OAUTH_TOKEN", "SYMPHONY_CLAUDE_ACCOUNTS",
+                                                     "SYMPHONY_CLAUDE_SETTINGS"])
+
+    def test_a_visibility_other_than_selected_is_left_as_it_is(self):
+        github = FakeGitHub(pool_answers(visibility="all"))
+        report, out = self.lend(github)
+        self.assertEqual(self.organization_writes(github), [])
+        self.assertEqual(report["settings"]["token_lending"]["state"], "done")
+        self.assertEqual(report["lending"]["left"], ["SYMPHONY_CLAUDE_3", "CLAUDE_CODE_OAUTH_TOKEN",
+                                                     "SYMPHONY_CLAUDE_ACCOUNTS", "SYMPHONY_CLAUDE_SETTINGS"])
+        # The run lent nothing itself, so the log says so.
+        self.assertIn(NOT_LENT_LOG, out.splitlines())
+
+    def secrets_private_variables_selected(self):
+        extra = {("GET", secret(name)): (200, {"name": name, "visibility": "private"})
+                 for name in ("SYMPHONY_CLAUDE_3", "CLAUDE_CODE_OAUTH_TOKEN")}
+        return extra
+
+    def test_a_private_secret_never_reaches_a_public_repository_nor_lends_the_variables(self):
+        github = FakeGitHub(pool_answers(extra=self.secrets_private_variables_selected()))
+        report, out = self.lend(github)
+        self.assertEqual(self.organization_writes(github), [])
+        self.assertEqual(report["settings"]["token_lending"]["state"], "none-lent")
+        self.assertEqual(report["lending"]["unreached"], ["SYMPHONY_CLAUDE_3", "CLAUDE_CODE_OAUTH_TOKEN"])
+        self.assertEqual(report["lending"]["left"], [])
+        self.assertFalse([path for _, path, _, _ in github.calls if path == variable("SYMPHONY_CLAUDE_ACCOUNTS")])
+        self.assertIn(NOT_LENT_LOG, out.splitlines())
+
+    def test_a_private_secret_reaches_a_private_or_internal_repository_and_the_variables_follow(self):
+        for visibility in ("private", "internal"):
+            with self.subTest(visibility=visibility):
+                github = FakeGitHub(pool_answers(extra=self.secrets_private_variables_selected(),
+                                                 repo_visibility=visibility))
+                report, out = self.lend(github)
+                self.assertEqual(report["settings"]["token_lending"]["state"], "done")
+                self.assertEqual(report["lending"]["left"], ["SYMPHONY_CLAUDE_3", "CLAUDE_CODE_OAUTH_TOKEN"])
+                self.assertEqual(self.organization_writes(github), [
+                    ("PUT", lent(variable("SYMPHONY_CLAUDE_ACCOUNTS"))),
+                    ("PUT", lent(variable("SYMPHONY_CLAUDE_SETTINGS"))),
+                ])
+                self.assertIn(NOT_LENT_LOG, out.splitlines())
+
+    def test_a_private_secret_beside_an_unknown_repository_visibility_does_not_reach_it(self):
+        self.assertFalse(setup.reaches("private", ""))
+        self.assertFalse(setup.reaches("private", "public"))
+        self.assertFalse(setup.reaches("selected", "private"))
+        self.assertFalse(setup.reaches(None, "private"))
+        self.assertTrue(setup.reaches("all", "public"))
+
+    def test_one_secret_lent_lends_the_variables_whatever_the_others(self):
+        extra = {("GET", secret("CLAUDE_CODE_OAUTH_TOKEN")): (200, {"name": "x", "visibility": "private"})}
+        github = FakeGitHub(pool_answers(extra=extra))
+        report, out = self.lend(github)
+        self.assertEqual(report["settings"]["token_lending"]["state"], "done")
+        self.assertEqual(report["lending"]["unreached"], ["CLAUDE_CODE_OAUTH_TOKEN"])
+        self.assertEqual(self.organization_writes(github), [
+            ("PUT", lent(secret("SYMPHONY_CLAUDE_3"))),
+            ("PUT", lent(variable("SYMPHONY_CLAUDE_ACCOUNTS"))),
+            ("PUT", lent(variable("SYMPHONY_CLAUDE_SETTINGS"))),
+        ])
+        self.assertIn(LENT_LOG, out.splitlines())
+
+    def test_a_secret_that_is_not_there_is_never_made(self):
+        github = FakeGitHub(pool_answers(extra={("GET", secret("CLAUDE_CODE_OAUTH_TOKEN")): (404, {"message": "Not Found"})}))
+        report, _ = self.lend(github)
+        self.assertEqual(report["lending"]["missing"], ["CLAUDE_CODE_OAUTH_TOKEN"])
+        self.assertNotIn(("PUT", lent(secret("CLAUDE_CODE_OAUTH_TOKEN"))), self.organization_writes(github))
+        self.assertFalse([call for call in github.writes() if call[0] in ("POST", "PATCH") and "/orgs/" in call[1]])
+
+    def test_a_requester_whose_secrets_are_all_gone_lends_nothing(self):
+        missing = (404, {"message": "Not Found"})
+        github = FakeGitHub(pool_answers(extra={("GET", secret("SYMPHONY_CLAUDE_3")): missing,
+                                            ("GET", secret("CLAUDE_CODE_OAUTH_TOKEN")): missing}))
+        report, out = self.lend(github)
+        self.assertEqual(report["settings"]["token_lending"]["state"], "none-lent")
+        self.assertEqual(report["lending"]["missing"], ["SYMPHONY_CLAUDE_3", "CLAUDE_CODE_OAUTH_TOKEN"])
+        self.assertEqual(self.organization_writes(github), [])
+        self.assertIn(NOT_LENT_LOG, out.splitlines())
+
+    def test_a_requester_who_owns_no_slot_lends_nothing_not_even_the_variables(self):
+        for requester in ("octocat", "", "-bad-"):
+            with self.subTest(requester=requester):
+                github = FakeGitHub(pool_answers())
+                report, _ = self.lend(github, requester=requester)
+                self.assertEqual(report["settings"]["token_lending"]["state"], "none-owned")
+                self.assertEqual(self.organization_writes(github), [])
+
+    def test_an_organization_with_no_pool_settings_has_none_owned(self):
+        for answer in ((404, {"message": "Not Found"}), (200, {"value": "not json"}), (200, {"value": "[1]"})):
+            with self.subTest(answer=answer):
+                github = FakeGitHub(pool_answers(extra={("GET", variable("SYMPHONY_CLAUDE_SETTINGS")): answer}))
+                report, _ = self.lend(github)
+                self.assertEqual(report["settings"]["token_lending"]["state"], "none-owned")
+                self.assertEqual(self.organization_writes(github), [])
+
+    def test_a_missing_permission_is_not_granted_and_quiet(self):
+        github = FakeGitHub(pool_answers(extra={("GET", variable("SYMPHONY_CLAUDE_SETTINGS")): (
+            403, {"message": "Resource not accessible by integration"})}))
+        report, out = self.lend(github)
+        self.assertEqual(report["settings"]["token_lending"]["state"], "not-granted")
+        self.assertEqual(self.organization_writes(github), [])
+        self.assertIn(NOT_LENT_LOG, out.splitlines())
+
+    def test_without_the_lending_token_nothing_of_the_organizations_is_touched(self):
+        github = FakeGitHub(pool_answers())
+        report, out = self.lend(github, token="")
+        self.assertEqual(report["settings"]["token_lending"]["state"], "not-granted")
+        self.assertFalse([path for _, path, _, _ in github.calls if path.startswith("/orgs/")])
+
+    def test_a_personal_accounts_repository_is_not_tried(self):
+        github = FakeGitHub(pool_answers())
+        report, out = self.lend(github, owner_type="User")
+        self.assertEqual(report["settings"]["token_lending"]["state"], "not-tried")
+        self.assertFalse([path for _, path, _, _ in github.calls if path.startswith("/orgs/")])
+        self.assertIn(NOT_LENT_LOG, out.splitlines())
+
+    def test_a_slot_whose_account_id_differs_is_not_lent(self):
+        """A login passes to whoever takes it after a rename: the new holder
+        of mona's login, with another account id, gets none of her slots."""
+        github = FakeGitHub(pool_answers())
+        report, out = self.lend(github, requester_id="99")
+        self.assertEqual(report["settings"]["token_lending"], {"state": "none-owned", "detail": setup.NONE_OWNED_HINT})
+        self.assertEqual(self.organization_writes(github), [])
+        self.assertFalse([path for _, path, _, _ in github.calls if "/secrets/" in path])
+        self.assertIn(NOT_LENT_LOG, out.splitlines())
+
+    def test_a_slot_that_kept_no_account_id_is_not_lent(self):
+        for uid in (None, "583231", True, 0, -583231):
+            with self.subTest(uid=uid):
+                settings = {"3": {"owner": "mona"}, "main": {"owner": "mona"}}
+                if uid is not None:
+                    settings["3"]["uid"] = settings["main"]["uid"] = uid
+                github = FakeGitHub(pool_answers(settings=settings))
+                report, _ = self.lend(github)
+                self.assertEqual(report["settings"]["token_lending"],
+                                 {"state": "none-owned", "detail": setup.NONE_OWNED_HINT})
+                self.assertEqual(self.organization_writes(github), [])
+
+    def test_a_slot_in_the_organizations_keeping_is_not_lent(self):
+        # symphony-template#253: a token lent with no say is placed by the
+        # organization's owners alone, never by its lender's adoption.
+        settings = {"3": {"owner": "mona", "uid": 583231, "keeping": "organization"}}
+        github = FakeGitHub(pool_answers(settings=settings))
+        report, _ = self.lend(github)
+        self.assertEqual(report["settings"]["token_lending"],
+                         {"state": "none-owned", "detail": setup.NONE_OWNED_HINT})
+        self.assertEqual(self.organization_writes(github), [])
+
+    def test_a_slot_whose_login_and_account_id_match_is_lent(self):
+        settings = {"3": {"owner": "MONA", "uid": 583231}, "5": {"owner": "mona", "uid": 7}, "6": {"owner": "mona"}}
+        github = FakeGitHub(pool_answers(settings=settings))
+        report, _ = self.lend(github)
+        self.assertEqual(report["settings"]["token_lending"]["state"], "done")
+        self.assertEqual(report["lending"]["lent"][0], "SYMPHONY_CLAUDE_3")
+        self.assertEqual(setup.owned_secrets(json.dumps(settings), "mona", REQUESTER_ID), ["SYMPHONY_CLAUDE_3"])
+        # Another login with the same account id owns nothing either.
+        self.assertEqual(setup.owned_secrets(json.dumps(settings), "hubot", REQUESTER_ID), [])
+
+    def test_without_the_requesters_account_id_nothing_is_lent(self):
+        for requester_id in ("", "0", "0583231", "58a", "1" * 21, "+5"):
+            with self.subTest(requester_id=requester_id):
+                github = FakeGitHub(pool_answers())
+                report, out = self.lend(github, requester_id=requester_id)
+                self.assertEqual(report["settings"]["token_lending"],
+                                 {"state": "not-tried", "detail": "the requester's account id was not given"})
+                self.assertFalse([path for _, path, _, _ in github.calls if path.startswith("/orgs/")])
+                self.assertIn(NOT_LENT_LOG, out.splitlines())
+
+    def test_a_repository_whose_id_is_unknown_lends_nothing(self):
+        github = FakeGitHub(pool_answers(extra={("GET", f"/repos/{REPO}"): (200, {"visibility": "public"})}))
+        report, _ = self.lend(github)
+        self.assertEqual(report["settings"]["token_lending"]["state"], "failed")
+        self.assertFalse([path for _, path, _, _ in github.calls if path.startswith("/orgs/")])
+
+    def test_the_whole_template_lends_too_and_the_body_reads_the_report(self):
+        github = FakeGitHub(pool_answers())
+        report, _ = self.lend(github, mode="new")
+        self.assertEqual(report["settings"]["token_lending"]["state"], "done")
+        self.assertEqual(adopt.read_report(self.report)["lending"]["lent"][0], "SYMPHONY_CLAUDE_3")
+
+    def test_the_owned_slots_follow_the_pool_main_last(self):
+        settings = {"main": {"owner": "mona"}, "12": {"owner": "mona"}, "2": {"owner": "mona"},
+                    "33": {"owner": "mona"}, "5": {"owner": "mona-"}}
+        settings = {slot: dict(setting, uid=583231) for slot, setting in settings.items()}
+        self.assertEqual(setup.owned_secrets(json.dumps(settings), "mona", REQUESTER_ID),
+                         ["SYMPHONY_CLAUDE_2", "SYMPHONY_CLAUDE_12", "CLAUDE_CODE_OAUTH_TOKEN"])
+        self.assertEqual(setup.owned_secrets(None, "mona", REQUESTER_ID), [])
+
+
 class Transport(unittest.TestCase):
     def test_a_body_cut_short_is_a_failure_to_get_an_answer(self):
         """http.client's own errors are not OSErrors; one escaping the
@@ -919,7 +1246,7 @@ class Skip(unittest.TestCase):
                 written = json.loads(report.read_text(encoding="utf-8"))
                 self.assertEqual((written["schema"], written["outcome"], written["mode"], written["settings"]),
                                  (setup.REPORT_SCHEMA, why, "existing", {}))
-                self.assertEqual(out.getvalue(), f"settings: none applied ({why})\n")
+                self.assertEqual(out.getvalue(), f"settings: none applied ({why})\n{NOT_LENT_LOG}\n")
                 self.assertEqual(adopt.read_report(report)["outcome"], why)
 
     def test_a_reason_that_is_not_one_is_refused(self):
