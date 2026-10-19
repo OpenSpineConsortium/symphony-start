@@ -128,16 +128,19 @@ beside its key, the Token workflow's two jobs that would use the key, the one th
 the organization's pool for its lender and the one that manages a token there, do not run, in the Token
 workflow as the template holds it since version 34 of this statement, which an adoption of either kind
 brings from then on and the Sync run offers a repository that holds the claim protocol alone: a run
-asked for either, by the control panel's Tokens page or by an issue, outside crowd mode, in which the
-run only says on the issue that the repository holds no Claude token (the control panel, below), reads
-the issue's comments, so as to say it once, says on the issue, with the repository's own GitHub token,
+asked for either, by the control panel's Tokens page or by an issue, outside crowd mode reads the
+issue's comments, so as to say it once, says on the issue, with the repository's own GitHub token,
 that the repository does not hold the App's settings and so stores no token into a pool, and that an
 owner of the organization adds one with Add Token, and, where an issue started the run, closes that
-issue as not planned. A copy of the whole template made before then keeps the Token workflow it was
+issue as not planned, as a run in crowd mode does too, saying on the issue only that the repository
+holds no Claude token (the control panel, below). A copy of the whole template made before then keeps
+the Token workflow it was
 made with, which neither the Sync run nor the protocol's releases replace, and where that workflow has
 those jobs, the store job in a copy made since 00:13 UTC on 2026-10-19 and the manage job too in one
-made since 02:26 UTC that day, they start there outside crowd mode without the variable, GitHub making
-their environment token-store in the repository the first time one does, and store and manage nothing:
+made since 02:26 UTC that day, they start there outside crowd mode without the variable, GitHub
+recording each such run as a deployment to their environment token-store, which it makes in the
+repository the first time one runs where the repository's plan lets it have environments, and store
+and manage nothing:
 each stops at the first step that needs the App's token, which in a copy made before 02:26 UTC that day
 comes after the Claude sign-in, the token then held on the runner and deleted unsaved, and the run then
 reads the issue's comments, says on the issue only that it stopped and closes an issue that started it
@@ -313,7 +316,7 @@ scripts import the protocol's library, which the adoption brings under `tools/sd
 that library will not be the template's once the pull request is merged. The pull request names the
 file that held it back. Once adopted for the protocol alone, a repository is offered the template's
 newer versions of these files by the Sync run (the next section), which offers nothing to a copy of the
-whole template.
+whole template that keeps its `.github/workflows/protocol.yml`.
 
 The adoption's files come from the developer's private template repository, read with a token that
 holds Contents read on that one repository and is revoked right after the checkout; only the files
@@ -331,18 +334,20 @@ there, on GitHub Actions, where SymphonyBoard's private key is kept: with the ke
 openssl through a pipe and never writes to a file, the run signs the App's own credential, which lasts
 less than ten minutes; the template's own GitHub token there only reads the template. With that
 credential it reads the App's own record, for the name its pull requests and commits carry, by which it
-tells them from anyone else's, and the list of SymphonyBoard's installations, with the account each is
-on. For each installation in turn, or, in a run started by hand that names one account, for that
+tells them from anyone else's, and the list of SymphonyBoard's installations, the first five thousand
+where there are more, with the account each is on. For each installation in turn, or, in a run started
+by hand that names one account, for that
 account's alone, it asks GitHub for an installation token with Contents, Pull requests and Workflows
 (write), Workflows because the files it brings include workflows, which GitHub lets no token write
-without it, and Metadata (read); reads the list of the repositories that installation reaches, with the
-record GitHub gives of each; offers each repository what this section says or, where GitHub fails to
+without it, and Metadata (read); reads the list of the repositories that installation reaches, the
+first five thousand where it reaches more, with the record GitHub gives of each; offers each repository
+what this section says or, where GitHub fails to
 give that list whole, offers none of them and counts that installation; and then revokes the token and
 goes on to the next installation whatever GitHub answers, so a token GitHub did not revoke, which the
 run does not say, runs out within the hour. An installation for which GitHub answers the request for a
 token with the status 403, 404 or 422, as it does for a suspended one, is counted and passed over;
-where GitHub answers that request any other way, or not at all, the run stops there, and the
-installations after it wait for its next run.
+where GitHub answers that request with any other status from 300 up, with an answer the run cannot
+read, or not at all, the run stops there, and the installations after it wait for its next run.
 
 It passes over, reading nothing more of it, the template's and the front door's own repositories and
 any repository that is archived, disabled or a fork. Of every other it reads, with that token, the
@@ -360,14 +365,15 @@ adoption's own reading of `.github/symphony-adopt` passes over, keeps it from co
 repository has opted out, and the run does nothing more there, writing nothing and leaving as they are
 any branch and pull request an earlier offer left. Where none says `off`, it passes over too, writing
 nothing there, a repository whose default branch holds `.github/workflows/protocol.yml`, as every copy
-of the whole template does, whether the front door adopted the whole template into it or it was made
+of the whole template does unless its owner has removed that workflow, whether the front door adopted
+the whole template into it or it was made
 with "Use this template": such a copy takes the protocol's releases by that workflow and runs the
 template's own tests on these scripts, tests the files alone would leave behind, so the Sync run offers
 files only to a repository that holds the claim protocol without that workflow, as one adopted for the
 protocol alone does. A copy of the whole template made since the template holds the Sync run carries
 `.github/workflows/sync.yml` too, whose runs there skip its one job, so nothing of the Sync run runs
 outside the template's own repository. It reads no other file of yours, beyond the lines of changed
-files that GitHub's comparison of the branch `symphony/sync` with your default branch shows (below): it
+files that GitHub's comparison of your default branch with the branch `symphony/sync` shows (below): it
 compares your files with the template's by the ids in the listing alone.
 
 What it offers comes in units, as the adoption of the protocol alone brings them: the vendored library
@@ -416,7 +422,8 @@ author's account and how many parents it has. Where one of those commits is neit
 its author's account, nor a merge, because someone pushed a commit of their own to the branch, or where
 the branch holds more of them than GitHub lists, the run leaves the branch and any pull request from it
 as they are, writing nothing, and offers that repository nothing more while the branch holds such a
-commit beyond your default branch. A merge made on the branch, such as GitHub's Update branch makes,
+commit, or more commits than GitHub lists, beyond your default branch. A merge made on the branch, such
+as GitHub's Update branch makes,
 holds nothing back by itself, whoever made it, and the run's next offer drops it from the branch with
 whatever it brought; but a commit the merge brought in that your default branch does not hold is one of
 the commits the branch holds beyond your default branch, so where such a commit is neither
@@ -458,9 +465,10 @@ files offered changed, that hidden line gone from its description, or the branch
 anything but one commit straight on your default branch's newest commit, as it is once anything is
 committed to your default branch or a merge is made on the branch: the run then writes the offer again
 on your default branch's newest commit, moves the branch to it and writes the description anew. Where
-the run stops after writing the files, the tree or the commit and before the branch `symphony/sync`
-points to that commit, as it does where a rule of your repository refuses SymphonyBoard the branch, the
-objects it wrote stay in your repository's storage with no branch pointing to them, holding the
+a call fails, or the run stops, after the run has written the files, the tree or the commit and before
+the branch `symphony/sync` points to that commit, as one fails where a rule of your repository refuses
+SymphonyBoard the branch, the objects it wrote stay in your repository's storage with no branch pointing
+to them, holding the
 template's files, your own tree's listing with those files in place and, where it got that far, the
 commit described above, with its message, SymphonyBoard as its author and committer and your default
 branch's newest commit as its parent, and nothing else.
@@ -478,9 +486,10 @@ date, declined, opted out, not adopted, whole template, for a repository that ho
 `.github/workflows/protocol.yml` and is offered nothing, skipped, branch theirs, refused, for a call
 GitHub answered with a status from 400 to 499 other than 429, and failed), for how many installations
 GitHub gave no token and for how many it failed to give the list of the repositories they reach, with
-those two counts and the count refused repeated as warnings on the run's page, and, where the run
-stops, the method of the call GitHub refused and the status it answered with or, where GitHub gave no
-answer, the error Python met, with the lines of the run's own code where it met it; it names no
+those two counts and the count refused repeated as warnings on the run's page, or, where the run
+stops, in place of all those counts, the method of the call GitHub refused and the status it answered
+with or, where GitHub gave no answer or one the run could not read, or something else stopped it, the
+error Python met, with the lines of code, the run's own and Python's, where it met it; it names no
 repository, account or file, save that a run started by hand for one account shows that account's login
 as whoever started it typed it. A repository where a call fails is counted and the run goes on to the
 next, starting that one over in its next run. Uninstalling SymphonyBoard stops the Sync run's reads and
@@ -943,13 +952,19 @@ what the page's issues hold: the link, the code until the run deletes it, and th
 slot's number, with the ids of the repositories it reaches when the run lends or lists it or takes
 it back from one, or a word
 that the run stopped and why, which may quote the last words Claude Code printed with any token and
-the code taken out; never the Claude token, and no repository's name. In crowd mode the run only says
-on the issue that the repository holds no Claude token, and closes it. Outside crowd mode, where the
-repository has no Actions variable SDLC_APP_ID, which names the App beside its key (the section on what
-each App asks for), a lend asks for no sign-in and a manage touches no token: the run reads the issue's
-comments, so as to say it once, says on the issue, with the repository's own GitHub token, that the
-repository does not hold the App's settings and so stores no token into a pool, and that an owner of
-the organization adds one with Add Token, and closes the issue as not planned.
+the code taken out; never the Claude token, and no repository's name. In crowd mode the run reads the
+issue's comments, so as to say it once, says on the issue only that the repository holds no Claude
+token, and closes it as not planned. Outside crowd mode, where the repository has no Actions variable
+SDLC_APP_ID, which names the App beside its key (the section on what each App asks for), a lend asks
+for no sign-in and a manage touches no token: the run reads the issue's comments, so as to say it once,
+says on the issue, with the repository's own GitHub token, why it stopped, and closes the issue as not
+planned. In the Token workflow as the template holds it since version 34 of this statement, it says
+that the repository does not hold the App's settings and so stores no token into a pool, and that an
+owner of the organization adds one with Add Token. In a copy of the whole template made before then,
+which keeps the Token workflow it was made with, an issue starts such a run only where the copy was
+made since 03:38 UTC on 2026-10-19, when the template's Token workflow came to start on an issue, and
+there the job the issue asks for starts in the environment token-store, as the section on what each
+App asks for says, stops at the App's token, and the run says only that it stopped.
 
 A lend whose second line says `organization` is a lend with no say: the token is stored the same
 way, its settings also marked with the word organization, and lent not to the issue's repository
@@ -1238,23 +1253,26 @@ and in the front door repository, github.com/OpenSpineConsortium/symphony-start,
 this text.
 
 Version 34 adds the Sync run, symphony-template#257, as the section of that name says: a workflow of
-the developer's in the template's own repository that, whenever the files Symphony's board runs on
-change there, once a week and by hand, walks every installation of SymphonyBoard on the App's own key
+the developer's in the template's own repository that, whenever the board's, tidy, metrics or Token
+workflow, `scripts/tokens.py` or any file under `tools/` changes there, once a week and by hand, walks
+every installation of SymphonyBoard on the App's own key
 and, in each repository an installation reaches but the template's and the front door's own, a fork and
 one archived or disabled, reads the default branch's newest commit and the listing of its tree, and,
 where that branch holds `docs/agents/PROTOCOL.md`, the text of the switches `.github/symphony-sync`,
 `.github/symphony-adopt` and `.github/sdlc-adopt`, and, where the repository has not opted out with
 `off` in one of them, holds no `.github/workflows/protocol.yml`, which every copy of the whole template
-holds and none adopted for the protocol alone does, so that a copy of the whole template, the front
-door's or one made with "Use this template", is passed over with nothing written, and a file needs
-changing, the twenty newest pull requests from the branch `symphony/sync` and, unless none of the App's
-among them is open and the newest of them was closed unmerged offering the same files, GitHub's
+holds unless its owner has removed it and none adopted for the protocol alone does, so that a copy of
+the whole template, the front door's or one made with "Use this template", is passed over with nothing
+written while it keeps that workflow, and a file needs changing, the twenty newest pull requests from
+the branch `symphony/sync` and, unless none of the App's among them is open and the newest of the
+App's was closed unmerged offering the same files, GitHub's
 comparison of the default branch with that branch, where it exists, with lines of the files changed on
 it, and, where every commit the branch holds beyond the default branch is the App's own or a merge and
 an open pull request of the App's offers the same files, the record of the branch's newest commit; it
 writes nothing where none of the App's pull requests among them is open and the newest of the App's was
 closed unmerged offering the same files, where a commit the branch holds beyond the default branch is
-neither the App's own nor a merge or the branch holds more such commits than GitHub's comparison lists,
+neither the App's own nor a merge or the branch holds more commits beyond the default branch than
+GitHub's comparison lists,
 or where an open pull request of the App's offers the same files and its branch already holds one
 commit straight on the default branch's newest commit; otherwise it writes the files it offers, a tree
 and a commit on the default branch's newest commit as git objects in the repository, the branch
@@ -1284,22 +1302,32 @@ the board's, tidy and metrics workflows, the Token workflow with the scripts it 
 tools/token_run.py and the modules of the template it imports, today tools/sealbox.py,
 scripts/tokens.py and tools/pool.py, held back, as that section now says in full for each workflow it
 brings with a script, where something of the repository's own, a file, a link or a folder, stands where
-one of them or one of their folders goes and is not the template's version byte for byte nor a link to
-a folder in the repository, where the repository ignores one of them, where Python would import a file
+one of them goes and is not a file, or a link to a file in the repository outside its `.git`, that
+holds the template's version byte for byte, where a file of the repository's own, or a link of its own
+to anything but a folder in the repository outside its `.git`, stands where one of their folders goes,
+where the repository ignores one of them, where Python would import a file
 of the repository's own in place of one of them, or where one of them stays out with another workflow
 that imports it too, the board's and the metrics workflows being held back also where the vendored
 library will not be the template's, and that every issue opened starts it, its jobs skipping unless the
 issue asks it to lend or manage a token; so the section on the control panel no longer says that a
 repository adopted for the claim protocol alone has no workflow Token of its own, and says that one
-adopted before has none until it merges a pull request the Sync run offers it, where that run offers
-one. And from symphony-template#257 the section on what each App asks for, and the control panel's
+adopted for it before the adoption brought that workflow has none until it merges a pull request the
+Sync run offers it, where that run offers one, and that one where a file of its own kept that workflow
+out has none either. And from symphony-template#257 the section on what each App asks for, and the
+control panel's
 passage on the runs an issue starts, say that where a repository has no variable SDLC_APP_ID, which
 names the App beside its key, the Token workflow's two jobs that store a token into the pool and manage
 one there do not run, in the Token workflow as the template holds it from this version on, and a run
 asked for either outside crowd mode only says so on the issue, with the repository's own token, and
-closes an issue that started it, where until then those jobs started there and stopped at the App's
-token, as they still do in a copy of the whole template made before then, which keeps the Token
-workflow it was made with. Nothing the developer receives or keeps changed.
+closes an issue that started it, where until then those jobs started there, GitHub recording each such
+run as a deployment to their environment token-store, which it made in the repository the first time
+one ran where the repository's plan let it have environments, and stopped at the App's token, in a
+copy made before 02:26 UTC on 2026-10-19 only after the Claude sign-in, the token then held on the
+runner and deleted unsaved, as they still do in a copy of the whole template made before then, which
+keeps the Token workflow it was made with, as the section on what each App asks for now says. That
+passage on the runs an issue starts also says, as version 33 did not, that a run in crowd mode reads
+the issue's comments, so as to say it once, and closes the issue as not planned. Nothing the developer
+receives or keeps changed.
 
 Version 33 adds the Notebooks tab's Make private, the owner's choice of 2026-10-19: where a notebook's
 repository is public or internal, a button in its side panel makes it private on GitHub, as you, once
