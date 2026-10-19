@@ -316,8 +316,12 @@ your own account's login (to say who is signed in), your repository's board (the
 the branch `board`), its open issues and their labels, for its Dependencies tab (below) the
 sub-issues of each open issue labelled epic or goal and the issues blocking each of an epic's
 sub-issues, the worker files under `.github/symphony/workers/`, the agents' list
-`.github/symphony/agents.json` and the agent files under `.claude/agents/` it names, its open pull
-requests and the check
+`.github/symphony/agents.json` and the agent files under `.claude/agents/` it names, for an agent's
+tokens the file `.github/symphony/accounts.json`, which names the token slots each agent may use,
+and the default branch's `tools/pool.py`, to see that it takes such a list before one is proposed,
+on the Tokens page the records on the branch `pool` of each slot's latest use (how much of its
+five-hour and seven-day windows it had used, when they reset, and when and by what it was read),
+its open pull requests and the check
 runs on their heads, its Actions runs, the repository's own record (its default branch, whether it
 is private, its topics and, for one you name, its numeric id and its owner's, to build the App's
 install link with that repository selected), on the cost page the file METRICS.json on the branch
@@ -337,8 +341,8 @@ agents.json, made as GitHub's own pages would make it (a branch of its own from 
 head, the files written or deleted on that branch, and the pull request opened, or the one already
 open from that branch found), never a push to the default branch, a pull request from the Agents
 tab that gives an agent the token slots you picked, by their names in .github/symphony/accounts.json,
-written on the branch symphony/tokens-<agent>, which is first set to the default branch's head, so
-an earlier such pull request's change on it is replaced, and set to merge itself once its checks
+written on the branch symphony/tokens-<the agent's name in lower case>, which is first set to the
+default branch's head, so whatever that branch held is replaced, and set to merge itself once its checks
 pass where the repository allows auto-merge (the Notebooks tab, below, writes a file too), or, on
 the Share tab, an
 invitation to the GitHub user you
@@ -819,8 +823,9 @@ Version 31 adds the control panel's Notebooks tab, as the section on the control
 the drive organizer's proposal of notebooks and its catalog from the branch drive-catalog of a private
 repository, and whether each notebook's repository exists and whether it is private, internal or
 public, and writes the proposal there, as you, when you propose, change or take out a notebook. It
-also names the pull request the Agents tab opens to give an agent its token slots, which earlier
-versions left out, and says, under SymphonyBoard's Contents permission, that the control panel
+also names the pull request the Agents tab opens to give an agent its token slots and the files it
+reads for it, accounts.json and tools/pool.py, and the Tokens page's read of the branch pool, which
+earlier versions left out, and says, under SymphonyBoard's Contents permission, that the control panel
 writes files with it, as you, as the section on the control panel lists: the pull requests it opens,
 Track on the Folders tab since version 21, and now the Notebooks tab. Nothing the developer receives
 or keeps changed.
