@@ -548,6 +548,47 @@ jobs:
           permission-checks: read
           skip-token-revoke: true
 
+      # For an organization's repository, in either mode, a token of the
+      # Setup App's with the organization permissions Secrets and Variables
+      # (write) alone, which setup.py uses only to add the repository to
+      # the selected repositories of the requester's own token secrets and
+      # of the pool's two variables. create-github-app-token takes no input
+      # for the Variables permission, so the token is minted here with the
+      # App's own JWT, as the first step mints its metadata token, for this
+      # one repository; the body is written by Python from the environment.
+      # A separate mint, so an installation that has not granted these
+      # permissions still adopts, and the pull request says the tokens
+      # were not lent: the step never fails, and GitHub's answers stay out
+      # of this log, which gets one fixed line. Revoked with the others.
+      - name: Make the token that lends the requester's own Claude tokens
+        id: lend-token
+        if: env.REFUSED != 'true' && env.SETUP_APP == 'present' && steps.setup-token.outcome == 'success' && steps.target.outputs.owner_type == 'Organization'
+        continue-on-error: true
+        env:
+          APP_ID: ${{ vars.SDLC_SETUP_APP_ID }}
+          APP_PRIVATE_KEY: ${{ secrets.SDLC_SETUP_APP_PRIVATE_KEY }}
+        run: |
+          jwt="$(bash start/scripts/jwt.sh)"
+          echo "::add-mask::$jwt"
+          installation="$(curl -sSf -H "Authorization: Bearer $jwt" -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/orgs/$OWNER/installation" 2>/dev/null \
+            | python3 -c 'import json, sys; print(int(json.load(sys.stdin)["id"]))' 2>/dev/null)" || installation=""
+          if [ -z "$installation" ]; then
+            echo "the token that lends the requester's Claude tokens: not made"
+            exit 0
+          fi
+          body="$(python3 -c 'import json, os; print(json.dumps({"repositories": [os.environ["NAME"]], "permissions": {"organization_secrets": "write", "organization_actions_variables": "write"}}))')"
+          token="$(curl -sSf -X POST -H "Authorization: Bearer $jwt" -H "Accept: application/vnd.github+json" \
+            -d "$body" "https://api.github.com/app/installations/$installation/access_tokens" 2>/dev/null \
+            | python3 -c 'import json, sys; print(json.load(sys.stdin)["token"])' 2>/dev/null)" || token=""
+          if [ -z "$token" ]; then
+            echo "the token that lends the requester's Claude tokens: not made"
+            exit 0
+          fi
+          echo "::add-mask::$token"
+          echo "token=$token" >> "$GITHUB_OUTPUT"
+          echo "the token that lends the requester's Claude tokens: made"
+
       # Only after that mint failed, on the owner's own installation of
       # the Setup App, which is on this repository and nothing else, with
       # metadata read: a failure here is the Setup App's id or key, not the
@@ -581,10 +622,13 @@ jobs:
           GH_TOKEN: ${{ steps.setup-token.outputs.token }}
           GH_ORG_TOKEN: ${{ steps.setup-org-token.outputs.token }}
           GH_CHECKS_TOKEN: ${{ steps.checks-token.outputs.token }}
+          GH_LEND_TOKEN: ${{ steps.lend-token.outputs.token }}
+          OWNER_TYPE: ${{ steps.target.outputs.owner_type }}
           TARGET: ${{ env.TARGET }}
         run: |
           if [ "$SETUP_APP" = present ] && [ "$SETUP_OUTCOME" = success ]; then
             python3 start/scripts/setup.py apply --repo "$TARGET" --mode "$MODE" --head "${ADOPT_HEAD:-}" \
+              --owner-type "$OWNER_TYPE" --requester="$REQUESTER" \
               --ruleset template/docs/setup/ruleset-main.json --report "$RUNNER_TEMP/settings.json"
           else
             if [ "$SETUP_APP" != present ]; then
@@ -616,6 +660,14 @@ jobs:
         run: |
           gh api --method DELETE installation/token --silent \
             || echo "::warning::the Setup App's organization token could not be revoked; it expires within the hour"
+
+      - name: Revoke the token that lends the requester's Claude tokens
+        if: always() && steps.lend-token.outputs.token != ''
+        env:
+          GH_TOKEN: ${{ steps.lend-token.outputs.token }}
+        run: |
+          gh api --method DELETE installation/token --silent \
+            || echo "::warning::the token that lends the requester's Claude tokens could not be revoked; it expires within the hour"
 
       - name: Revoke the token that reads the check runs
         if: always() && steps.checks-token.outputs.token != ''

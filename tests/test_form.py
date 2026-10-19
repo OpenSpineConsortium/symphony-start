@@ -282,9 +282,27 @@ class TheWorkflows(unittest.TestCase):
         self.assertIn("continue-on-error: true", asking[0])
         self.assertNotIn("permission-contents", asking[0])
         # The key is minted for Administration once, for the organization's
-        # Administration once, probed once and read as set-or-not once; the
-        # App no longer uninstalls itself, so no JWT of its is signed here.
-        self.assertEqual(text.count("secrets.SDLC_SETUP_APP_PRIVATE_KEY"), 4)
+        # Administration once, probed once, read as set-or-not once, and
+        # signs the JWT that mints the organization's Secrets and Variables
+        # token once; the App no longer uninstalls itself.
+        self.assertEqual(text.count("secrets.SDLC_SETUP_APP_PRIVATE_KEY"), 5)
+        lend, = [step for step in steps if "id: lend-token" in step]
+        self.assertIn("APP_ID: ${{ vars.SDLC_SETUP_APP_ID }}", lend)
+        self.assertIn("continue-on-error: true", lend)
+        self.assertIn("steps.setup-token.outcome == 'success'", lend)
+        self.assertIn("steps.target.outputs.owner_type == 'Organization'", lend)
+        self.assertIn('"permissions": {"organization_secrets": "write", "organization_actions_variables": "write"}',
+                      lend)
+        self.assertIn('"repositories": [os.environ["NAME"]]', lend)
+        self.assertNotIn("administration", lend)
+        # Its answers stay out of the log: every curl and Python read is
+        # silenced, and the step says one fixed line either way.
+        for line in lend.splitlines():
+            if "curl " in line or "python3 -c 'import json, sys" in line:
+                self.assertTrue("2>/dev/null" in line or line.rstrip().endswith("\\"), line)
+        self.assertIn('echo "::add-mask::$token"', lend)
+        self.assertLess(lend.index('echo "::add-mask::$token"'), lend.index('echo "token=$token"'))
+        self.assertIn("name: Revoke the token that lends the requester's Claude tokens", text)
         org, = [step for step in steps if "id: setup-org-token" in step]
         self.assertIn("app-id: ${{ vars.SDLC_SETUP_APP_ID }}", org)
         self.assertIn("repositories: ${{ env.NAME }}", org)

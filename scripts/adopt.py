@@ -213,6 +213,12 @@ ACTIONS_LABEL = "Allow GitHub Actions to create and approve pull requests"
 # then pins it to GitHub Actions, which GitHub takes only once GitHub
 # Actions has reported it, so the pin may be left for the person.
 CHECK_SOURCE = "check_source"
+# For an organization's repository the Setup App lends it the requester's
+# own Claude tokens of the organization's pool and the pool's two
+# variables, where its installation granted the organization permissions
+# Secrets and Variables.
+TOKEN_LENDING = "token_lending"
+POOL_VARIABLES = ("SYMPHONY_CLAUDE_ACCOUNTS", "SYMPHONY_CLAUDE_SETTINGS")
 # The box's API path, which the template's scripts/setup-repo.sh calls since
 # it ticks the box too, and never called before. The run copies the
 # template's default branch and a repository keeps the script it was
@@ -1668,6 +1674,55 @@ def check_source_line(manifest, report):
             f" `bash {SETUP_SCRIPT}` from a clone, which pins it too.")
 
 
+def code_list(names):
+    names = [f"`{name}`" for name in names]
+    return names[0] if len(names) == 1 else ", ".join(names[:-1]) + " and " + names[-1]
+
+
+def lend_by_hand(org):
+    """How an owner of the organization lends a token by hand: the secret's
+    and the variables' pages, Repository access."""
+    return (f" To lend more, an owner of the organization opens the secret at"
+            f" https://github.com/organizations/{org}/settings/secrets/actions, and each of {code_list(POOL_VARIABLES)}"
+            f" at https://github.com/organizations/{org}/settings/variables/actions, and adds this repository under"
+            " Repository access; a token is lent only by its owner's word.")
+
+
+def token_lending_line(manifest, report):
+    """The requester's own Claude tokens of the organization's pool, lent to
+    the repository, in either mode: which were, which were left as they
+    are, and how to lend more by hand; else why none was. Nothing for a
+    personal account's repository, or a report from before the lending."""
+    state = setting_state(report, TOKEN_LENDING)
+    if manifest["owner_type"] != "Organization" or state in (None, "not-tried"):
+        return None
+    org = manifest["repository"].split("/")[0]
+    lending = report.get("lending") if isinstance(report.get("lending"), dict) else {}
+    lent, left, failed = ([name for name in lending.get(key) if isinstance(name, str)]
+                          if isinstance(lending.get(key), list) else [] for key in ("lent", "left", "failed"))
+    head = "- Your Claude tokens in the organization's pool:"
+    by_hand = lend_by_hand(org)
+    if state == "not-granted":
+        return (f"{head} not lent, since the {SETUP_APP} App's installation on the organization has not granted the"
+                f" organization permissions Secrets and Variables (Read and write){github_said(report, TOKEN_LENDING)};"
+                f" an owner of the organization accepts them at {installations_page(manifest)}.{by_hand}")
+    if state == "none-owned":
+        return (f"{head} none lent, since no token in it names you as its owner: the organization variable"
+                " `SYMPHONY_CLAUDE_SETTINGS`, which the control panel's Tokens page writes, gives each token's"
+                f" owner.{by_hand}")
+    parts = []
+    if lent:
+        parts.append(f"lent to this repository: {code_list(lent)}")
+    if left:
+        parts.append(f"{code_list(left)} {'is' if len(left) == 1 else 'are'} shared with more than selected"
+                     " repositories and left as GitHub has it")
+    if failed:
+        parts.append(f"not lent: {code_list(failed)}{github_said(report, TOKEN_LENDING)}")
+    said = "; ".join(parts) if parts else f"not lent{github_said(report, TOKEN_LENDING)}"
+    return (f"{head} {said}. Only your own tokens are lent, never another person's, and no value or visibility"
+            f" was changed.{by_hand}")
+
+
 def toggles_line(manifest, report):
     if setting_state(report, "toggles") == "done":
         return "- Delete head branches on merge and allow auto-merge: on."
@@ -1763,7 +1818,8 @@ def stays_installed_sentence(manifest):
     person may uninstall it whenever they like, and the sentence says
     where. A report from before that decision may carry "uninstalled",
     which nothing reads any more."""
-    holds = ("Administration on this repository and, where its installation accepted it, on the organization"
+    holds = ("Administration on this repository and, where its installation accepted them, Administration, Secrets"
+             " and Variables on the organization"
              if manifest["owner_type"] == "Organization" else "Administration on this repository")
     owner = "the organization's" if manifest["owner_type"] == "Organization" else "your account's"
     return (f"The {SETUP_APP} App stays installed, acting only during an adoption run. It holds {holds};"
@@ -1790,6 +1846,9 @@ def settings_section(manifest, report):
                   topic_line(manifest, report), scanning_line(manifest, report)]
         if manifest["mode"] == "new":
             parts.append(actions_line(manifest, report))
+        lending = token_lending_line(manifest, report)
+        if lending:
+            parts.append(lending)
         parts.append("")
         parts.append(stays_installed_sentence(manifest))
     elif outcome == "not-installed":

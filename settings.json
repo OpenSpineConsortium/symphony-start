@@ -1,0 +1,116 @@
+{
+  "schema": "symphony-settings/1",
+  "about": "Every setting an adoption applies, in the order the run applies it: the record of what a new repository, and the organization it belongs to, gets. scripts/setup.py applies those with a report key, in this order, and tests/test_settings_list.py fails when setup.py's SETTINGS and this list disagree, so a setting is added in both places or in neither. scope is what the setting changes, the repository or its organization; app is the App whose token makes the call; permission is that App's permission the call needs; modes are the adoption's kinds that apply it (new is the whole template, existing the protocol alone); when says what else must hold.",
+  "settings": [
+    {
+      "key": "labels",
+      "report": null,
+      "scope": "repository",
+      "app": "SymphonyBoard",
+      "permission": "Issues: write (repository)",
+      "api": "POST /repos/{owner}/{repo}/labels",
+      "value": "the board's labels, from LABELS in the template's tools/template_init.py; mode existing leaves out team mode's",
+      "modes": ["new", "existing"],
+      "when": "always; made by .github/workflows/adopt-run.yml, not by scripts/setup.py"
+    },
+    {
+      "key": "ruleset",
+      "report": "ruleset",
+      "scope": "repository",
+      "app": "Symphony Setup",
+      "permission": "Administration: write (repository)",
+      "api": "POST /repos/{owner}/{repo}/rulesets",
+      "value": "the template's docs/setup/ruleset-main.json; in mode existing without the rule required_status_checks",
+      "modes": ["new", "existing"],
+      "when": "unless the repository has its own ruleset of that name"
+    },
+    {
+      "key": "toggles",
+      "report": "toggles",
+      "scope": "repository",
+      "app": "Symphony Setup",
+      "permission": "Administration: write (repository)",
+      "api": "PATCH /repos/{owner}/{repo}",
+      "value": {"delete_branch_on_merge": true, "allow_auto_merge": true},
+      "modes": ["new", "existing"],
+      "when": "always"
+    },
+    {
+      "key": "topic",
+      "report": "topic",
+      "scope": "repository",
+      "app": "Symphony Setup",
+      "permission": "Administration: write (repository)",
+      "api": "PUT /repos/{owner}/{repo}/topics",
+      "value": "the repository's topics with symphony added",
+      "modes": ["new", "existing"],
+      "when": "always; the topics it has stay"
+    },
+    {
+      "key": "secret_scanning",
+      "report": "secret_scanning",
+      "scope": "repository",
+      "app": "Symphony Setup",
+      "permission": "Administration: write (repository)",
+      "api": "PATCH /repos/{owner}/{repo}",
+      "value": {"security_and_analysis": {"secret_scanning": {"status": "enabled"}}},
+      "modes": ["new", "existing"],
+      "when": "where the plan and the visibility offer it"
+    },
+    {
+      "key": "push_protection",
+      "report": "push_protection",
+      "scope": "repository",
+      "app": "Symphony Setup",
+      "permission": "Administration: write (repository)",
+      "api": "PATCH /repos/{owner}/{repo}",
+      "value": {"security_and_analysis": {"secret_scanning_push_protection": {"status": "enabled"}}},
+      "modes": ["new", "existing"],
+      "when": "once secret scanning is on"
+    },
+    {
+      "key": "actions_pull_requests",
+      "report": "actions_pull_requests",
+      "scope": "repository",
+      "app": "Symphony Setup",
+      "permission": "Administration: write (repository)",
+      "api": "PUT /repos/{owner}/{repo}/actions/permissions/workflow",
+      "value": {"can_approve_pull_request_reviews": true, "default_workflow_permissions": "as GitHub read them"},
+      "modes": ["new"],
+      "when": "unless it is on already"
+    },
+    {
+      "key": "actions_pull_requests_organization",
+      "report": "actions_pull_requests",
+      "scope": "organization",
+      "app": "Symphony Setup",
+      "permission": "Administration: write (organization)",
+      "api": "PUT /orgs/{org}/actions/permissions/workflow",
+      "value": {"can_approve_pull_request_reviews": true, "default_workflow_permissions": "as GitHub read them"},
+      "modes": ["new"],
+      "when": "an organization's repository whose own setting GitHub refused with 409, where the installation granted the permission; the repository's setting is then tried again"
+    },
+    {
+      "key": "token_lending",
+      "report": "token_lending",
+      "scope": "organization",
+      "app": "Symphony Setup",
+      "permission": "Secrets: write and Variables: write (organization)",
+      "api": "PUT /orgs/{org}/actions/secrets/{secret_name}/repositories/{repository_id} and PUT /orgs/{org}/actions/variables/{name}/repositories/{repository_id}",
+      "value": "the repository added to the selected repositories of the organization secrets the requester owns (SYMPHONY_CLAUDE_1 to SYMPHONY_CLAUDE_32 and CLAUDE_CODE_OAUTH_TOKEN, whose slot's owner in the variable SYMPHONY_CLAUDE_SETTINGS is the requester's login) and of the variables SYMPHONY_CLAUDE_ACCOUNTS and SYMPHONY_CLAUDE_SETTINGS",
+      "modes": ["new", "existing"],
+      "when": "an organization's repository, where the installation granted the permissions; only a secret or variable that exists and whose visibility is selected; no value, visibility or other person's slot is changed"
+    },
+    {
+      "key": "check_source",
+      "report": "check_source",
+      "scope": "repository",
+      "app": "Symphony Setup",
+      "permission": "Administration: write (repository), with SymphonyBoard's Checks: read to see the check run",
+      "api": "PUT /repos/{owner}/{repo}/rulesets/{ruleset_id}",
+      "value": {"integration_id": 15368, "on": "the required check named check"},
+      "modes": ["new"],
+      "when": "on the ruleset this run created, once GitHub Actions has reported the check on symphony/adopt, within ten minutes"
+    }
+  ]
+}
