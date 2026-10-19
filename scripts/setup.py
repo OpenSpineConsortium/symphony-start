@@ -4,7 +4,9 @@
 .github/workflows/adopt.yml runs this after the branch symphony/adopt is
 pushed and before the pull request opens, with the token of the OpenSpine
 Symphony Setup App for the one repository (Administration: write, Metadata:
-read), when the person installed that App on it. It does what the
+read), when the person installed that App on it; the App stays
+installed after the run, so a later run can keep the settings current,
+until the person uninstalls it. It does what the
 template's scripts/setup-repo.sh does from a clone, through the REST API
 with the standard library, so the repository's settings need no step by
 hand:

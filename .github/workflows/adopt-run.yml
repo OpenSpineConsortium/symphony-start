@@ -36,10 +36,12 @@ name: Adopt (run)
 # sweep.is_adopted), since a name typed on the form meets none of the
 # installation path's checks, and a second adoption would put the
 # template's files over the repository's own or, for the protocol alone,
-# bring back what it took out; the Setup App, which both paths need, then
-# uninstalls itself as after an adoption. And apply refuses an adoption
-# that could not write docs/agents/PROTOCOL.md, the one file that rule
-# reads, so every adoption made is one the next request knows.
+# bring back what it took out; the Setup App, which both paths need,
+# stays installed, as after an adoption, for a later run to keep the
+# settings current, and the person removes it whenever they like. And
+# apply refuses an adoption that could not write docs/agents/PROTOCOL.md,
+# the one file that rule reads, so every adoption made is one the next
+# request knows.
 
 on:
   workflow_call:
@@ -273,10 +275,10 @@ jobs:
           # the protocol's later releases come from, how to adopt it again
           # (the other kind, or what its pull request left out, both by
           # reverting that adoption first), that the Setup App the form
-          # asked for uninstalls itself, and that the topic symphony is what
-          # the browser extension reads; its words are adopted.py's ANSWER,
-          # which adopt.yml gives too where the Setup App is missing from a
-          # named repository adopted already. It comes before the branch
+          # asked for stays installed and did nothing, and that the topic
+          # symphony is what the browser extension reads; its words are
+          # adopted.py's ANSWER, which adopt.yml gives too where the Setup
+          # App is missing from a named repository adopted already. It comes before the branch
           # symphony/adopt, so a merged adoption that kept its branch is
           # told that it is adopted rather than sent to delete the branch
           # and ask again.
@@ -284,8 +286,7 @@ jobs:
           python3 start/scripts/adopted.py "$TARGET" 2> "$RUNNER_TEMP/adopted-said" || adopted=$?
           case "$adopted" in
             0) ;;
-            3) echo "ADOPTED=true" >> "$GITHUB_ENV"
-               bash start/scripts/refuse.sh "$(python3 start/scripts/adopted.py --answer)"
+            3) bash start/scripts/refuse.sh "$(python3 start/scripts/adopted.py --answer)"
                exit 0 ;;
             *) echo "whether the repository is adopted already could not be read: $(head -n 1 "$RUNNER_TEMP/adopted-said")"
                exit 1 ;;
@@ -624,64 +625,6 @@ jobs:
           gh api --method DELETE installation/token --silent \
             || echo "::warning::the token that reads the check runs could not be revoked; it expires within the hour"
 
-      # Its one job done, the Setup App uninstalls itself, which an App may
-      # do with its own JWT, when its installation reaches this repository
-      # alone; one that reaches more stays, and the pull request says so.
-      # A request refused because the repository is adopted already is done
-      # too, with nothing left for the Setup App to do there, so it goes
-      # the same way, as the answer says; there is no report to mark then,
-      # and a front door without the Setup App has nothing to uninstall.
-      - name: Uninstall the Setup App when this was its only repository
-        if: (env.REFUSED != 'true' && env.SETTINGS == 'applied') || env.ADOPTED == 'true'
-        env:
-          APP_ID: ${{ vars.SDLC_SETUP_APP_ID }}
-          APP_PRIVATE_KEY: ${{ secrets.SDLC_SETUP_APP_PRIVATE_KEY }}
-          TARGET: ${{ env.TARGET }}
-        run: |
-          if [ -z "$APP_ID" ] || [ -z "$APP_PRIVATE_KEY" ]; then
-            echo "this front door has no Setup App; nothing to uninstall"
-            exit 0
-          fi
-          accept="Accept: application/vnd.github+json"
-          jwt="$(bash start/scripts/jwt.sh)"
-          echo "::add-mask::$jwt"
-          curl -sS -o "$RUNNER_TEMP/setup-installation" -H "Authorization: Bearer $jwt" -H "$accept" \
-            "https://api.github.com/repos/$TARGET/installation"
-          read -r id selection < <(python3 -c 'import json, sys
-          data = json.load(open(sys.argv[1]))
-          print(data.get("id", ""), data.get("repository_selection", ""))' "$RUNNER_TEMP/setup-installation")
-          if [ -z "$id" ]; then
-            echo "the Setup App's installation was not found; nothing to uninstall"
-            exit 0
-          fi
-          count=0
-          if [ "$selection" = selected ]; then
-            token="$(curl -sS -X POST -H "Authorization: Bearer $jwt" -H "$accept" -d '{"permissions":{"metadata":"read"}}' \
-              "https://api.github.com/app/installations/$id/access_tokens" | python3 -c 'import json, sys; print(json.load(sys.stdin).get("token", ""))')"
-            echo "::add-mask::$token"
-            count="$(curl -sS -H "Authorization: Bearer $token" -H "$accept" "https://api.github.com/installation/repositories?per_page=2" \
-              | python3 -c 'import json, sys; print(json.load(sys.stdin).get("total_count", 0))')"
-            curl -sS -X DELETE -H "Authorization: Bearer $token" -H "$accept" https://api.github.com/installation/token -o /dev/null || true
-          fi
-          if [ "$count" = 1 ]; then
-            status="$(curl -sS -o /dev/null -w '%{http_code}' -X DELETE -H "Authorization: Bearer $jwt" -H "$accept" "https://api.github.com/app/installations/$id")"
-            if [ "$status" = 204 ]; then
-              if [ -f "$RUNNER_TEMP/settings.json" ]; then
-                python3 -c 'import json, sys
-          path = sys.argv[1]
-          report = json.load(open(path))
-          report["uninstalled"] = True
-          json.dump(report, open(path, "w"), indent=2)' "$RUNNER_TEMP/settings.json"
-              fi
-              echo "SETUP_UNINSTALLED=true" >> "$GITHUB_ENV"
-              echo "the Setup App uninstalled itself: this was its only repository"
-              exit 0
-            fi
-            echo "::warning::the Setup App could not uninstall itself; it stays installed for the person to uninstall"
-            exit 0
-          fi
-          echo "the Setup App stays installed: its installation reaches more than this repository"
-
       # A settings step that died before its report leaves a report that
       # says so, since the Setup App's token may have applied some of them.
       - name: Write the pull request's text
@@ -831,13 +774,9 @@ jobs:
             new:*) issue=" The issue \"Set up this project\" could not be opened there; the pull request's next steps and its docs/setup/owner-checklist.md stand in for it." ;;
           esac
           settings=""
-          if [ "${SETUP_UNINSTALLED:-}" = true ]; then
-            settings=" The Setup App applied the repository's settings and uninstalled itself."
-          else
-            case "${SETTINGS:-}" in
-              applied|not-reported) settings=" The pull request's section Settings says what the Setup App could do for the repository's settings; uninstall that App now, since that was its one job." ;;
-            esac
-          fi
+          case "${SETTINGS:-}" in
+            applied|not-reported) settings=" The pull request's section Settings says what the Setup App could do for the repository's settings; the App stays installed, so a later run can keep them current, and you can uninstall it at any time." ;;
+          esac
           merged=""
           case "${MERGED:-}" in
             merged) merged=" It is merged, as you asked." ;;
@@ -882,6 +821,6 @@ jobs:
         run: |
           settings=""
           if [ "$SETUP_MINTED" = success ]; then
-            settings=" This run had made the Setup App's token before it stopped, so some of the repository's settings may be applied: review $SETTINGS_WORDS, and uninstall the Setup App now."
+            settings=" This run had made the Setup App's token before it stopped, so some of the repository's settings may be applied: review $SETTINGS_WORDS. The Setup App stays installed; you can uninstall it at any time."
           fi
           gh issue comment "$ISSUE" --repo "$GITHUB_REPOSITORY" --body "Something went wrong while handling this request, and it stopped; the run is $RUN. This issue stays open for the owner of this repository to look at. If the run pushed a branch symphony/adopt to your repository before it stopped, delete that branch before a new request.$settings"

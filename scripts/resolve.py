@@ -22,7 +22,7 @@ Create again for the next, or names a repository on the form. With SETUP_JWT set
 repository the Setup App is installed on is a candidate, asked by id with
 that App's JWT before the newest is chosen: the Setup App's installation
 is the person's choice of repository and their consent to the settings it
-applies for the one run, so an account with the App on all its
+applies, so an account with the App on all its
 repositories and the Setup App on one gets that one. Without SETUP_JWT
 there is no such filter. The file --out
 gets installation_id, repository_ids (a JSON list) and count, as KEY=value

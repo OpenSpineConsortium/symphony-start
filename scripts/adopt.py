@@ -193,8 +193,9 @@ PLUGIN = "symphony@symphony-marketplace"
 FRONT_DOOR = "https://github.com/OpenSpineConsortium/symphony-start"
 
 # The Setup App: a second App, holding Administration, which the person
-# installs on the repository for the one run that applies the template's
-# repository settings (scripts/setup.py) and uninstalls afterwards. Its
+# installs on the repository so the run applies the template's
+# repository settings (scripts/setup.py), and which stays installed, so
+# a later run can keep them current, until the person uninstalls it. Its
 # report says what was done, and the pull request's text follows it.
 SETUP_APP = "Symphony Setup"
 SETUP_SCHEMA = "sdlc-setup/1"
@@ -1607,8 +1608,8 @@ def the_settings(manifest):
 
 
 def installations_page(manifest):
-    """Where the person uninstalls the Setup App: their own installations,
-    or the organization's."""
+    """Where the person may uninstall the Setup App: their own
+    installations, or the organization's."""
     if manifest["owner_type"] == "Organization":
         return f"https://github.com/organizations/{manifest['repository'].split('/')[0]}/settings/installations"
     return "https://github.com/settings/installations"
@@ -1756,19 +1757,20 @@ def by_hand_pointer(manifest):
             f" https://github.com/{repo}/settings/security_analysis, where the plan offers them.")
 
 
-def uninstall_sentence(manifest):
+def stays_installed_sentence(manifest):
+    """The Setup App stays installed after the run, by the owner's decision
+    of 2026-10-19, so a later run can keep the settings current; the
+    person may uninstall it whenever they like, and the sentence says
+    where. A report from before that decision may carry "uninstalled",
+    which nothing reads any more."""
     holds = ("Administration on this repository and, where its installation accepted it, on the organization"
              if manifest["owner_type"] == "Organization" else "Administration on this repository")
-    return (f"That was the Setup App's one job: uninstall it at {installations_page(manifest)}, since it holds"
-            f" {holds}, and nothing else uses it. The Symphony App, which opened this"
-            " pull request, stays; uninstalling it undoes nothing here and only stops what is shared, above, from"
-            " being read.")
-
-
-def uninstalled_sentence(manifest):
-    return ("The Setup App uninstalled itself once that was done, this repository being the only one its"
-            " installation reached. The Symphony App, which opened this pull request, stays; uninstalling it"
-            " undoes nothing here and only stops what is shared, above, from being read.")
+    owner = "the organization's" if manifest["owner_type"] == "Organization" else "your account's"
+    return (f"The {SETUP_APP} App stays installed, so a later run can keep these settings current. It holds {holds};"
+            " you can uninstall it at any time, from the repository's Settings, GitHub Apps, at"
+            f" https://github.com/{manifest['repository']}/settings/installations, or from {owner} at"
+            f" {installations_page(manifest)}. The Symphony App, which opened this pull request, stays too;"
+            " uninstalling it undoes nothing here and only stops what is shared, above, from being read.")
 
 
 def settings_section(manifest, report):
@@ -1789,20 +1791,22 @@ def settings_section(manifest, report):
         if manifest["mode"] == "new":
             parts.append(actions_line(manifest, report))
         parts.append("")
-        parts.append(uninstalled_sentence(manifest) if report.get("uninstalled") else uninstall_sentence(manifest))
+        parts.append(stays_installed_sentence(manifest))
     elif outcome == "not-installed":
         parts.append(f"None of the settings was changed: no token for this repository could be made from the"
                      f" {SETUP_APP} App, which means it is not installed on this repository, or its installation"
                      f" does not include it, or GitHub did not answer; so this run could not apply {what}."
-                     f" {by_hand_pointer(manifest)} If you did install it, uninstall it now at"
-                     f" {installations_page(manifest)}, since nothing used it, and say so on your request's issue.")
+                     f" {by_hand_pointer(manifest)} If you did install it, check that its installation includes this"
+                     " repository and say so on your request's issue; it stays installed, and you can uninstall it at"
+                     f" any time at {installations_page(manifest)}.")
     elif outcome == "front-door-broken":
         parts.append(f"None of the settings was changed: this front door's Setup App is not working (its id or"
                      " private key there is wrong, it is not installed on the front door's own repository, or GitHub"
                      " did not answer), which is for the front door's owner to put right, and the run has told them;"
                      f" so this run could not apply {what}."
-                     f" {by_hand_pointer(manifest)} If you installed the Setup App, uninstall it now at"
-                     f" {installations_page(manifest)}, since nothing used it.")
+                     f" {by_hand_pointer(manifest)} If you installed the Setup App, it stays installed, so a run made"
+                     " once the owner has put it right can apply them; you can uninstall it at any time at"
+                     f" {installations_page(manifest)}.")
     elif outcome == "not-reported":
         repo = manifest["repository"]
         # Mode new's box is under Actions, a page of its own.
@@ -1811,7 +1815,7 @@ def settings_section(manifest, report):
             pages.append(f"https://github.com/{repo}/settings/actions")
         parts.append("The step that applies the settings stopped before it could say what it did. If you installed"
                      f" the Setup App, some of {what} may be applied: check {', '.join(pages[:-1])} and {pages[-1]}."
-                     f" {by_hand_pointer(manifest)} {uninstall_sentence(manifest)}")
+                     f" {by_hand_pointer(manifest)} {stays_installed_sentence(manifest)}")
     else:
         parts.append(f"None of the settings was changed: this front door has no Setup App yet, so {what} are applied"
                      f" by hand. {by_hand_pointer(manifest)}")

@@ -37,6 +37,12 @@ MEANWHILE = ("Until it is on, `protocol.yml` brings each new release as an issue
 # The pull request's sentence on the counts of parallel work, which is true
 # only of a landed script that counts by setting.
 PARALLEL = "Some of those counts say how the work ran in parallel"
+# The Setup App stays installed after the run (the owner, 2026-10-19).
+STAYS = ("The Symphony Setup App stays installed, so a later run can keep these settings current. It holds"
+         " Administration on this repository; you can uninstall it at any time, from the repository's Settings,"
+         " GitHub Apps, at https://github.com/octo-org/widget/settings/installations, or from your account's at"
+         " https://github.com/settings/installations. The Symphony App, which opened this pull request, stays too;"
+         " uninstalling it undoes nothing here and only stops what is shared, above, from being read.")
 # The check pinned to GitHub Actions in mode new's ruleset, and the two ways
 # to pin it where the run could not.
 PIN_DONE = ("- The check \"check\" in that ruleset: taken from GitHub Actions alone, so only a workflow run"
@@ -441,11 +447,12 @@ class Body(unittest.TestCase):
         self.assertIn(f"{ACTIONS}: on, {ACTIONS_WHY}.", body)
         self.assertIn("the topic symphony, secret scanning with push protection, and letting GitHub Actions create and"
                       " approve pull requests)", body)
-        self.assertIn("uninstall it at https://github.com/settings/installations, since it holds Administration", body)
+        self.assertIn(f"\n\n{STAYS}", body)
+        # A report from before the Setup App stayed installed may say it
+        # uninstalled itself; the body still renders, and says it stays.
         body = self.body(settings=dict(report(), uninstalled=True))
-        self.assertIn("The Setup App uninstalled itself once that was done, this repository being the only one its"
-                      " installation reached.", body)
-        self.assertNotIn("uninstall it at", body)
+        self.assertIn(STAYS, body)
+        self.assertNotIn("uninstalled itself", body)
         self.assertIn("2. The GitHub side is set up (Settings above), so `bash scripts/setup-repo.sh` is not needed",
                       body)
         self.assertIn("is done but for GitHub's reading of `.github/CODEOWNERS`", body)
@@ -460,7 +467,10 @@ class Body(unittest.TestCase):
 
     def test_an_organization_uninstalls_from_its_own_page(self):
         body = self.body(settings=report(), owner_type="Organization")
-        self.assertIn("uninstall it at https://github.com/organizations/octo-org/settings/installations", body)
+        self.assertIn("It holds Administration on this repository and, where its installation accepted it, on the"
+                      " organization; you can uninstall it at any time, from the repository's Settings, GitHub Apps,"
+                      " at https://github.com/octo-org/widget/settings/installations, or from the organization's at"
+                      " https://github.com/organizations/octo-org/settings/installations.", body)
 
     def test_a_private_repositorys_ruleset_is_said_to_be_unenforced_on_free(self):
         body = self.body(settings=report(private=True))
@@ -731,10 +741,11 @@ class Body(unittest.TestCase):
                       " installation does not include it, or GitHub did not answer; so this run could not apply the"
                       " settings `scripts/setup-repo.sh` applies", body)
         self.assertIn("Step 2 of the next steps applies them by hand, with `scripts/setup-repo.sh`.", body)
-        self.assertIn("If you did install it, uninstall it now at https://github.com/settings/installations, since"
-                      " nothing used it, and say so on your request's issue.", body)
+        self.assertIn("If you did install it, check that its installation includes this repository and say so on"
+                      " your request's issue; it stays installed, and you can uninstall it at any time at"
+                      " https://github.com/settings/installations.", body)
         self.assertIn("2. From a clone", body)
-        self.assertNotIn("That was the Setup App's one job", body)
+        self.assertNotIn("uninstall it now", body)
         self.assertNotIn("which turns auto-merge off again", body)
         self.assertNotIn("Nothing of the GitHub side", body)
         body = self.body(THEIR_FILES, mode="existing", settings=report(outcome="not-installed", mode="existing"))
@@ -759,8 +770,9 @@ class Body(unittest.TestCase):
                       " private key there is wrong, it is not installed on the front door's own repository, or GitHub"
                       " did not answer), which is for the front door's owner to put right, and the run has told them",
                       body)
-        self.assertIn("If you installed the Setup App, uninstall it now at https://github.com/settings/installations,"
-                      " since nothing used it.", body)
+        self.assertIn("If you installed the Setup App, it stays installed, so a run made once the owner has put it"
+                      " right can apply them; you can uninstall it at any time at"
+                      " https://github.com/settings/installations.", body)
         self.assertIn("2. From a clone", body)
 
     def test_a_settings_step_that_died_before_its_report(self):
@@ -772,8 +784,10 @@ class Body(unittest.TestCase):
         self.assertIn("check https://github.com/octo-org/widget/settings/rules,"
                       f" https://github.com/octo-org/widget/settings and {ACTIONS_PAGE}. Step 2 of the next steps"
                       " applies them by hand", body)
-        self.assertIn("That was the Setup App's one job: uninstall it at"
-                      " https://github.com/organizations/octo-org/settings/installations", body)
+        self.assertIn("applies them by hand, with `scripts/setup-repo.sh`. The Symphony Setup App stays installed,"
+                      " so a later run can keep these settings current.", body)
+        self.assertIn("or from the organization's at https://github.com/organizations/octo-org/settings/installations",
+                      body)
         self.assertIn("2. From a clone", body)
         self.assertNotIn("which turns auto-merge off again", body)
         body = self.body(THEIR_FILES, mode="existing", settings=report(outcome="not-reported", mode="existing"))
