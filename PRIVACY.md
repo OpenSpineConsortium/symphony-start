@@ -692,12 +692,19 @@ clears when the tab closes and brings back with the tab when it reopens or resto
 in with GitHub", GitHub issues, after you allow it on GitHub's own page, a token of SymphonyBoard's
 that acts as you within the App's permissions and your own access on the repositories it is
 installed on, and expires in eight hours; beside it GitHub issues a refresh token, valid six months,
-with which the page renews the token. Pressed in a browser's tab, "Sign in with GitHub" leaves for
-GitHub's page, and GitHub sends your browser back to the page with a one-time code (the installed
-app, below, is another matter); the page sends that code, with a one-time secret it made for this
-sign-in, to the sign-in service, a small program of the developer's run on Cloudflare's Workers
-platform, which adds the App's client secret, asks GitHub for the token and hands back the token and
-the refresh token; the page renews the token by sending the service the refresh token the same way.
+with which the page renews the token. Pressed in a browser's tab, "Sign in with GitHub" first keeps
+in the tab's own storage a one-time value, a one-time secret it made for this sign-in, whether "Keep
+me signed in" is ticked and the page's query (the repository it showed), then leaves for GitHub's
+page, sending GitHub that value and a hash of the secret, and GitHub sends your browser back to the
+page with a one-time code and the same value (the installed app, below, is another matter); on that
+return the page takes the code out of its address, forgets what it kept, puts its query back and,
+where the value matches, sends the code, with the one-time secret, to the sign-in service, a small
+program of the developer's run on Cloudflare's Workers platform, which adds the App's client secret,
+asks GitHub for the token and hands back the token and the refresh token; the page renews the token
+by sending the service the refresh token the same way. What it kept for a sign-in that never comes
+back stays in the tab's own storage, which "Forget the token" does not clear, until another press of
+"Sign in with GitHub" replaces it, a return from GitHub or from Microsoft (the Folders tab, below)
+reaches that tab, or the browser clears the tab's own storage, as above.
 With "Keep me signed in" ticked, the page keeps both in the browser's storage until you press
 "Forget the token".
 Unticked, it keeps the token in the tab's own storage, as it keeps a pasted token, and the refresh
@@ -713,8 +720,9 @@ timing under Cloudflare's own privacy policy. The developer receives nothing fro
 that service passes through in the moment: never a token to keep, never a name, never a count.
 Beside the token, the page keeps in your browser the names of the repositories you listed, the plan
 you chose on the cost page, the number of the assistant issue it uses in each repository (below),
-and the layout you set: the widths and heights of the panels you resized and the text size, numbers
-alone, holding nothing of your repositories or of GitHub and sent nowhere.
+which chart you last chose on each repository's Dependencies tab, by the repository's name and the
+chart's (below), and the layout you set: the widths and heights of the panels you resized and the
+text size, numbers alone, holding nothing of your repositories or of GitHub and sent nowhere.
 
 The control panel can also be installed from the browser as an app, on a phone's Home Screen or
 among a computer's apps; its manifest is
@@ -724,8 +732,16 @@ section says, its window standing for the tab, save for its sign-in. While sign-
 is switched off, the app's "Sign in with GitHub" leaves for GitHub's page as a tab's does, but
 GitHub's return may land in your browser rather than in the app. The page there did not start that
 sign-in and holds no secret for it, so it takes the code out of its address and sends it nowhere,
-and the code signs nobody in; the app is then not signed in by that press, and a token pasted into
-it is the way in.
+and the code signs nobody in; the app is then not signed in by that press, and its window keeps what
+the press kept, the one-time value and secret, the tick and the page's query, in its own storage, as
+a tab keeps them (above), until another press of "Sign in with GitHub" replaces them, a return from
+GitHub or from Microsoft reaches the app, or that storage is cleared as a tab's is. The way in is
+then a token pasted into the app or, where the app shares its browser's storage with that browser's
+tabs, as some browsers' installed apps do, a sign-in or a token kept on that browser with "Keep me
+signed in" ticked, which the app reads as it opens, as a tab does. There what the app keeps with
+that box ticked the browser's tabs read too, and the app's "Forget the token" forgets what that
+browser keeps, for its tabs as for the app, though not a sign-in a tab holds for itself alone, and
+has the service ask GitHub to revoke a sign-in's token among it, as a tab's does.
 
 Each time your browser loads the control panel, in a tab or as the installed app, or the cost page,
 the page's head, as on the developer's site's other Symphony pages, links a stylesheet of Google
@@ -735,11 +751,15 @@ weights 400, 500 and 600 and italic at 400 and 500, across its optical sizes 6 t
 fonts.googleapis.com and fonts.gstatic.com as it loads. Your browser asks fonts.googleapis.com for
 that stylesheet and fonts.gstatic.com for the font files it names, as the page's text comes to need
 them, unless it holds them from an earlier load. Google receives those requests as it receives any,
-with your network address and the headers your browser sends with every request, under Google's
-own privacy policy, and the request for the stylesheet names the page it came from as browsers do
-unless set otherwise, by the site's address alone, https://openspineconsortium.com/, and not by the
-page's own address, whose query can name a repository; the page puts nothing of its own into them,
-no token, no repository's name and nothing you type, and the developer receives nothing of them.
+with your network address and the headers your browser sends with every request, under Google's own
+privacy policy, and the request for the stylesheet names the page it came from as browsers do unless
+set otherwise, by the site's address alone, https://openspineconsortium.com/, and not by the page's
+own address, whose query can name a repository, while each request for a font file, which browsers
+fetch as a cross-origin request, names the site too, by its origin, https://openspineconsortium.com,
+and names the stylesheet that asked for it by Google's own address alone,
+https://fonts.googleapis.com/, as browsers do unless set otherwise; the page puts nothing of its own
+into them, no token, no repository's name and nothing you type, and the developer receives nothing
+of them.
 
 Sign-in by code, GitHub's device flow, is built into both pages for the installed app and switched
 off: a setting in the page's script, CODE_SIGNIN, holds it off until the developer turns it on, and
@@ -761,22 +781,27 @@ nothing; you type the code there, where GitHub names SymphonyBoard and asks whet
 you. Meanwhile the page sends the device code alone to the service's route /device/token, at most
 once every five seconds and more slowly where GitHub or the service asks, and the service passes it
 to GitHub, at https://github.com/login/oauth/access_token, with the client id and no client secret,
-and hands back GitHub's word that the code is not typed yet, GitHub's refusal or, once you have
-typed it and allowed SymphonyBoard, the token and the refresh token, the same kinds the sign-in by
-GitHub's page gives, which the page renews and revokes through the service in the same way. The page
-stops asking when GitHub gives the token or refuses, when the code runs out, or when you press
-Cancel, sign in another way, paste a token GitHub accepts or press "Forget the token"; a token
-GitHub gives after that, for a code the page has let go of, goes once more to the service, so that
-GitHub revokes it. Once you are signed in by code, the page keeps what the sign-in by GitHub's page
-keeps, as above, by "Keep me signed in" as it stands when the token comes: ticked, the token and the
-refresh token in the browser's storage until you press "Forget the token"; unticked, the token in
-the tab's own storage and the refresh token in the open page's memory alone. Save where the browser
-refuses to store the token, as it can for a sign-in by code, which, unlike the sign-in by GitHub's
-page, needs no storage to finish: the page then holds the token in the open page's memory alone,
-and the refresh token there too where "Keep me signed in" is unticked and nowhere where it is
-ticked, never renews them, and drops them once that page is gone or you press "Forget the token",
-which in that case does not ask GitHub to revoke that token, so the token stays good at GitHub
-until it runs out within eight hours, or until Revoke at
+and hands back GitHub's word that the code is not typed yet or that the page should ask more slowly,
+GitHub's refusal, its own word that GitHub could not be reached or answered with trouble of the
+moment, a server error or a limit with no word of its own, on which the page asks again at the same
+pace, as it does when the service itself cannot be reached or gives no answer the page can read, or,
+once you have typed it and allowed SymphonyBoard, the token and the refresh token, the same kinds
+the sign-in by GitHub's page gives, which the page renews and revokes through the service in the
+same way. The page stops asking when GitHub gives the token or refuses, when the service refuses the
+request or fails at it, save at its limit on one address's calls, on which the page asks more
+slowly, when the code runs out, or when you press Cancel, sign in another way, paste a token GitHub
+accepts or press "Forget the token"; a token GitHub gives after that, for a code the page has let go
+of, goes once more to the service, so that GitHub revokes it. Once you are signed in by code, the
+page keeps what the sign-in by GitHub's page keeps, as above, by "Keep me signed in" as it stands
+when the token comes: ticked, the token and the refresh token in the browser's storage until you
+press "Forget the token"; unticked, the token in the tab's own storage and the refresh token in the
+open page's memory alone. Save where the browser refuses to store the token, as it can for a sign-in
+by code, which, unlike the sign-in by GitHub's page, needs no storage to finish: the page then holds
+the token in the open page's memory alone, and the refresh token there too where "Keep me signed in"
+is unticked and nowhere where it is ticked, never renews them, and drops them once that page is
+gone, you press "Forget the token", or a sign-in by code or a token you paste that GitHub accepts
+takes their place, none of which in that case asks GitHub to revoke that token, so the token stays
+good at GitHub until it runs out within eight hours, or until Revoke at
 https://github.com/settings/apps/authorizations, below, ends it. The service keeps nothing of a
 sign-in by code either: no store, no cookie and no log of its own, and its two device routes answer
 the site's origin alone.
@@ -794,10 +819,11 @@ sign-in by code can keep that sign-in going without end: GitHub renews such a re
 client id alone, with no client secret and without the sign-in service, each renewal giving a new
 refresh token good for six months more, so the sign-in ends only when it is revoked or goes six
 months without a renewal. "Forget the token" drops the token and the refresh token that tab and that
-browser hold and, where the browser's storage holds that token, asks GitHub through the service to
-revoke it, and no other; whether GitHub then refuses that sign-in's refresh token too is not
-established, though the page no longer holds it. Revoke beside SymphonyBoard under your GitHub
-Settings, Applications, Authorized GitHub Apps, https://github.com/settings/apps/authorizations,
+browser hold and asks GitHub, through the service, to revoke each sign-in's token that the tab's own
+storage or the browser's storage holds, which can be two, and no other, so not one the browser
+refused to store; whether GitHub then refuses such a sign-in's refresh token too is not established,
+though the page no longer holds it. Revoke beside SymphonyBoard under your GitHub Settings,
+Applications, Authorized GitHub Apps, https://github.com/settings/apps/authorizations,
 ends every token and refresh token GitHub has issued SymphonyBoard for you, one from a code someone
 else started among them.
 
@@ -858,8 +884,15 @@ from Google Fonts, which the page asks for as its text needs them (above), the t
 anyone but GitHub. Pressing a node, here or in the Board tab, or a row's "Centre its row", opens the
 Tasks tab at that task's row, where the task tables hold it, and asks GitHub nothing; that task is
 then the one the page centres, which the assistant's next question names, as above. The tab writes
-nothing: not to GitHub, whose issues it only reads, and not to your browser's storage; the chart is
-gone with the page, and the developer receives none of it.
+nothing to GitHub, whose issues it only reads. Where it has two charts or more, a row of tiles above
+them, All, Goals and one for each epic, shows one chart at a time, or every one for All, and when
+you press a tile, with the mouse or the arrow keys, or step to the chart beside it with Previous or
+Next, the page keeps in your browser's storage which chart you chose for that repository, by the
+repository's name, its owner's with it, and the chart's, every chart, the goals or the epic's
+number, so that the tab opens on that chart again the next time it draws that repository's charts
+while that chart is still among them; it sends that nowhere and keeps it until you choose another
+chart in that repository, and neither "Forget the token" nor taking the repository off your list
+removes it. The chart itself is gone with the page, and the developer receives none of it.
 
 The control panel's Explore tab, https://openspineconsortium.com/symphony/control/#explore, shows
 the same work as a map you go into one level at a time: the repository, its goals and epics, each
@@ -1358,24 +1391,39 @@ page holds the device code in the open page's memory alone and sends it to the s
 client secret until you have typed the short code at https://github.com/login/device and allowed
 SymphonyBoard; the page then keeps what the sign-in by GitHub's page keeps, save where the browser
 refuses to store the token, which a sign-in by code, needing no storage to finish, can meet: there
-the page holds it in its memory alone, never renews it, and "Forget the token" drops it without
-asking GitHub to revoke it, so it runs out within eight hours; and the service keeps nothing of it.
+the page holds it in its memory alone, never renews it, and "Forget the token", or a sign-in by code
+or a pasted token that takes its place, drops it without asking GitHub to revoke it, so it stays
+good until it runs out within eight hours; and the service keeps nothing of it.
 It says that "Enable Device Flow", which sign-in by code needs ticked on SymphonyBoard, lets anyone
 ask GitHub for a SymphonyBoard code and talk a person into typing it, which hands whoever asked a
 token that acts as that person, so the page warns beside every code to type only one started on
 that page a moment ago; and that such a sign-in's refresh token renews at GitHub with the client id
 alone, each renewal good for six months more, so that it lasts until it is revoked or goes six
-months unrenewed, and where you revoke it; and that "Forget the token" asks GitHub to revoke the
-token it drops, while whether GitHub then refuses that sign-in's refresh token too is not
-established. It names, as no earlier version did, the stylesheet of Google Fonts that the control
-panel and the cost page link for the site's typefaces, Newsreader, IBM Plex Sans and IBM Plex Mono,
-as the site's other Symphony pages do, which your browser asks Google for, with the font files it
-names, as the pages load, with nothing of the page's own in those requests, the stylesheet's naming
-the page it came from by the site's address alone, as browsers do unless set otherwise. And it says
-that the control panel installs as an app, the same page in a window of its own, whose "Sign in
-with GitHub" may come back from GitHub's page to your browser rather than to the app, where the page
-sends the code nowhere and the code signs nobody in; earlier versions said that GitHub sends your
-browser back to the page, which holds in a browser's tab alone.
+months unrenewed, and where you revoke it; and that "Forget the token" asks GitHub to revoke each
+sign-in's token that the tab's own storage or the browser's storage holds, and no other, so not one
+the browser refused to store, while whether GitHub then refuses such a sign-in's refresh token too
+is not established. It names, as no earlier version did, the stylesheet of Google Fonts that the
+control panel and the cost page link for the site's typefaces, Newsreader, IBM Plex Sans and IBM
+Plex Mono, as the site's other Symphony pages do, which your browser asks Google for, with the font
+files it names, as the pages load, with nothing of the page's own in those requests, the
+stylesheet's naming the page it came from by the site's address alone and each font file's naming
+the site by its origin and the stylesheet by Google's own address alone, as browsers do unless set
+otherwise. And it says that the control panel installs as an app, the same page in a window of its
+own, whose "Sign in with GitHub" may come back from GitHub's page to your browser rather than to the
+app, where the page sends the code nowhere and the code signs nobody in, while the app keeps what
+the press kept, as a tab does, until another press, a return or the clearing of that storage ends
+it, and that where the app shares its browser's storage with that browser's tabs it reads a sign-in
+or a token kept there with "Keep me signed in" ticked, and its "Forget the token" forgets that for
+those tabs too; earlier versions said that GitHub sends your browser back to the page, which holds
+in a browser's tab alone. It also says, as no earlier version did, what a press of "Sign in with
+GitHub" keeps in the tab's own storage until GitHub's return reaches the page, or for as long as the
+sign-in is left unfinished: a one-time value, the sign-in's one-time secret, whether "Keep me signed
+in" is ticked and the page's query, the repository it showed. It corrects the section on the control
+panel's Dependencies tab, which said that the tab writes nothing to your browser's storage, as was
+so until its row of tiles came: where a repository has two charts or more, the page keeps there
+which of them you last chose, by the repository's name and the chart's, until you choose another,
+and neither "Forget the token" nor taking the repository off your list removes it; the list of what
+the page keeps in your browser now names it too.
 Nothing the developer receives or keeps changed.
 
 Version 34 adds the Sync run, symphony-template#257, as the section of that name says: a workflow of
