@@ -82,7 +82,10 @@ class SettingsList(unittest.TestCase):
         self.assertEqual(scoped["token_lending"], "organization")
 
     def test_every_setting_has_its_log_lines(self):
-        self.assertEqual(set(setup.LOG_LINES), set(setup.SETTINGS))
+        # The token lending has one line of two of its own, the same for
+        # every state, so the log tells nothing of why.
+        self.assertEqual(set(setup.LOG_LINES) | {setup.TOKEN_LENDING}, set(setup.SETTINGS))
+        self.assertEqual(setup.lending_line({"lending": {"lent": []}}), "token lending: no tokens lent")
 
     def test_the_readme_points_to_the_list(self):
         readme = (ROOT / "README.md").read_text(encoding="utf-8")

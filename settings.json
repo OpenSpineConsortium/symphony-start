@@ -95,11 +95,11 @@
       "report": "token_lending",
       "scope": "organization",
       "app": "Symphony Setup",
-      "permission": "Secrets: write and Variables: write (organization)",
+      "permission": "Secrets: write and Variables: write (organization), Metadata: read (repository)",
       "api": "PUT /orgs/{org}/actions/secrets/{secret_name}/repositories/{repository_id} and PUT /orgs/{org}/actions/variables/{name}/repositories/{repository_id}",
-      "value": "the repository added to the selected repositories of the organization secrets the requester owns (SYMPHONY_CLAUDE_1 to SYMPHONY_CLAUDE_32 and CLAUDE_CODE_OAUTH_TOKEN, whose slot's owner in the variable SYMPHONY_CLAUDE_SETTINGS is the requester's login) and of the variables SYMPHONY_CLAUDE_ACCOUNTS and SYMPHONY_CLAUDE_SETTINGS",
+      "value": "the repository added to the selected repositories of the organization secrets the requester owns (SYMPHONY_CLAUDE_1 to SYMPHONY_CLAUDE_32 and CLAUDE_CODE_OAUTH_TOKEN, whose slot's owner in the variable SYMPHONY_CLAUDE_SETTINGS is the requester by login and by account id, uid; a slot with no uid is never lent) and, only where one of those secrets was lent or reaches the repository already, of the variables SYMPHONY_CLAUDE_ACCOUNTS and SYMPHONY_CLAUDE_SETTINGS",
       "modes": ["new", "existing"],
-      "when": "an organization's repository, where the installation granted the permissions; only a secret or variable that exists and whose visibility is selected; no value, visibility or other person's slot is changed"
+      "when": "an organization's repository, where the installation granted the permissions; only a secret or variable that exists and whose visibility is selected is written; the run reads the value of SYMPHONY_CLAUDE_SETTINGS, which holds the slots' owners, and never a secret's value; no value, visibility or other person's slot is changed"
     },
     {
       "key": "check_source",

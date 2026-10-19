@@ -69,6 +69,11 @@ on:
         description: The login of the administrator who asked
         type: string
         required: true
+      requester_id:
+        description: The account id of the administrator who asked, which a token of the pool must keep to be lent
+        type: string
+        required: false
+        default: ""
       issue:
         description: The request's issue number on this repository
         type: string
@@ -119,6 +124,7 @@ jobs:
         env:
           REPOSITORY: ${{ inputs.repository }}
           REQUESTER_GIVEN: ${{ inputs.requester }}
+          REQUESTER_ID_GIVEN: ${{ inputs.requester_id }}
           INSTALLATION_ID: ${{ inputs.installation_id }}
           REPOSITORY_ID: ${{ inputs.repository_id }}
           APP_ID: ${{ vars.SDLC_APP_ID }}
@@ -133,6 +139,7 @@ jobs:
             # here so that the steps' headers read the same whether or
             # not it is also the repository's owner.
             [ -n "$REQUESTER_GIVEN" ] && echo "::add-mask::$REQUESTER_GIVEN"
+            [ -n "$REQUESTER_ID_GIVEN" ] && echo "::add-mask::$REQUESTER_ID_GIVEN"
             case "$INSTALLATION_ID" in ""|*[!0-9]*) echo "installation_id must be a number"; exit 1 ;; esac
             case "$REPOSITORY_ID" in ""|*[!0-9]*) echo "repository_id must be a number"; exit 1 ;; esac
             jwt="$(bash start/scripts/jwt.sh)"
@@ -157,6 +164,13 @@ jobs:
           fi
           sed 's/^repository=/TARGET=/; s/^owner=/OWNER=/; s/^name=/NAME=/' "$RUNNER_TEMP/named" >> "$GITHUB_ENV"
           echo "REQUESTER=$REQUESTER_GIVEN" >> "$GITHUB_ENV"
+          # The account id, digits alone or nothing; without it no token
+          # of the pool is lent, since a login passes to whoever takes it.
+          case "$REQUESTER_ID_GIVEN" in
+            [1-9]*) case "$REQUESTER_ID_GIVEN" in *[!0-9]*) REQUESTER_ID_GIVEN="" ;; esac ;;
+            *) REQUESTER_ID_GIVEN="" ;;
+          esac
+          echo "REQUESTER_ID=$REQUESTER_ID_GIVEN" >> "$GITHUB_ENV"
           echo "NAMED=$named" >> "$GITHUB_ENV"
           target="$(sed -n 's/^repository=//p' "$RUNNER_TEMP/named")"
           if [ "$named" = public ]; then
@@ -550,16 +564,23 @@ jobs:
 
       # For an organization's repository, in either mode, a token of the
       # Setup App's with the organization permissions Secrets and Variables
-      # (write) alone, which setup.py uses only to add the repository to
+      # (write) and Metadata (read), which setup.py uses only to add the repository to
       # the selected repositories of the requester's own token secrets and
       # of the pool's two variables. create-github-app-token takes no input
       # for the Variables permission, so the token is minted here with the
       # App's own JWT, as the first step mints its metadata token, for this
       # one repository; the body is written by Python from the environment.
+      # Metadata read too, which GitHub's documentation lists beside
+      # Secrets and Variables for the two calls that add a repository.
       # A separate mint, so an installation that has not granted these
       # permissions still adopts, and the pull request says the tokens
-      # were not lent: the step never fails, and GitHub's answers stay out
-      # of this log, which gets one fixed line. Revoked with the others.
+      # were not lent: the step never fails and prints nothing, so this
+      # log says nothing of the installation's permissions; the settings
+      # step prints the one line for the lending. The token goes to a file
+      # in the runner's temporary directory, not to a step output, since a
+      # step's env in this log shows whether a value is set, and the steps
+      # after read it from there whether or not it was made. Revoked with
+      # the others.
       - name: Make the token that lends the requester's own Claude tokens
         id: lend-token
         if: env.REFUSED != 'true' && env.SETUP_APP == 'present' && steps.setup-token.outcome == 'success' && steps.target.outputs.owner_type == 'Organization'
@@ -568,26 +589,23 @@ jobs:
           APP_ID: ${{ vars.SDLC_SETUP_APP_ID }}
           APP_PRIVATE_KEY: ${{ secrets.SDLC_SETUP_APP_PRIVATE_KEY }}
         run: |
-          jwt="$(bash start/scripts/jwt.sh)"
+          jwt="$(bash start/scripts/jwt.sh 2>/dev/null)" || exit 0
           echo "::add-mask::$jwt"
           installation="$(curl -sSf -H "Authorization: Bearer $jwt" -H "Accept: application/vnd.github+json" \
             "https://api.github.com/orgs/$OWNER/installation" 2>/dev/null \
             | python3 -c 'import json, sys; print(int(json.load(sys.stdin)["id"]))' 2>/dev/null)" || installation=""
           if [ -z "$installation" ]; then
-            echo "the token that lends the requester's Claude tokens: not made"
             exit 0
           fi
-          body="$(python3 -c 'import json, os; print(json.dumps({"repositories": [os.environ["NAME"]], "permissions": {"organization_secrets": "write", "organization_actions_variables": "write"}}))')"
+          body="$(python3 -c 'import json, os; print(json.dumps({"repositories": [os.environ["NAME"]], "permissions": {"organization_secrets": "write", "organization_actions_variables": "write", "metadata": "read"}}))')"
           token="$(curl -sSf -X POST -H "Authorization: Bearer $jwt" -H "Accept: application/vnd.github+json" \
             -d "$body" "https://api.github.com/app/installations/$installation/access_tokens" 2>/dev/null \
             | python3 -c 'import json, sys; print(json.load(sys.stdin)["token"])' 2>/dev/null)" || token=""
           if [ -z "$token" ]; then
-            echo "the token that lends the requester's Claude tokens: not made"
             exit 0
           fi
           echo "::add-mask::$token"
-          echo "token=$token" >> "$GITHUB_OUTPUT"
-          echo "the token that lends the requester's Claude tokens: made"
+          (umask 077; printf '%s' "$token" > "$RUNNER_TEMP/lend-token")
 
       # Only after that mint failed, on the owner's own installation of
       # the Setup App, which is on this repository and nothing else, with
@@ -622,13 +640,13 @@ jobs:
           GH_TOKEN: ${{ steps.setup-token.outputs.token }}
           GH_ORG_TOKEN: ${{ steps.setup-org-token.outputs.token }}
           GH_CHECKS_TOKEN: ${{ steps.checks-token.outputs.token }}
-          GH_LEND_TOKEN: ${{ steps.lend-token.outputs.token }}
           OWNER_TYPE: ${{ steps.target.outputs.owner_type }}
           TARGET: ${{ env.TARGET }}
         run: |
           if [ "$SETUP_APP" = present ] && [ "$SETUP_OUTCOME" = success ]; then
-            python3 start/scripts/setup.py apply --repo "$TARGET" --mode "$MODE" --head "${ADOPT_HEAD:-}" \
-              --owner-type "$OWNER_TYPE" --requester="$REQUESTER" \
+            GH_LEND_TOKEN="$(cat "$RUNNER_TEMP/lend-token" 2>/dev/null || true)" \
+              python3 start/scripts/setup.py apply --repo "$TARGET" --mode "$MODE" --head "${ADOPT_HEAD:-}" \
+              --owner-type "$OWNER_TYPE" --requester="$REQUESTER" --requester-id="$REQUESTER_ID" \
               --ruleset template/docs/setup/ruleset-main.json --report "$RUNNER_TEMP/settings.json"
           else
             if [ "$SETUP_APP" != present ]; then
@@ -661,13 +679,16 @@ jobs:
           gh api --method DELETE installation/token --silent \
             || echo "::warning::the Setup App's organization token could not be revoked; it expires within the hour"
 
+      # Whenever the step that makes it ran, made or not, and silent, so
+      # this log does not tell the one from the other; a token that could
+      # not be revoked expires within the hour.
       - name: Revoke the token that lends the requester's Claude tokens
-        if: always() && steps.lend-token.outputs.token != ''
-        env:
-          GH_TOKEN: ${{ steps.lend-token.outputs.token }}
+        if: always() && steps.lend-token.outcome != 'skipped'
         run: |
-          gh api --method DELETE installation/token --silent \
-            || echo "::warning::the token that lends the requester's Claude tokens could not be revoked; it expires within the hour"
+          if [ -s "$RUNNER_TEMP/lend-token" ]; then
+            GH_TOKEN="$(cat "$RUNNER_TEMP/lend-token")" gh api --method DELETE installation/token --silent >/dev/null 2>&1 || true
+          fi
+          rm -f "$RUNNER_TEMP/lend-token"
 
       - name: Revoke the token that reads the check runs
         if: always() && steps.checks-token.outputs.token != ''

@@ -373,6 +373,7 @@ jobs:
       metrics: ${{ needs.request.outputs.metrics }}
       merge: ${{ needs.request.outputs.merge }}
       requester: ${{ github.event.issue.user.login }}
+      requester_id: ${{ github.event.issue.user.id }}
       issue: ${{ github.event.issue.number }}
     secrets: inherit
 
@@ -396,6 +397,7 @@ jobs:
       metrics: ${{ needs.request.outputs.metrics }}
       merge: ${{ needs.request.outputs.merge }}
       requester: ${{ github.event.issue.user.login }}
+      requester_id: ${{ github.event.issue.user.id }}
       issue: ${{ github.event.issue.number }}
       answer: caller
     secrets: inherit

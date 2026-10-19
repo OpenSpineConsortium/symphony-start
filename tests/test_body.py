@@ -480,9 +480,10 @@ class Body(unittest.TestCase):
                       " at https://github.com/octo-org/widget/settings/installations, or from the organization's at"
                       " https://github.com/organizations/octo-org/settings/installations.", body)
 
-    def lending_report(self, state, lent=(), left=(), failed=(), detail="", mode="new"):
+    def lending_report(self, state, lent=(), left=(), failed=(), detail="", mode="new", unreached=(), missing=()):
         settings = report(states=dict(ALL_DONE, token_lending=state), details={"token_lending": detail}, mode=mode)
-        settings["lending"] = {"lent": list(lent), "left": list(left), "missing": [], "failed": list(failed)}
+        settings["lending"] = {"lent": list(lent), "left": list(left), "unreached": list(unreached),
+                               "missing": list(missing), "failed": list(failed)}
         return settings
 
     def test_the_tokens_lent_are_named_with_how_to_lend_more(self):
@@ -490,10 +491,27 @@ class Body(unittest.TestCase):
                                                       left=("CLAUDE_CODE_OAUTH_TOKEN",)),
                          owner_type="Organization")
         self.assertIn(f"{LENDING} lent to this repository: `SYMPHONY_CLAUDE_3` and `SYMPHONY_CLAUDE_ACCOUNTS`;"
-                      " `CLAUDE_CODE_OAUTH_TOKEN` is shared with more than selected repositories and left as GitHub"
-                      " has it. Only your own tokens are lent, never another person's, and no value or visibility"
+                      " `CLAUDE_CODE_OAUTH_TOKEN` reaches this repository already, shared with all the"
+                      " organization's repositories or its private ones, and is left as GitHub shares it. Only your"
+                      " own tokens are lent, never another person's, and no value or visibility"
                       f" was changed.{LEND_MORE}\n", body)
         self.assertLess(body.index(ACTIONS), body.index(LENDING))
+
+    def test_tokens_that_cannot_reach_the_repository_say_so(self):
+        body = self.body(settings=self.lending_report("none-lent", unreached=("SYMPHONY_CLAUDE_3",),
+                                                      missing=("CLAUDE_CODE_OAUTH_TOKEN",)),
+                         owner_type="Organization")
+        self.assertIn(f"{LENDING} `SYMPHONY_CLAUDE_3` does not reach this repository, shared only with the"
+                      " organization's private and internal repositories or in another way than with selected ones,"
+                      " and the run changes no visibility; an owner of the organization switches it to selected"
+                      " repositories to lend it here; `CLAUDE_CODE_OAUTH_TOKEN` is not among the organization's"
+                      " secrets, and the run makes none.", body)
+
+    def test_a_slot_kept_by_login_alone_is_explained(self):
+        detail = "a token in it names you by login alone"
+        body = self.body(settings=self.lending_report("none-owned", detail=detail), owner_type="Organization")
+        self.assertIn(f"gives each token's owner; {detail}.{LEND_MORE}", body)
+        self.assertNotIn("GitHub said", body.split(LENDING)[1].split("\n")[0])
 
     def test_a_loan_refused_keeps_githubs_words(self):
         body = self.body(settings=self.lending_report("failed", lent=("SYMPHONY_CLAUDE_3",),

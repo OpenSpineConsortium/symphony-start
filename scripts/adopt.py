@@ -1698,8 +1698,9 @@ def token_lending_line(manifest, report):
         return None
     org = manifest["repository"].split("/")[0]
     lending = report.get("lending") if isinstance(report.get("lending"), dict) else {}
-    lent, left, failed = ([name for name in lending.get(key) if isinstance(name, str)]
-                          if isinstance(lending.get(key), list) else [] for key in ("lent", "left", "failed"))
+    lent, left, unreached, missing, failed = (
+        [name for name in lending.get(key) if isinstance(name, str)] if isinstance(lending.get(key), list) else []
+        for key in ("lent", "left", "unreached", "missing", "failed"))
     head = "- Your Claude tokens in the organization's pool:"
     by_hand = lend_by_hand(org)
     # GitHub's words where GitHub gave them, else the run's own reason.
@@ -1711,15 +1712,25 @@ def token_lending_line(manifest, report):
                 f" organization permissions Secrets and Variables (Read and write){said};"
                 f" an owner of the organization accepts them at {installations_page(manifest)}.{by_hand}")
     if state == "none-owned":
-        return (f"{head} none lent, since no token in it names you as its owner: the organization variable"
-                " `SYMPHONY_CLAUDE_SETTINGS`, which the control panel's Tokens page writes, gives each token's"
-                f" owner.{by_hand}")
+        why = f"; {detail}" if detail else ""
+        return (f"{head} none lent, since no token in it names you as its owner by your login and account id: the"
+                " organization variable `SYMPHONY_CLAUDE_SETTINGS`, which the control panel's Tokens page writes,"
+                f" gives each token's owner{why}.{by_hand}")
     parts = []
     if lent:
         parts.append(f"lent to this repository: {code_list(lent)}")
     if left:
-        parts.append(f"{code_list(left)} {'is' if len(left) == 1 else 'are'} shared with more than selected"
-                     " repositories and left as GitHub has it")
+        parts.append(f"{code_list(left)} {'reaches' if len(left) == 1 else 'reach'} this repository already, shared"
+                     " with all the organization's repositories or its private ones, and"
+                     f" {'is' if len(left) == 1 else 'are'} left as GitHub shares {'it' if len(left) == 1 else 'them'}")
+    if unreached:
+        parts.append(f"{code_list(unreached)} {'does' if len(unreached) == 1 else 'do'} not reach this repository,"
+                     " shared only with the organization's private and internal repositories or in another way"
+                     " than with selected ones, and the run changes no visibility; an owner of the organization"
+                     " switches it to selected repositories to lend it here")
+    if missing:
+        parts.append(f"{code_list(missing)} {'is' if len(missing) == 1 else 'are'} not among the organization's"
+                     " secrets, and the run makes none")
     if failed:
         parts.append(f"not lent: {code_list(failed)}{said}")
     what = "; ".join(parts) if parts else f"not lent{said}"
