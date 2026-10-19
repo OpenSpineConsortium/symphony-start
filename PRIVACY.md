@@ -1,6 +1,6 @@
 # Symphony GitHub Apps privacy statement
 
-Version 30, 2026-10-19. This text is also at https://openspineconsortium.com/symphony/apps-privacy.html.
+Version 31, 2026-10-19. This text is also at https://openspineconsortium.com/symphony/apps-privacy.html.
 The Symphony browser extension has a statement of its own, at https://openspineconsortium.com/symphony/privacy.html.
 
 Who makes the Apps: Gregory Schwing, trading as OpenSpineConsortium ("the developer"). Questions:
@@ -25,7 +25,8 @@ every one of them, and this statement applies to each.
 
 SymphonyBoard asks for eleven repository permissions: Contents (read and write), to read your default
 branch and push the branch `symphony/adopt` and, in a repository with no commit yet, to make its first
-commit, a README; Pull requests (read and write), to open the adoption
+commit, a README, and for the control panel's writes of a file, as you, when you press Track on its
+Folders tab or propose, change or take out a notebook on its Notebooks tab (the control panel, below); Pull requests (read and write), to open the adoption
 pull request and, only when you asked for it on the form, merge it; Issues (read and write), to
 make the board's labels and, in a new repository, open the issue "Set up this project"; Checks (read
 and write), to post the protocol check as a check run where the developer runs the App's server;
@@ -427,6 +428,23 @@ more, until you choose another repository or the page is gone, and reads a level
 press Read again; it writes nothing, not to GitHub and not to your
 browser's storage, and the developer receives none of it.
 
+The control panel's Notebooks tab, https://openspineconsortium.com/symphony/control/#notebooks,
+shows the notebooks the drive organizer proposes for a private repository: groups of a few of your
+drive's files, each meant to become a private repository of its own that points at those files where
+they are and never moves them. It reads, as you, with the GitHub token you gave it, two files on the
+repository's branch drive-catalog: notebooks.json, the proposal (each notebook's title, summary,
+repository name and the paths of its files), and catalog.json, the names, kinds, sizes, dates and
+OneDrive links of the drive's files, as the Folders tab reads it; and, for each notebook, whether a
+repository of that name exists under the same owner and whether it is private. On a public
+repository it reads none of these, since a notebook names your files. When you propose a notebook,
+change one or take one out, it asks for catalog.json's version once more and writes notebooks.json on
+that branch, as you, over the version it read, so that a change the organizer made meanwhile is
+never written over; when you take out the last notebook it deletes the file. It writes nothing else:
+not to your browser's storage, and not to the drive, of which Microsoft is asked nothing. The
+repository a notebook names is made by the notebook skill in a Claude session, not by the page. What
+the tab writes stays on the private repository's branch, where GitHub keeps it as it keeps any file,
+readable by whoever may read that repository; the developer receives none of it.
+
 The aggregates the collector reads are as the section on field metrics says, whether or not you use
 the pages. The pages never show a repository's Claude secret, which GitHub never gives back. The
 one Claude token they take is one you paste into the Tokens page's "Add or renew a slot": the page
@@ -754,6 +772,13 @@ Symphony is for people who administer GitHub repositories. It is not directed at
 A new version of this statement is published at https://openspineconsortium.com/symphony/apps-privacy.html
 and in the front door repository, github.com/OpenSpineConsortium/symphony-start, whose PRIVACY.md is
 this text.
+
+Version 31 adds the control panel's Notebooks tab, as the section on the control panel says: it reads
+the drive organizer's proposal of notebooks and its catalog from the branch drive-catalog of a private
+repository, and whether each notebook's repository exists and is private, and writes the proposal
+there, as you, when you propose, change or take out a notebook. It also says, under SymphonyBoard's
+Contents permission, that the control panel writes a file with it, as you: from the Folders tab since
+version 21, and now from the Notebooks tab. Nothing the developer receives or keeps changed.
 
 Version 30 adds the control panel's "Your token" box and the Token workflow's manage job, which
 lists, takes back or deletes the one token in an organization's pool whose settings name you, by
