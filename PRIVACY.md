@@ -1,6 +1,6 @@
 # Symphony GitHub Apps privacy statement
 
-Version 32, 2026-10-19. This text is also at https://openspineconsortium.com/symphony/apps-privacy.html.
+Version 33, 2026-10-19. This text is also at https://openspineconsortium.com/symphony/apps-privacy.html.
 The Symphony browser extension has a statement of its own, at https://openspineconsortium.com/symphony/privacy.html.
 
 Who makes the Apps: Gregory Schwing, trading as OpenSpineConsortium ("the developer"). Questions:
@@ -36,9 +36,10 @@ page used up to version 13 of this statement to make a Codespace and no longer u
 on the App until the developer takes it off; Actions (read and write), for the control panel's buttons
 that start a workflow run by hand, such as the Tokens page's "Read every slot now" and "Add a Claude
 account", and its reads
-of the repository's workflow runs, their jobs and a job's log (the control panel, below); Administration (read and write), for one thing only: the
+of the repository's workflow runs, their jobs and a job's log (the control panel, below); Administration (read and write), for two things only: the
 control panel's Share tab invites a person you name by their GitHub username as a collaborator on the repository, as
-you, when you press "Invite" (the control panel, below), and no adoption run, workflow or other page uses it;
+you, when you press "Invite", and its Notebooks tab makes a notebook's public or internal repository private, as
+you, when you press "Make private" and confirm (the control panel, below); no adoption run, workflow or other page uses it;
 Secrets (read and write), for the control panel's Folders tab, which reads whether the repository's
 secret SYMPHONY_DRIVE_REFRESH is set and, when you press Track, saves a drive's refresh token as
 that secret, and for the Tokens page on a personal account's repository, which holds its Claude
@@ -343,7 +344,8 @@ open from that branch found), never a push to the default branch, a pull request
 tab that gives an agent the token slots you picked, by their names in .github/symphony/accounts.json,
 written on the branch symphony/tokens-<the agent's name in lower case>, which is first set to the
 default branch's head, so whatever that branch held is replaced, and set to merge itself once its checks
-pass where the repository allows auto-merge (the Notebooks tab, below, writes a file too), or, on
+pass where the repository allows auto-merge (the Notebooks tab, below, writes a file too, and makes a
+notebook's repository private when you ask), or, on
 the Share tab, an
 invitation to the GitHub user you
 name, with the role you pick, to collaborate on the repository, a new role for a collaborator or
@@ -468,13 +470,19 @@ they are and never moves them. It reads, as you, with the GitHub token you gave 
 repository's branch drive-catalog: notebooks.json, the proposal (each notebook's title, summary,
 repository name and the paths of its files), and catalog.json, the names, kinds, sizes, dates and
 OneDrive links of the drive's files, as the Folders tab reads it; and, for each notebook, whether a
-repository of that name exists under the same owner and whether it is private, internal or public.
+repository of that name exists under the same owner, whether it is private, internal or public, and
+whether GitHub counts you its administrator, which GitHub gives in the same answer.
 On a public or internal repository it reads none of these, since a notebook names your files. When
 you propose a notebook,
 change one or take one out, it asks for catalog.json's version once more and writes notebooks.json on
 that branch, as you, over the version it read, so that a change the organizer made meanwhile is
 never written over; when you take out the last notebook it deletes the file, and whatever else the
-organizer wrote in it goes with it. It writes nothing else: in your browser's storage only the width
+organizer wrote in it goes with it. Where a notebook's repository is public or internal and GitHub
+does not say you are not its administrator, the side panel offers Make private: once you confirm, after
+a question that says what GitHub erases with the change (its stars and watchers) and what becomes of
+its forks, the page asks GitHub, as you, to make that repository private, which takes SymphonyBoard's
+Administration permission (or, with a pasted token, the token's), and shows what GitHub answers; it
+changes nothing else about the repository. It writes nothing else: in your browser's storage only the width
 of its side panel, kept with the layout (above), and nothing to the drive, of which Microsoft is
 asked nothing. The
 repository a notebook names is made by the notebook skill in a Claude session, not by the page. What
@@ -773,7 +781,8 @@ SymphonyBoard's, to GitHub's that revokes one. No token, key or signature is eve
 
 They send nothing to any service but GitHub's own API. They have no analytics, no error reporting
 and no third party. SymphonyBoard holds Administration only to send the invitation you ask for on the
-control panel's Share tab, as you, and changes no setting with it; Symphony Setup holds it where you
+control panel's Share tab and to make a notebook's repository private when you press Make private on
+its Notebooks tab, each as you, and changes no other setting with it; Symphony Setup holds it where you
 installed it, uses it only during an adoption run, and stays installed until you uninstall it. They
 read your repository's code only as the
 adoption above says (the tree listing, a one-commit checkout of the default branch, and the few
@@ -812,6 +821,13 @@ Symphony is for people who administer GitHub repositories. It is not directed at
 A new version of this statement is published at https://openspineconsortium.com/symphony/apps-privacy.html
 and in the front door repository, github.com/OpenSpineConsortium/symphony-start, whose PRIVACY.md is
 this text.
+
+Version 33 adds the Notebooks tab's Make private, the owner's choice of 2026-10-19: where a notebook's
+repository is public or internal, a button in its side panel makes it private on GitHub, as you, once
+you confirm, which is a second use of SymphonyBoard's repository permission Administration beside the
+Share tab's invitation; the tab also reads, from the answer it already asked for, whether GitHub counts
+you the repository's administrator, and offers the button only where GitHub does not say you are not.
+Nothing the developer receives or keeps changed.
 
 Version 32 adds Symphony Setup's two organization permissions Secrets and Variables (read and write),
 used only in an adoption run to add the new repository to the lists of repositories that read the
