@@ -36,10 +36,12 @@ name: Adopt (run)
 # sweep.is_adopted), since a name typed on the form meets none of the
 # installation path's checks, and a second adoption would put the
 # template's files over the repository's own or, for the protocol alone,
-# bring back what it took out; the Setup App, which both paths need, then
-# uninstalls itself as after an adoption. And apply refuses an adoption
-# that could not write docs/agents/PROTOCOL.md, the one file that rule
-# reads, so every adoption made is one the next request knows.
+# bring back what it took out; the Setup App, which both paths need,
+# stays installed, as after an adoption, acting only during an adoption
+# run, and the person removes it whenever they like. And
+# apply refuses an adoption that could not write docs/agents/PROTOCOL.md,
+# the one file that rule reads, so every adoption made is one the next
+# request knows.
 
 on:
   workflow_call:
@@ -89,7 +91,9 @@ permissions:
 jobs:
   adopt:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    # Fifteen minutes for the run, and ten more for the settings step's
+    # bound on the wait for the check run it pins the ruleset's check to.
+    timeout-minutes: 25
     # Keyed on the request and the repository, so an installation's several
     # repositories run side by side and two requests for one repository
     # both run, the push of symphony/adopt settling them.
@@ -271,10 +275,10 @@ jobs:
           # the protocol's later releases come from, how to adopt it again
           # (the other kind, or what its pull request left out, both by
           # reverting that adoption first), that the Setup App the form
-          # asked for uninstalls itself, and that the topic symphony is what
-          # the browser extension reads; its words are adopted.py's ANSWER,
-          # which adopt.yml gives too where the Setup App is missing from a
-          # named repository adopted already. It comes before the branch
+          # asked for stays installed and did nothing, and that the topic
+          # symphony is what the browser extension reads; its words are
+          # adopted.py's ANSWER, which adopt.yml gives too where the Setup
+          # App is missing from a named repository adopted already. It comes before the branch
           # symphony/adopt, so a merged adoption that kept its branch is
           # told that it is adopted rather than sent to delete the branch
           # and ask again.
@@ -282,8 +286,7 @@ jobs:
           python3 start/scripts/adopted.py "$TARGET" 2> "$RUNNER_TEMP/adopted-said" || adopted=$?
           case "$adopted" in
             0) ;;
-            3) echo "ADOPTED=true" >> "$GITHUB_ENV"
-               bash start/scripts/refuse.sh "$(python3 start/scripts/adopted.py --answer)"
+            3) bash start/scripts/refuse.sh "$(python3 start/scripts/adopted.py --answer)"
                exit 0 ;;
             *) echo "whether the repository is adopted already could not be read: $(head -n 1 "$RUNNER_TEMP/adopted-said")"
                exit 1 ;;
@@ -414,7 +417,9 @@ jobs:
       # actions/checkout leaves when it keeps its credentials, masked before
       # use; the remote URL never holds the token. git's messages name files
       # and commits, so they go to a file of the run and not to this public
-      # log, which gets a fixed line instead.
+      # log, which gets a fixed line instead. The pushed head's sha goes to
+      # the environment, unprinted, for the settings step, which waits for
+      # the check run GitHub Actions starts on it; a sha names nothing.
       - name: Commit on symphony/adopt and push it as the App
         if: env.REFUSED != 'true'
         env:
@@ -463,6 +468,8 @@ jobs:
             else
               bash "$refuse" "Nothing was done: GitHub refused the push of the branch symphony/adopt to $SAID; a ruleset or a branch protection there may stand in its way. Let the App push that branch, then open a new request with the form; this one is closed."
             fi
+          else
+            echo "ADOPT_HEAD=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
           fi
 
       # Only whether the Setup App's key is set reaches the shell, never
@@ -520,6 +527,27 @@ jobs:
           permission-organization-administration: write
           skip-token-revoke: true
 
+      # For mode new, a token of the main App's, SymphonyBoard's, with
+      # Checks read alone, for this one repository: setup.py reads with it
+      # whether GitHub Actions has reported the check named "check" on the
+      # head pushed above, since GitHub pins a required check to an app
+      # only once that app has reported it, and the Setup App holds no
+      # Checks permission. A separate mint, so an installation that has not
+      # accepted Checks still adopts and only the pin is left by hand; the
+      # write that pins goes with the Setup App's token. Revoked with the
+      # Setup App's.
+      - uses: actions/create-github-app-token@v1
+        id: checks-token
+        if: env.REFUSED != 'true' && env.SETUP_APP == 'present' && steps.setup-token.outcome == 'success' && env.MODE == 'new'
+        continue-on-error: true
+        with:
+          app-id: ${{ vars.SDLC_APP_ID }}
+          private-key: ${{ secrets.SDLC_APP_PRIVATE_KEY }}
+          owner: ${{ env.OWNER }}
+          repositories: ${{ env.NAME }}
+          permission-checks: read
+          skip-token-revoke: true
+
       # Only after that mint failed, on the owner's own installation of
       # the Setup App, which is on this repository and nothing else, with
       # metadata read: a failure here is the Setup App's id or key, not the
@@ -541,7 +569,9 @@ jobs:
       # line per setting. The step never fails the request: the pull
       # request is the place that says what happened, and a step that
       # dies before writing the report leaves the pull request's text
-      # without its section, which the next step says.
+      # without its section, which the next step says. In mode new it may
+      # wait up to ten minutes for the check run it pins the ruleset's
+      # check to, usually under one, which the job's timeout allows for.
       - name: Apply the repository's settings where the Setup App is installed
         if: env.REFUSED != 'true'
         continue-on-error: true
@@ -550,10 +580,11 @@ jobs:
           PROBE_OUTCOME: ${{ steps.setup-probe.outcome }}
           GH_TOKEN: ${{ steps.setup-token.outputs.token }}
           GH_ORG_TOKEN: ${{ steps.setup-org-token.outputs.token }}
+          GH_CHECKS_TOKEN: ${{ steps.checks-token.outputs.token }}
           TARGET: ${{ env.TARGET }}
         run: |
           if [ "$SETUP_APP" = present ] && [ "$SETUP_OUTCOME" = success ]; then
-            python3 start/scripts/setup.py apply --repo "$TARGET" --mode "$MODE" \
+            python3 start/scripts/setup.py apply --repo "$TARGET" --mode "$MODE" --head "${ADOPT_HEAD:-}" \
               --ruleset template/docs/setup/ruleset-main.json --report "$RUNNER_TEMP/settings.json"
           else
             if [ "$SETUP_APP" != present ]; then
@@ -586,63 +617,13 @@ jobs:
           gh api --method DELETE installation/token --silent \
             || echo "::warning::the Setup App's organization token could not be revoked; it expires within the hour"
 
-      # Its one job done, the Setup App uninstalls itself, which an App may
-      # do with its own JWT, when its installation reaches this repository
-      # alone; one that reaches more stays, and the pull request says so.
-      # A request refused because the repository is adopted already is done
-      # too, with nothing left for the Setup App to do there, so it goes
-      # the same way, as the answer says; there is no report to mark then,
-      # and a front door without the Setup App has nothing to uninstall.
-      - name: Uninstall the Setup App when this was its only repository
-        if: (env.REFUSED != 'true' && env.SETTINGS == 'applied') || env.ADOPTED == 'true'
+      - name: Revoke the token that reads the check runs
+        if: always() && steps.checks-token.outputs.token != ''
         env:
-          APP_ID: ${{ vars.SDLC_SETUP_APP_ID }}
-          APP_PRIVATE_KEY: ${{ secrets.SDLC_SETUP_APP_PRIVATE_KEY }}
-          TARGET: ${{ env.TARGET }}
+          GH_TOKEN: ${{ steps.checks-token.outputs.token }}
         run: |
-          if [ -z "$APP_ID" ] || [ -z "$APP_PRIVATE_KEY" ]; then
-            echo "this front door has no Setup App; nothing to uninstall"
-            exit 0
-          fi
-          accept="Accept: application/vnd.github+json"
-          jwt="$(bash start/scripts/jwt.sh)"
-          echo "::add-mask::$jwt"
-          curl -sS -o "$RUNNER_TEMP/setup-installation" -H "Authorization: Bearer $jwt" -H "$accept" \
-            "https://api.github.com/repos/$TARGET/installation"
-          read -r id selection < <(python3 -c 'import json, sys
-          data = json.load(open(sys.argv[1]))
-          print(data.get("id", ""), data.get("repository_selection", ""))' "$RUNNER_TEMP/setup-installation")
-          if [ -z "$id" ]; then
-            echo "the Setup App's installation was not found; nothing to uninstall"
-            exit 0
-          fi
-          count=0
-          if [ "$selection" = selected ]; then
-            token="$(curl -sS -X POST -H "Authorization: Bearer $jwt" -H "$accept" -d '{"permissions":{"metadata":"read"}}' \
-              "https://api.github.com/app/installations/$id/access_tokens" | python3 -c 'import json, sys; print(json.load(sys.stdin).get("token", ""))')"
-            echo "::add-mask::$token"
-            count="$(curl -sS -H "Authorization: Bearer $token" -H "$accept" "https://api.github.com/installation/repositories?per_page=2" \
-              | python3 -c 'import json, sys; print(json.load(sys.stdin).get("total_count", 0))')"
-            curl -sS -X DELETE -H "Authorization: Bearer $token" -H "$accept" https://api.github.com/installation/token -o /dev/null || true
-          fi
-          if [ "$count" = 1 ]; then
-            status="$(curl -sS -o /dev/null -w '%{http_code}' -X DELETE -H "Authorization: Bearer $jwt" -H "$accept" "https://api.github.com/app/installations/$id")"
-            if [ "$status" = 204 ]; then
-              if [ -f "$RUNNER_TEMP/settings.json" ]; then
-                python3 -c 'import json, sys
-          path = sys.argv[1]
-          report = json.load(open(path))
-          report["uninstalled"] = True
-          json.dump(report, open(path, "w"), indent=2)' "$RUNNER_TEMP/settings.json"
-              fi
-              echo "SETUP_UNINSTALLED=true" >> "$GITHUB_ENV"
-              echo "the Setup App uninstalled itself: this was its only repository"
-              exit 0
-            fi
-            echo "::warning::the Setup App could not uninstall itself; it stays installed for the person to uninstall"
-            exit 0
-          fi
-          echo "the Setup App stays installed: its installation reaches more than this repository"
+          gh api --method DELETE installation/token --silent \
+            || echo "::warning::the token that reads the check runs could not be revoked; it expires within the hour"
 
       # A settings step that died before its report leaves a report that
       # says so, since the Setup App's token may have applied some of them.
@@ -793,13 +774,9 @@ jobs:
             new:*) issue=" The issue \"Set up this project\" could not be opened there; the pull request's next steps and its docs/setup/owner-checklist.md stand in for it." ;;
           esac
           settings=""
-          if [ "${SETUP_UNINSTALLED:-}" = true ]; then
-            settings=" The Setup App applied the repository's settings and uninstalled itself."
-          else
-            case "${SETTINGS:-}" in
-              applied|not-reported) settings=" The pull request's section Settings says what the Setup App could do for the repository's settings; uninstall that App now, since that was its one job." ;;
-            esac
-          fi
+          case "${SETTINGS:-}" in
+            applied|not-reported) settings=" The pull request's section Settings says what the Setup App could do for the repository's settings; the App stays installed, acting only during an adoption run, and you can uninstall it at any time." ;;
+          esac
           merged=""
           case "${MERGED:-}" in
             merged) merged=" It is merged, as you asked." ;;
@@ -844,6 +821,6 @@ jobs:
         run: |
           settings=""
           if [ "$SETUP_MINTED" = success ]; then
-            settings=" This run had made the Setup App's token before it stopped, so some of the repository's settings may be applied: review $SETTINGS_WORDS, and uninstall the Setup App now."
+            settings=" This run had made the Setup App's token before it stopped, so some of the repository's settings may be applied: review $SETTINGS_WORDS. The Setup App stays installed; you can uninstall it at any time."
           fi
           gh issue comment "$ISSUE" --repo "$GITHUB_REPOSITORY" --body "Something went wrong while handling this request, and it stopped; the run is $RUN. This issue stays open for the owner of this repository to look at. If the run pushed a branch symphony/adopt to your repository before it stopped, delete that branch before a new request.$settings"

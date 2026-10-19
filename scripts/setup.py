@@ -4,7 +4,9 @@
 .github/workflows/adopt.yml runs this after the branch symphony/adopt is
 pushed and before the pull request opens, with the token of the OpenSpine
 Symphony Setup App for the one repository (Administration: write, Metadata:
-read), when the person installed that App on it. It does what the
+read), when the person installed that App on it; the App stays
+installed after the run, acting only during an adoption run,
+until the person uninstalls it. It does what the
 template's scripts/setup-repo.sh does from a clone, through the REST API
 with the standard library, so the repository's settings need no step by
 hand:
@@ -44,7 +46,22 @@ hand:
      for the organization, the default token's permissions sent back as
      the organization had them, and ticks the repository's box again.
      Where the organization cannot be changed, or its enterprise
-     forbids it, GitHub's answer is kept and the run goes on.
+     forbids it, GitHub's answer is kept and the run goes on;
+  6. in mode new, once the ruleset of step 1 was created and requires the
+     check, that check pinned to GitHub Actions (app 15368) as its source,
+     so that a commit status named "check", which anyone with write access
+     can post, no longer satisfies it. GitHub takes the pin only from an
+     app that has reported the check already, so the ruleset is created
+     without it, and this step waits, up to about ten minutes, for the
+     check run that the template's CI starts on the branch symphony/adopt
+     the run pushed (--head), then puts the ruleset back with the pin; a
+     422, the app not yet counted as one that reported, is tried again
+     within the same bound. Reading check runs needs the Checks
+     permission, which the Setup App does not hold, so the read uses a
+     token of the main App's with Checks read alone, GH_CHECKS_TOKEN, and
+     the write the Setup App's. A ruleset of that name the repository had
+     already is left as it is, unpinned, as step 1 says it is, and so is
+     an organization's ruleset of that name, which only its owners edit.
 
 The labels are the workflow's, made with the main App's token; the
 template's variables are optional and none is set here; the Claude token
@@ -65,7 +82,7 @@ is the person's own and never asked for; and GitHub's reading of
          request's text has one source for all of it.
 
 Python 3.12 or later, standard library only. The tokens are read from
-GH_TOKEN and GH_ORG_TOKEN and never printed.
+GH_TOKEN, GH_ORG_TOKEN and GH_CHECKS_TOKEN and never printed.
 """
 
 import argparse
@@ -74,8 +91,10 @@ import json
 import os
 import re
 import sys
+import time
 import urllib.error
 import urllib.request
+from dataclasses import dataclass
 from pathlib import Path
 
 REPORT_SCHEMA = "sdlc-setup/1"
@@ -101,6 +120,9 @@ EXISTS = "exists"
 FAILED = "failed"
 FORBIDDEN = "forbidden"
 NOT_TRIED = "not-tried"
+# The check's pin only: no check run of GitHub Actions came within the
+# bound, so the ruleset still takes the check from any source.
+NOT_YET = "not-yet"
 # The settings, in the order they are applied and reported.
 RULESET = "ruleset"
 TOGGLES = "toggles"
@@ -108,7 +130,10 @@ TOPIC = "topic"
 SECRET_SCANNING = "secret_scanning"
 PUSH_PROTECTION = "push_protection"
 ACTIONS_PULL_REQUESTS = "actions_pull_requests"
-SETTINGS = (RULESET, TOGGLES, TOPIC, SECRET_SCANNING, PUSH_PROTECTION, ACTIONS_PULL_REQUESTS)
+CHECK_SOURCE = "check_source"
+# The pin comes last, though it belongs to the ruleset, since it may wait
+# minutes for the check run and every other setting is applied meanwhile.
+SETTINGS = (RULESET, TOGGLES, TOPIC, SECRET_SCANNING, PUSH_PROTECTION, ACTIONS_PULL_REQUESTS, CHECK_SOURCE)
 # The topic an adopted repository carries, which the template's own
 # scripts/setup-repo.sh adds too.
 TOPIC_NAME = "symphony"
@@ -117,6 +142,20 @@ TOPIC_NAME = "symphony"
 TOKEN_PERMISSIONS = ("read", "write")
 # GitHub's answer when the organization or its enterprise holds the setting.
 POLICY_CONFLICT = 409
+# The check the template's CI reports and its ruleset requires, and GitHub
+# Actions' app id, the one source the pin allows for it.
+CHECK_NAME = "check"
+ACTIONS_APP = 15368
+# What GitHub's answer to a ruleset carries that its PUT takes back; the
+# rest (id, source, links, dates) is GitHub's own.
+RULESET_KEYS = ("name", "target", "enforcement", "conditions", "rules", "bypass_actors")
+# GitHub's answer to a pin from an app it does not yet count as one that
+# reported the check, and to a request it would take later.
+UNPROCESSABLE = 422
+TOO_MANY = 429
+HEAD = re.compile(r"[0-9a-f]{40}|[0-9a-f]{64}")
+
+
 def organization_first(org):
     """The detail of a box ticked only after the organization allowed it:
     the organization's setting stays allowed, and the repositories it makes
@@ -406,7 +445,144 @@ def apply_actions_pull_requests(github, repo, report, org_github=None):
             record(report, ACTIONS_PULL_REQUESTS, FORBIDDEN if said.status == POLICY_CONFLICT else FAILED, str(said))
 
 
-def apply_settings(github, repo, ruleset, mode, org_github=None):
+@dataclass
+class Waiting:
+    """How the pin waits for the check run: a clock and a sleep the tests
+    replace, so they run at once, the bound and the pause between reads."""
+    clock: object = time.monotonic
+    sleep: object = time.sleep
+    bound: float = 600
+    interval: float = 15
+
+
+WAITING = Waiting()
+
+
+def worth_waiting(said):
+    """Whether a refusal may pass with time: GitHub out of reach or failing,
+    a rate limit, or the 422 of an app GitHub does not yet count as one that
+    reported the check. Any other 4xx is an answer that stays."""
+    status = said.status
+    return status is None or status in (UNPROCESSABLE, TOO_MANY) or status >= 500
+
+
+def actions_reported_check(checks_github, repo, head):
+    """Whether GitHub Actions has a check run named "check" on the head
+    commit, in any status: a queued one is a report too. An answer with no
+    list reads as none yet."""
+    answer = checks_github.call("GET", f"/repos/{repo}/commits/{head}/check-runs?check_name={CHECK_NAME}&per_page=100")
+    runs = answer.get("check_runs") if isinstance(answer, dict) else None
+    return any(isinstance(run, dict) and run.get("name") == CHECK_NAME and isinstance(run.get("app"), dict)
+               and run["app"].get("id") == ACTIONS_APP for run in runs or [])
+
+
+def own_ruleset_id(github, repo, name):
+    """The id of the repository's own ruleset of that name. includes_parents
+    =false keeps an organization's out of the list, and a source other than
+    the repository is passed over too: only its owners edit that one."""
+    listed = github.call("GET", f"/repos/{repo}/rulesets?includes_parents=false&per_page=100")
+    for item in listed if isinstance(listed, list) else []:
+        if (isinstance(item, dict) and item.get("name") == name
+                and item.get("source_type", "Repository") == "Repository" and item.get("id")):
+            return item["id"]
+    raise GitHubError(f"the repository's own rulesets include none named \"{name}\"", 404)
+
+
+def required_checks_named(ruleset):
+    """The ruleset's required checks named "check", as the dicts the PUT
+    sends back, so setting a key on one sets it in the body."""
+    rules = ruleset.get("rules") if isinstance(ruleset, dict) else None
+    found = []
+    for rule in rules if isinstance(rules, list) else []:
+        if not isinstance(rule, dict) or rule.get("type") != REQUIRED_CHECKS_RULE:
+            continue
+        parameters = rule.get("parameters")
+        checks = parameters.get("required_status_checks") if isinstance(parameters, dict) else None
+        found += [check for check in checks if isinstance(check, dict) and check.get("context") == CHECK_NAME] \
+            if isinstance(checks, list) else []
+    return found
+
+
+def pin_ruleset(github, repo, name):
+    """Put the ruleset back with GitHub Actions as the source of each
+    required "check" that names none; (state, detail). A check with a
+    source already keeps it."""
+    ident = own_ruleset_id(github, repo, name)
+    ruleset = github.call("GET", f"/repos/{repo}/rulesets/{ident}")
+    checks = required_checks_named(ruleset)
+    if not checks:
+        return NOT_TRIED, f"the ruleset requires no check named \"{CHECK_NAME}\" any more"
+    unpinned = [check for check in checks if not check.get("integration_id")]
+    if not unpinned:
+        return EXISTS, ""
+    for check in unpinned:
+        check["integration_id"] = ACTIONS_APP
+    github.call("PUT", f"/repos/{repo}/rulesets/{ident}", {key: ruleset[key] for key in RULESET_KEYS if key in ruleset})
+    return DONE, ""
+
+
+def try_pin(github, checks_github, repo, name, head):
+    """One round: None while GitHub Actions has not reported the check on
+    the head, else what the pin came to."""
+    if not actions_reported_check(checks_github, repo, head):
+        return None
+    return pin_ruleset(github, repo, name)
+
+
+def pin_check_source(github, checks_github, repo, name, head, report, waiting):
+    """Wait within the bound for the check run, then pin; a refusal that may
+    pass with time is tried again within the same bound, and the last one
+    is what the report keeps when the bound passes, unless a later round
+    went through and only found no check run yet. Nothing here stops the
+    run: the report says what came of it."""
+    deadline = waiting.clock() + waiting.bound
+    refused = None
+    while True:
+        try:
+            outcome = try_pin(github, checks_github, repo, name, head)
+        except GitHubError as said:
+            if not worth_waiting(said):
+                record(report, CHECK_SOURCE, FAILED, str(said))
+                return
+            refused, outcome = said, None
+        else:
+            refused = None
+        if outcome is not None:
+            record(report, CHECK_SOURCE, *outcome)
+            return
+        if waiting.clock() + waiting.interval > deadline:
+            break
+        waiting.sleep(waiting.interval)
+    if refused is not None:
+        record(report, CHECK_SOURCE, FAILED, str(refused))
+    else:
+        minutes = round(waiting.bound / 60)
+        record(report, CHECK_SOURCE, NOT_YET, f"GitHub Actions had not reported the check named \"{CHECK_NAME}\""
+               f" on the branch symphony/adopt within {minutes} minutes")
+
+
+def apply_check_source(github, checks_github, repo, head, report, waiting):
+    """The pin, where this run created a ruleset that requires the check.
+    One the repository had already is left unpinned: the run says it left
+    that ruleset as it is, and it may be the person's own, or the template's
+    from scripts/setup-repo.sh, which pins it itself."""
+    ruleset_state = report["settings"].get(RULESET, {}).get("state")
+    if ruleset_state == EXISTS:
+        record(report, CHECK_SOURCE, NOT_TRIED, "the ruleset of that name was there already and is left as it is")
+    elif ruleset_state != DONE:
+        record(report, CHECK_SOURCE, NOT_TRIED, "no ruleset was created")
+    elif not report["required_check"]:
+        record(report, CHECK_SOURCE, NOT_TRIED, f"the ruleset requires no check named \"{CHECK_NAME}\"")
+    elif checks_github is None:
+        record(report, CHECK_SOURCE, NOT_TRIED, "no token that reads check runs could be made for this run")
+    elif not HEAD.fullmatch(head or ""):
+        # A head that is not a sha costs the pin alone, never the settings.
+        record(report, CHECK_SOURCE, NOT_TRIED, "the run named no commit to read the check run on")
+    else:
+        pin_check_source(github, checks_github, repo, report["ruleset_name"], head, report, waiting)
+
+
+def apply_settings(github, repo, ruleset, mode, org_github=None, checks_github=None, head=None, waiting=None):
     """Every setting, each on its own: one that fails costs itself and
     nothing else. ruleset is the dict, or the one-line reason it could not
     be read."""
@@ -426,6 +602,11 @@ def apply_settings(github, repo, ruleset, mode, org_github=None):
         apply_actions_pull_requests(github, repo, report, org_github)
     else:
         record(report, ACTIONS_PULL_REQUESTS, NOT_TRIED, "the protocol alone opens no pull request with GitHub Actions")
+    # Only the whole template brings the CI job that reports the check (6).
+    if mode == "new":
+        apply_check_source(github, checks_github, repo, head, report, waiting or WAITING)
+    else:
+        record(report, CHECK_SOURCE, NOT_TRIED, "the protocol alone brings no check, and its ruleset requires none")
     return report
 
 
@@ -444,6 +625,9 @@ LOG_LINES = {
                             FAILED: "allow GitHub Actions to create and approve pull requests: not turned on",
                             FORBIDDEN: "allow GitHub Actions to create and approve pull requests: not turned on",
                             NOT_TRIED: "allow GitHub Actions to create and approve pull requests: not tried"},
+    CHECK_SOURCE: {DONE: "the check's source: GitHub Actions", EXISTS: "the check's source: set already",
+                   FAILED: "the check's source: not set", NOT_YET: "the check's source: not set yet",
+                   NOT_TRIED: "the check's source: not tried"},
 }
 
 
@@ -475,8 +659,12 @@ def command_apply(options, transport=urllib_transport):
     # organization permission; without it a 409 stays a 409.
     org_token = os.environ.get("GH_ORG_TOKEN", "")
     org_github = GitHub(org_token, transport, options.api) if org_token else None
+    # The main App's token with Checks read alone, minted only in mode new;
+    # the Setup App holds no Checks permission to read the check run with.
+    checks_token = os.environ.get("GH_CHECKS_TOKEN", "")
+    checks_github = GitHub(checks_token, transport, options.api) if checks_token else None
     try:
-        report = apply_settings(github, options.repo, ruleset, options.mode, org_github)
+        report = apply_settings(github, options.repo, ruleset, options.mode, org_github, checks_github, options.head)
         write_report(options.report, report)
     except OSError as problem:
         print(f"setup: {problem}", file=sys.stderr)
@@ -505,6 +693,7 @@ def parse_args(argv):
     applying.add_argument("--ruleset", required=True, help="the template's docs/setup/ruleset-main.json")
     applying.add_argument("--mode", required=True, choices=("new", "existing"))
     applying.add_argument("--report", required=True, help="where to write the report")
+    applying.add_argument("--head", default="", help="the sha of the branch symphony/adopt the run pushed")
     applying.add_argument("--api", default=API, help=argparse.SUPPRESS)
 
     skipping = commands.add_parser("skip", help="write a report that says why nothing was applied")

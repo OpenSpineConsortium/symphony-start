@@ -10,9 +10,9 @@ since the run's log is public. The step of .github/workflows/adopt-run.yml
 that asks it is run here for real, with gh answered from a table and the
 script asking a fake GitHub: an adopted repository gets one answer that
 names nothing of it and says what to do instead, and nothing after it is
-read. On the form's paths the Setup App that request needed uninstalls
-itself afterwards, by the step that does so after an adoption, run here
-with curl answered from a table; and the stage step answers apply's
+read. On the form's paths the Setup App that request needed stays
+installed, as after an adoption, and the answer says so; and the stage
+step answers apply's
 refusal of an adoption that could not write docs/agents/PROTOCOL.md, the
 file the rule reads, as a refusal on the request. A named repository
 without the Setup App is asked the same question by adopt.yml before it is
@@ -310,7 +310,6 @@ class TheRunsCheck(unittest.TestCase):
     def test_an_adopted_repository_is_refused_with_one_answer_and_nothing_more_is_read(self):
         code, env, calls, out = self.run_step(200)
         self.assertEqual(code, 0, out)
-        self.assertIn("ADOPTED=true", env)
         self.assertIn("REFUSED=true", env)
         self.assertFalse([line for line in env if line.startswith("MODE=")], "the kind is never read")
         self.assertIn(["adopted.py", REPOSITORY, TOKEN], calls)
@@ -329,8 +328,9 @@ class TheRunsCheck(unittest.TestCase):
                       " merge on the default branch, so docs/agents/PROTOCOL.md is gone from it, or rename that file if"
                       " it is one of your own and not this protocol, then ask again", answer)
         # The Setup App the form asked for, and the topic the extension reads.
-        self.assertIn("Symphony Setup, where it was installed for this request, did nothing here: it uninstalls itself"
-                      " as this run ends where this repository is the only one it was given", answer)
+        self.assertIn("Symphony Setup, where it was installed for this request, did nothing here; it stays installed,"
+                      " acting only during an adoption run, and you can uninstall it at any time", answer)
+        self.assertNotIn("uninstalls itself", answer)
         self.assertIn("add the topic symphony with the gear beside About", answer)
         for word in (OWNER, NAME, "https://github.com/" + OWNER):
             self.assertNotIn(word, answer)
@@ -376,49 +376,12 @@ class TheRunsCheck(unittest.TestCase):
         order = [script.index(words) for words in ('has no commit yet', 'python3 start/scripts/adopted.py "$TARGET"',
                                                    'taken="$(', 'mode="$MODE_GIVEN"')]
         self.assertEqual(order, sorted(order))
-        self.assertIn('3) echo "ADOPTED=true" >> "$GITHUB_ENV"\n     bash start/scripts/refuse.sh'
-                      ' "$(python3 start/scripts/adopted.py --answer)"\n     exit 0 ;;', script)
+        self.assertIn('3) bash start/scripts/refuse.sh "$(python3 start/scripts/adopted.py --answer)"\n'
+                      '     exit 0 ;;', script)
         self.assertNotIn(ANSWER, script, "the words are the script's, in one place")
 
 
-UNINSTALL_STEP = "name: Uninstall the Setup App when this was its only repository"
 STAGE_STEP = "name: Stage the adoption and write the pull request's title"
-
-FAKE_CURL = """#!/usr/bin/env python3
-# curl, answered as GitHub answers the uninstall step for the Setup App's
-# installation 42 on the repository, its repository selection and its
-# count given; every call is kept.
-import json, os, sys
-argv, method, out, write_out, url = sys.argv[1:], "GET", None, None, None
-index = 0
-while index < len(argv):
-    word = argv[index]
-    if word in ("-X", "-o", "-w", "-H", "-d"):
-        method = argv[index + 1] if word == "-X" else method
-        out = argv[index + 1] if word == "-o" else out
-        write_out = argv[index + 1] if word == "-w" else write_out
-        index += 2
-        continue
-    url = word if word.startswith("https://") else url
-    index += 1
-with open(os.environ["CURL_LOG"], "a", encoding="utf-8") as log:
-    log.write(json.dumps([method, url]) + "\\n")
-api = "https://api.github.com"
-answers = {
-    ("GET", api + "/repos/" + os.environ["TARGET"] + "/installation"):
-        {"id": 42, "repository_selection": os.environ["SELECTION"]},
-    ("POST", api + "/app/installations/42/access_tokens"): {"token": "metadata-token"},
-    ("GET", api + "/installation/repositories?per_page=2"): {"total_count": int(os.environ["COUNT"])},
-}
-body = json.dumps(answers.get((method, url), {}))
-if out is None:
-    sys.stdout.write(body)
-elif out != "/dev/null":
-    with open(out, "w", encoding="utf-8") as kept:
-        kept.write(body)
-if write_out == "%{http_code}":
-    sys.stdout.write("204")
-"""
 
 # The stage step's call of scripts/adopt.py: apply ends with APPLY_STATUS,
 # and body prints a title; every call is kept.
@@ -432,7 +395,7 @@ print("Take up the Symphony claim protocol")
 
 
 def make_runner(root, adopt_stand_in=None):
-    """A scratch runner under root: gh, curl and the tests' python3 first on
+    """A scratch runner under root: gh and the tests' python3 first on
     PATH, refuse.sh and a stand-in jwt.sh under start/scripts, and, when
     given, a stand-in for scripts/adopt.py."""
     scripts = root / "start/scripts"
@@ -443,7 +406,7 @@ def make_runner(root, adopt_stand_in=None):
         (scripts / "adopt.py").write_text(adopt_stand_in, encoding="utf-8")
     bin_folder = root / "bin"
     bin_folder.mkdir()
-    for name, text in (("gh", FAKE_GH), ("curl", FAKE_CURL)):
+    for name, text in (("gh", FAKE_GH),):
         (bin_folder / name).write_text(text, encoding="utf-8")
         (bin_folder / name).chmod(0o755)
     (bin_folder / "python3").symlink_to(sys.executable)
@@ -476,64 +439,17 @@ def stage_environ(runner, status, said=REPOSITORY):
             "SAID": said, "GH_LOG": str(runner / "gh.log"), "APPLY_STATUS": str(status)}
 
 
-class TheSetupAppAfterTheRefusal(unittest.TestCase):
-    """The form's paths need Symphony Setup, which the person installs for
-    the one run: a request refused because the repository is adopted
-    already ends that run, so the Setup App uninstalls itself as after an
-    adoption, by the same step, which then has no report to mark."""
+class TheSetupAppStaysInstalled(unittest.TestCase):
+    """The owner's decision of 2026-10-19: Symphony Setup stays installed
+    after an adoption, and after a request refused because the repository
+    is adopted already, acting only during an adoption run; no
+    step of the run deletes its installation."""
 
-    def setUp(self):
-        self.scratch = tempfile.TemporaryDirectory()
-        self.addCleanup(self.scratch.cleanup)
-        self.root = Path(self.scratch.name)
-        self.runner = make_runner(self.root)
-        self.text = RUN.read_text(encoding="utf-8")
-
-    def uninstall(self, selection="selected", count=1, app_id="12345", report=None):
-        """(exit code, GITHUB_ENV's lines, the curl calls, what it printed)."""
-        for name in ("env", "curl.log"):
-            (self.runner / name).unlink(missing_ok=True)
-        (self.runner / "env").write_text("", encoding="utf-8")
-        if report is not None:
-            (self.runner / "settings.json").write_text(json.dumps(report), encoding="utf-8")
-        environ = {"APP_ID": app_id, "APP_PRIVATE_KEY": "a-key-for-tests", "TARGET": REPOSITORY,
-                   "RUNNER_TEMP": str(self.runner), "GITHUB_ENV": str(self.runner / "env"),
-                   "CURL_LOG": str(self.runner / "curl.log"), "SELECTION": selection, "COUNT": str(count)}
-        code, out = run_script(self.root, step_script(self.text, UNINSTALL_STEP), environ)
-        env = (self.runner / "env").read_text(encoding="utf-8").splitlines()
-        return code, env, logged(self.runner / "curl.log"), out
-
-    def test_the_step_runs_after_a_refusal_as_adopted_on_the_forms_paths(self):
-        step = self.text[self.text.index(UNINSTALL_STEP):]
-        condition = step[:step.index("\n        env:")].split("\n")[1].strip()
-        self.assertEqual(condition, "if: (env.REFUSED != 'true' && env.SETTINGS == 'applied') || env.ADOPTED == 'true'")
-
-    def test_a_setup_app_on_this_repository_alone_uninstalls_itself(self):
-        code, env, calls, out = self.uninstall()
-        self.assertEqual(code, 0, out)
-        self.assertIn(["DELETE", "https://api.github.com/app/installations/42"], calls)
-        self.assertIn("SETUP_UNINSTALLED=true", env)
-        self.assertFalse((self.runner / "settings.json").exists(), "no report is made where there was none")
-
-    def test_after_an_adoption_the_report_says_so(self):
-        code, env, calls, out = self.uninstall(report={"outcome": "applied"})
-        self.assertEqual(code, 0, out)
-        self.assertEqual(json.loads((self.runner / "settings.json").read_text(encoding="utf-8")),
-                         {"outcome": "applied", "uninstalled": True})
-
-    def test_one_that_reaches_more_stays(self):
-        for selection, count in (("selected", 2), ("all", 1)):
-            with self.subTest(selection=selection, count=count):
-                code, env, calls, out = self.uninstall(selection, count)
-                self.assertEqual(code, 0, out)
-                self.assertNotIn(["DELETE", "https://api.github.com/app/installations/42"], calls)
-                self.assertNotIn("SETUP_UNINSTALLED=true", env)
-                self.assertIn("stays installed", out)
-
-    def test_a_front_door_without_the_setup_app_asks_nothing(self):
-        code, env, calls, out = self.uninstall(app_id="")
-        self.assertEqual((code, env, calls), (0, [], []), out)
-        self.assertIn("nothing to uninstall", out)
+    def test_no_step_uninstalls_the_setup_app(self):
+        text = RUN.read_text(encoding="utf-8")
+        for words in ("Uninstall the Setup App", "app/installations/$id", "SETUP_UNINSTALLED", "ADOPTED=true",
+                      '"uninstalled"'):
+            self.assertNotIn(words, text)
 
 
 class TheStageStep(unittest.TestCase):

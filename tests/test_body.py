@@ -37,6 +37,22 @@ MEANWHILE = ("Until it is on, `protocol.yml` brings each new release as an issue
 # The pull request's sentence on the counts of parallel work, which is true
 # only of a landed script that counts by setting.
 PARALLEL = "Some of those counts say how the work ran in parallel"
+# The Setup App stays installed after the run (the owner, 2026-10-19).
+STAYS = ("The Symphony Setup App stays installed, acting only during an adoption run. It holds"
+         " Administration on this repository; you can uninstall it at any time, from the repository's Settings,"
+         " GitHub Apps, at https://github.com/octo-org/widget/settings/installations, or from your account's at"
+         " https://github.com/settings/installations. The Symphony App, which opened this pull request, stays too;"
+         " uninstalling it undoes nothing here and only stops what is shared, above, from being read.")
+# The check pinned to GitHub Actions in mode new's ruleset, and the two ways
+# to pin it where the run could not.
+PIN_DONE = ("- The check \"check\" in that ruleset: taken from GitHub Actions alone, so only a workflow run"
+            " satisfies it, and a commit status named \"check\", which anyone with write access can post, does"
+            " not.")
+PIN_FIX = ("Until it is, a commit status named \"check\", which anyone with write access can post, satisfies the"
+           " ruleset as well as GitHub Actions' run does. In the repository's Settings, Rules, open the ruleset"
+           f" \"Protect the default branch\" at {RULES} and, beside \"check\", pick GitHub Actions as the source;"
+           " or, once this pull request's check has run on the default branch after the merge, run"
+           " `bash scripts/setup-repo.sh` from a clone, which pins it too.")
 
 
 def report(outcome="applied", states=ALL_DONE, details=None, mode="new", private=False, required_check=True):
@@ -431,11 +447,12 @@ class Body(unittest.TestCase):
         self.assertIn(f"{ACTIONS}: on, {ACTIONS_WHY}.", body)
         self.assertIn("the topic symphony, secret scanning with push protection, and letting GitHub Actions create and"
                       " approve pull requests)", body)
-        self.assertIn("uninstall it at https://github.com/settings/installations, since it holds Administration", body)
+        self.assertIn(f"\n\n{STAYS}", body)
+        # A report from before the Setup App stayed installed may say it
+        # uninstalled itself; the body still renders, and says it stays.
         body = self.body(settings=dict(report(), uninstalled=True))
-        self.assertIn("The Setup App uninstalled itself once that was done, this repository being the only one its"
-                      " installation reached.", body)
-        self.assertNotIn("uninstall it at", body)
+        self.assertIn(STAYS, body)
+        self.assertNotIn("uninstalled itself", body)
         self.assertIn("2. The GitHub side is set up (Settings above), so `bash scripts/setup-repo.sh` is not needed",
                       body)
         self.assertIn("is done but for GitHub's reading of `.github/CODEOWNERS`", body)
@@ -450,7 +467,10 @@ class Body(unittest.TestCase):
 
     def test_an_organization_uninstalls_from_its_own_page(self):
         body = self.body(settings=report(), owner_type="Organization")
-        self.assertIn("uninstall it at https://github.com/organizations/octo-org/settings/installations", body)
+        self.assertIn("It holds Administration on this repository and, where its installation accepted it, on the"
+                      " organization; you can uninstall it at any time, from the repository's Settings, GitHub Apps,"
+                      " at https://github.com/octo-org/widget/settings/installations, or from the organization's at"
+                      " https://github.com/organizations/octo-org/settings/installations.", body)
 
     def test_a_private_repositorys_ruleset_is_said_to_be_unenforced_on_free(self):
         body = self.body(settings=report(private=True))
@@ -661,6 +681,59 @@ class Body(unittest.TestCase):
         body = self.body(THEIR_FILES, mode="existing", settings=report(outcome="not-installed", mode="existing"))
         self.assertNotIn("GitHub Actions", body)
 
+    def test_the_check_pinned_to_github_actions_says_why_it_matters(self):
+        body = self.body(settings=report(states=dict(ALL_DONE, check_source="done")))
+        self.assertIn(f"at {RULES}.\n{PIN_DONE}\n- Delete head branches", body)
+        self.assertIn("applied in this run the settings", body)
+        self.assertIn("2. The GitHub side is set up (Settings above)", body)
+        body = self.body(settings=report(states=dict(ALL_DONE, check_source="exists")))
+        self.assertIn("- The check \"check\" in that ruleset: it named its source already, which was left as it is.",
+                      body)
+        self.assertIn("2. The GitHub side is set up (Settings above)", body)
+
+    def test_a_check_not_pinned_says_how_to_pin_it(self):
+        """Not yet, refused or not tried: why, in GitHub's words where they
+        are GitHub's, what it leaves open, and the two ways to pin it; the
+        setup script is then what step 2 runs for what is left."""
+        cases = (
+            ("not-yet", "GitHub Actions had not reported the check named \"check\" on the branch symphony/adopt"
+             " within 10 minutes", "not pinned to GitHub Actions yet: GitHub Actions had not reported the check"
+             " named \"check\" on the branch symphony/adopt within 10 minutes."),
+            ("failed", "HTTP 422: Validation Failed", "not pinned to GitHub Actions (GitHub said: HTTP 422:"
+             " Validation Failed)."),
+            ("not-tried", "no token that reads check runs could be made for this run", "not pinned to GitHub"
+             " Actions: no token that reads check runs could be made for this run."),
+        )
+        for state, detail, said in cases:
+            with self.subTest(state=state):
+                body = self.body(settings=report(states=dict(ALL_DONE, check_source=state),
+                                                 details={"check_source": detail}))
+                self.assertIn(f"- The check \"check\" in that ruleset: {said} {PIN_FIX}", body)
+                self.assertIn("was used in this run for the settings", body)
+                self.assertIn("2. For what the Settings above could not do: from a clone", body)
+                self.assertNotIn("2. The GitHub side is set up", body)
+
+    def test_no_pin_line_where_no_pin_was_expected(self):
+        """A ruleset left as it was, one not created, one that requires no
+        check, mode existing, and a report from before the pin: no line, and
+        nothing of the pin keeps the settings from reading as applied."""
+        left = dict(ALL_DONE, ruleset="exists", check_source="not-tried")
+        body = self.body(settings=report(states=left, details={
+            "check_source": "the ruleset of that name was there already and is left as it is"}))
+        self.assertNotIn("in that ruleset", body)
+        self.assertIn("2. The GitHub side is set up", body)
+        body = self.body(settings=report(states=dict(ALL_DONE, ruleset="failed", check_source="not-tried")))
+        self.assertNotIn("in that ruleset", body)
+        details = {"actions_pull_requests": "the protocol alone opens no pull request with GitHub Actions",
+                   "check_source": "the protocol alone brings no check, and its ruleset requires none"}
+        settings = report(mode="existing", required_check=False, details=details,
+                          states=dict(ALL_DONE, actions_pull_requests="not-tried", check_source="not-tried"))
+        body = self.body(THEIR_FILES, mode="existing", settings=settings)
+        self.assertNotIn("in that ruleset", body)
+        self.assertNotIn("GitHub Actions", body)
+        self.assertIn("applied in this run the settings", body)
+        self.assertNotIn("in that ruleset", self.body(settings=report()))
+
     def test_the_setup_app_not_installed(self):
         body = self.body(settings=report(outcome="not-installed"))
         self.assertIn("## Settings\n\nNone of the settings was changed: no token for this repository could be made"
@@ -668,10 +741,11 @@ class Body(unittest.TestCase):
                       " installation does not include it, or GitHub did not answer; so this run could not apply the"
                       " settings `scripts/setup-repo.sh` applies", body)
         self.assertIn("Step 2 of the next steps applies them by hand, with `scripts/setup-repo.sh`.", body)
-        self.assertIn("If you did install it, uninstall it now at https://github.com/settings/installations, since"
-                      " nothing used it, and say so on your request's issue.", body)
+        self.assertIn("If you did install it, check that its installation includes this repository and say so on"
+                      " your request's issue; it stays installed, and you can uninstall it at any time at"
+                      " https://github.com/settings/installations.", body)
         self.assertIn("2. From a clone", body)
-        self.assertNotIn("That was the Setup App's one job", body)
+        self.assertNotIn("uninstall it now", body)
         self.assertNotIn("which turns auto-merge off again", body)
         self.assertNotIn("Nothing of the GitHub side", body)
         body = self.body(THEIR_FILES, mode="existing", settings=report(outcome="not-installed", mode="existing"))
@@ -696,8 +770,9 @@ class Body(unittest.TestCase):
                       " private key there is wrong, it is not installed on the front door's own repository, or GitHub"
                       " did not answer), which is for the front door's owner to put right, and the run has told them",
                       body)
-        self.assertIn("If you installed the Setup App, uninstall it now at https://github.com/settings/installations,"
-                      " since nothing used it.", body)
+        self.assertIn("If you installed the Setup App, it stays installed, so a run made once the owner has put it"
+                      " right can apply them; you can uninstall it at any time at"
+                      " https://github.com/settings/installations.", body)
         self.assertIn("2. From a clone", body)
 
     def test_a_settings_step_that_died_before_its_report(self):
@@ -709,8 +784,10 @@ class Body(unittest.TestCase):
         self.assertIn("check https://github.com/octo-org/widget/settings/rules,"
                       f" https://github.com/octo-org/widget/settings and {ACTIONS_PAGE}. Step 2 of the next steps"
                       " applies them by hand", body)
-        self.assertIn("That was the Setup App's one job: uninstall it at"
-                      " https://github.com/organizations/octo-org/settings/installations", body)
+        self.assertIn("applies them by hand, with `scripts/setup-repo.sh`. The Symphony Setup App stays installed,"
+                      " acting only during an adoption run.", body)
+        self.assertIn("or from the organization's at https://github.com/organizations/octo-org/settings/installations",
+                      body)
         self.assertIn("2. From a clone", body)
         self.assertNotIn("which turns auto-merge off again", body)
         body = self.body(THEIR_FILES, mode="existing", settings=report(outcome="not-reported", mode="existing"))

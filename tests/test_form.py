@@ -99,7 +99,7 @@ class TheForm(unittest.TestCase):
         for words in ("never code, text or names", ".github/symphony-metrics", "This issue is public", "installations/new",
                       "Press Create", "the newest repository the installation reaches", "press Create again",
                       "Both Apps are needed", "https://github.com/apps/symphonyboard/installations/new",
-                      "uninstalls itself", "without the Setup App is refused"):
+                      "stays installed, acting only during an adoption run", "without the Setup App is refused"):
             self.assertIn(words, self.text)
         prose = re.search(r"value: \|\n((?:        .*\n)+)", self.text).group(1)
         self.assertLess(len(prose.split()), 140)
@@ -107,11 +107,14 @@ class TheForm(unittest.TestCase):
     def test_the_form_and_the_readme_name_the_setup_app_and_its_one_use(self):
         """Installing the Setup App is the person's consent to the settings,
         so the form says what it is for, where it is and that it is
-        uninstalled afterwards, and the README names the same App."""
+        stays installed afterwards, which the person may uninstall whenever
+        they like (the owner, 2026-10-19), and the README names the same
+        App."""
         for text in (self.text, (ROOT / "README.md").read_text(encoding="utf-8")):
             self.assertIn(SETUP_APP_INSTALL, text)
             self.assertIn("Administration", text)
-            self.assertIn("uninstall", text)
+            self.assertIn("stays installed", text)
+            self.assertNotIn("uninstalls itself", text)
             self.assertIn('"Only select repositories"', text)
         self.assertNotIn("Setup App", "\n".join(re.findall(r"^      label: (.+)$", self.text, re.MULTILINE)))
 
@@ -244,13 +247,12 @@ class TheWorkflows(unittest.TestCase):
         self.assertIn("if: env.REFUSED != 'true' && inputs.answer != 'caller'", run)
         self.assertIn("if: failure() && env.REFUSED != 'true' && inputs.answer != 'caller'", run)
 
-    def test_the_run_merges_when_asked_and_the_setup_app_uninstalls_itself(self):
+    def test_the_run_merges_when_asked_and_the_setup_app_stays_installed(self):
         """Merge for me: the run merges, or arms auto-merge where a ruleset
-        requires the check, and says which; the Setup App deletes its own
-        installation once the settings are applied and it reached this
-        repository alone, and the pull request's text says so, and on the
-        form's paths it does so too after a request refused because the
-        repository is adopted already."""
+        requires the check, and says which; the Setup App stays installed,
+        after an adoption and after a request refused because the
+        repository is adopted already, acting only during an adoption run,
+        and its token is still revoked after the settings."""
         run = (ROOT / ".github/workflows/adopt-run.yml").read_text(encoding="utf-8")
         merge = run.index("name: Merge the pull request when asked")
         self.assertIn("if: env.REFUSED != 'true' && inputs.merge == 'true'", run[merge:])
@@ -259,15 +261,11 @@ class TheWorkflows(unittest.TestCase):
         self.assertLess(run.index("name: Open the setup issue in a new repository"), merge)
         self.assertLess(merge, run.index("name: Answer the request and close it"))
         self.assertIn('merged) merged=" It is merged, as you asked." ;;', run)
-        uninstall = run.index("name: Uninstall the Setup App when this was its only repository")
-        self.assertIn("if: (env.REFUSED != 'true' && env.SETTINGS == 'applied') || env.ADOPTED == 'true'",
-                      run[uninstall:])
-        self.assertLess(run.index("name: Revoke the Setup App's token"), uninstall)
-        self.assertLess(uninstall, run.index("name: Write the pull request's text"))
-        self.assertIn('-X DELETE -H "Authorization: Bearer $jwt" -H "$accept" "https://api.github.com/app/installations/$id"', run)
-        self.assertIn('if [ "$count" = 1 ]; then', run)
-        self.assertIn('report["uninstalled"] = True', run)
-        self.assertIn('echo "SETUP_UNINSTALLED=true" >> "$GITHUB_ENV"', run)
+        self.assertLess(run.index("name: Revoke the Setup App's token"), run.index("name: Write the pull request's text"))
+        for words in ("Uninstall the Setup App", "/app/installations/$id", "SETUP_UNINSTALLED", '"uninstalled"'):
+            self.assertNotIn(words, run)
+        self.assertIn("the App stays installed, acting only during an adoption run, and you can uninstall it at"
+                      " any time.", run)
 
     def test_only_the_setup_app_is_asked_for_administration(self):
         """The main App's tokens never carry Administration: the one mint
@@ -284,9 +282,9 @@ class TheWorkflows(unittest.TestCase):
         self.assertIn("continue-on-error: true", asking[0])
         self.assertNotIn("permission-contents", asking[0])
         # The key is minted for Administration once, for the organization's
-        # Administration once, probed once, read as set-or-not once, and
-        # signs the JWT that uninstalls the App itself.
-        self.assertEqual(text.count("secrets.SDLC_SETUP_APP_PRIVATE_KEY"), 5)
+        # Administration once, probed once and read as set-or-not once; the
+        # App no longer uninstalls itself, so no JWT of its is signed here.
+        self.assertEqual(text.count("secrets.SDLC_SETUP_APP_PRIVATE_KEY"), 4)
         org, = [step for step in steps if "id: setup-org-token" in step]
         self.assertIn("app-id: ${{ vars.SDLC_SETUP_APP_ID }}", org)
         self.assertIn("repositories: ${{ env.NAME }}", org)

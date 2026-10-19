@@ -11,7 +11,11 @@ repository has and never replaces them. In mode new the box that lets
 GitHub Actions create and approve pull requests is ticked with the
 token's permissions sent back as they were, and a 409, the policy of
 the organization or its enterprise, is kept apart from other refusals;
-mode existing leaves the box alone.
+mode existing leaves the box alone. In mode new the ruleset this run
+created has its check pinned to GitHub Actions once GitHub Actions has
+reported it on the pushed head, read with the main App's Checks token and
+written with the Setup App's, within a bound the tests pass on a clock of
+their own; nothing else is pinned, and nothing stops the run.
 """
 
 import contextlib
@@ -64,13 +68,50 @@ ACTIONS_LOG = "settings: allow GitHub Actions to create and approve pull request
 NOT_TRIED_IN_EXISTING = "the protocol alone opens no pull request with GitHub Actions"
 REFUSED = (422, {"message": "Secret scanning is not available for this repository.",
                  "errors": [{"message": "Upgrade the plan."}]})
+# The check's pin: the main App's token that reads the check runs, the head
+# the run pushed, the repository's own ruleset as GitHub lists and gives it
+# back, and the body the PUT sends, the check now from GitHub Actions.
+CHECKS_TOKEN = "ghs_checks_token_for_tests"
+HEAD = "a" * 40
+CHECK_RUNS = f"/repos/{REPO}/commits/{HEAD}/check-runs?check_name=check&per_page=100"
+ACTIONS_RUN = {"name": "check", "status": "queued", "app": {"id": 15368, "slug": "github-actions"}}
+OWN_RULESETS = f"/repos/{REPO}/rulesets?includes_parents=false&per_page=100"
+RULESET_ID = 7
+RULESET_PATH = f"/repos/{REPO}/rulesets/{RULESET_ID}"
+LISTED = {"id": RULESET_ID, "name": RULESET["name"], "source_type": "Repository", "source": REPO}
+GIVEN_BACK = dict(json.loads(json.dumps(RULESET)), id=RULESET_ID, source_type="Repository", source=REPO,
+                  node_id="RRS_x", created_at="2026-10-19T00:00:00Z", _links={"self": {"href": "x"}})
+PINNED = json.loads(json.dumps(RULESET))
+PINNED["rules"][2]["parameters"]["required_status_checks"] = [{"context": "check", "integration_id": 15368}]
+PIN_LOG = "settings: the check's source: "
+
+
+class FakeClock:
+    """The pin's clock: sleeping moves it on at once, and it keeps every
+    pause, so a test of ten minutes' waiting runs in no time."""
+
+    def __init__(self):
+        self.now = 0.0
+        self.pauses = []
+
+    def clock(self):
+        return self.now
+
+    def sleep(self, seconds):
+        self.pauses.append(seconds)
+        self.now += seconds
+
+    def waiting(self):
+        return setup.Waiting(clock=self.clock, sleep=self.sleep, bound=600, interval=15)
 
 
 class FakeGitHub:
     """A transport that answers from a table keyed (method, path) and keeps
     every call; the default answers are a public repository with no
     ruleset and GitHub's default workflow permissions that accepts every
-    write. An answer of None is a body of nothing, as a 204 has."""
+    write, on whose head GitHub Actions has queued the check, and whose
+    ruleset, once created, is listed and given back as GitHub would. An
+    answer of None is a body of nothing, as a 204 has."""
 
     def __init__(self, answers=None, raising=None):
         self.answers = answers or {}
@@ -98,6 +139,12 @@ class FakeGitHub:
             status, answer = 200, dict(THEIR_WORKFLOW)
         elif (method, path) == ("PUT", WORKFLOW):
             status, answer = 204, None
+        elif (method, path) == ("GET", CHECK_RUNS):
+            status, answer = 200, {"total_count": 1, "check_runs": [ACTIONS_RUN]}
+        elif (method, path) == ("GET", OWN_RULESETS):
+            status, answer = 200, [LISTED]
+        elif (method, path) == ("GET", RULESET_PATH):
+            status, answer = 200, json.loads(json.dumps(GIVEN_BACK))
         elif method == "POST":
             status, answer = 201, {"id": 1}
         else:
@@ -116,11 +163,16 @@ class Apply(unittest.TestCase):
         self.ruleset = self.root / "ruleset-main.json"
         self.ruleset.write_text(json.dumps(RULESET, indent=2) + "\n", encoding="utf-8")
         self.report = self.root / "settings.json"
-        patcher = mock.patch.dict(os.environ, {"GH_TOKEN": "ghs_token_for_tests"})
+        # The run's own environment in mode new: both tokens are there.
+        patcher = mock.patch.dict(os.environ, {"GH_TOKEN": "ghs_token_for_tests", "GH_CHECKS_TOKEN": CHECKS_TOKEN})
+        patcher.start()
+        self.addCleanup(patcher.stop)
+        self.clock = FakeClock()
+        patcher = mock.patch.object(setup, "WAITING", self.clock.waiting())
         patcher.start()
         self.addCleanup(patcher.stop)
 
-    def apply(self, github, mode="new", ruleset=None, org_token=None):
+    def apply(self, github, mode="new", ruleset=None, org_token=None, head=HEAD):
         """Run apply; (exit code, the report or None, stdout, stderr)."""
         if org_token:
             patcher = mock.patch.dict(os.environ, {"GH_ORG_TOKEN": org_token})
@@ -128,7 +180,7 @@ class Apply(unittest.TestCase):
             self.addCleanup(patcher.stop)
         out, err = io.StringIO(), io.StringIO()
         argv = ["apply", "--repo", REPO, "--mode", mode, "--ruleset", str(ruleset or self.ruleset),
-                "--report", str(self.report)]
+                "--report", str(self.report)] + (["--head", head] if head is not None else [])
         with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
             code = setup.main(argv, transport=github)
         report = json.loads(self.report.read_text(encoding="utf-8")) if self.report.exists() else None
@@ -148,13 +200,14 @@ class Apply(unittest.TestCase):
             ("PATCH", f"/repos/{REPO}", SCANNING),
             ("PATCH", f"/repos/{REPO}", PUSH_PROTECTION),
             ("PUT", WORKFLOW, ACTIONS_ON),
+            ("PUT", RULESET_PATH, PINNED),
         ])
         self.assertEqual(report["schema"], setup.REPORT_SCHEMA)
         self.assertEqual((report["outcome"], report["mode"], report["private"]), ("applied", "new", False))
         self.assertEqual((report["ruleset_name"], report["required_check"]), ("Protect the default branch", True))
         self.assertEqual(self.states(report), {
             "ruleset": "done", "toggles": "done", "topic": "done", "secret_scanning": "done", "push_protection": "done",
-            "actions_pull_requests": "done",
+            "actions_pull_requests": "done", "check_source": "done",
         })
         self.assertEqual(list(report["settings"]), list(setup.SETTINGS))
         self.assertEqual(out.splitlines(), [
@@ -164,14 +217,18 @@ class Apply(unittest.TestCase):
             "settings: secret scanning: on",
             "settings: push protection: on",
             ACTIONS_LOG + "on",
+            PIN_LOG + "GitHub Actions",
         ])
 
     def test_every_call_carries_the_token_and_the_api_version(self):
+        """The Setup App's token for everything but the check runs, which
+        only the main App's Checks token reads."""
         github = FakeGitHub()
         self.apply(github)
         for method, path, headers, body in github.calls:
             with self.subTest(call=(method, path)):
-                self.assertEqual(headers["Authorization"], "Bearer ghs_token_for_tests")
+                token = CHECKS_TOKEN if path == CHECK_RUNS else "ghs_token_for_tests"
+                self.assertEqual(headers["Authorization"], f"Bearer {token}")
                 self.assertEqual(headers["X-GitHub-Api-Version"], setup.API_VERSION)
                 self.assertEqual(headers["Accept"], "application/vnd.github+json")
                 self.assertEqual("Content-Type" in headers, body is not None)
@@ -229,7 +286,7 @@ class Apply(unittest.TestCase):
         _, report, out, _ = self.apply(Github())
         self.assertEqual(self.states(report), {
             "ruleset": "failed", "toggles": "failed", "topic": "failed", "secret_scanning": "failed",
-            "push_protection": "not-tried", "actions_pull_requests": "failed",
+            "push_protection": "not-tried", "actions_pull_requests": "failed", "check_source": "not-tried",
         })
         self.assertEqual(report["settings"]["toggles"]["detail"], "HTTP 307: Temporary Redirect")
         self.assertEqual(report["settings"]["actions_pull_requests"]["detail"], "HTTP 307: Temporary Redirect")
@@ -276,7 +333,7 @@ class Apply(unittest.TestCase):
         self.assertEqual(code, 0)
         self.assertEqual(self.states(report), {
             "ruleset": "done", "toggles": "done", "topic": "done", "secret_scanning": "failed",
-            "push_protection": "not-tried", "actions_pull_requests": "done",
+            "push_protection": "not-tried", "actions_pull_requests": "done", "check_source": "done",
         })
         self.assertEqual(report["settings"]["secret_scanning"]["detail"],
                          "HTTP 422: Secret scanning is not available for this repository. Upgrade the plan.")
@@ -331,7 +388,7 @@ class Apply(unittest.TestCase):
         self.assertEqual(code, 0)
         self.assertEqual(self.states(report), {
             "ruleset": "done", "toggles": "done", "topic": "failed", "secret_scanning": "done",
-            "push_protection": "done", "actions_pull_requests": "done",
+            "push_protection": "done", "actions_pull_requests": "done", "check_source": "done",
         })
         self.assertEqual(report["settings"]["topic"]["detail"], "HTTP 403: Resource not accessible by integration")
         self.assertIn("settings: topic symphony: not set", out)
@@ -524,11 +581,11 @@ class Apply(unittest.TestCase):
         self.assertEqual(report["settings"]["actions_pull_requests"],
                          {"state": "not-tried", "detail": NOT_TRIED_IN_EXISTING})
         self.assertEqual(list(report["settings"]), list(setup.SETTINGS))
-        self.assertEqual(out.splitlines()[-1], ACTIONS_LOG + "not tried")
+        self.assertEqual(out.splitlines()[-2:], [ACTIONS_LOG + "not tried", PIN_LOG + "not tried"])
 
     def test_the_log_has_a_line_for_every_setting_done_or_refused(self):
         self.assertEqual(setup.SETTINGS, ("ruleset", "toggles", "topic", "secret_scanning", "push_protection",
-                                          "actions_pull_requests"))
+                                          "actions_pull_requests", "check_source"))
         for key in setup.SETTINGS:
             with self.subTest(setting=key):
                 self.assertIn(setup.DONE, setup.LOG_LINES[key])
@@ -538,6 +595,9 @@ class Apply(unittest.TestCase):
         lines = setup.LOG_LINES[setup.ACTIONS_PULL_REQUESTS]
         self.assertEqual(set(lines), {setup.DONE, setup.FAILED, setup.FORBIDDEN, setup.NOT_TRIED})
         self.assertEqual(lines[setup.FORBIDDEN], lines[setup.FAILED])
+        # The pin may wait out its bound, which the log tells from a refusal.
+        lines = setup.LOG_LINES[setup.CHECK_SOURCE]
+        self.assertEqual(set(lines), {setup.DONE, setup.EXISTS, setup.FAILED, setup.NOT_YET, setup.NOT_TRIED})
 
     def test_a_token_github_refuses_fails_each_setting_and_nothing_else(self):
         class Github(FakeGitHub):
@@ -550,7 +610,7 @@ class Apply(unittest.TestCase):
         self.assertEqual((code, err), (0, ""))
         self.assertEqual(self.states(report), {
             "ruleset": "failed", "toggles": "failed", "topic": "failed", "secret_scanning": "failed",
-            "push_protection": "not-tried", "actions_pull_requests": "failed",
+            "push_protection": "not-tried", "actions_pull_requests": "failed", "check_source": "not-tried",
         })
         self.assertIsNone(report["private"])
         for key in ("ruleset", "toggles", "topic", "secret_scanning", "actions_pull_requests"):
@@ -562,6 +622,7 @@ class Apply(unittest.TestCase):
             "settings: secret scanning: not turned on",
             "settings: push protection: not tried",
             ACTIONS_LOG + "not turned on",
+            PIN_LOG + "not tried",
         ])
         self.assertNotIn("integration", out)
 
@@ -623,6 +684,190 @@ class Apply(unittest.TestCase):
                                "--report", str(self.report)], transport=FakeGitHub())
         self.assertEqual(code, 2)
         self.assertFalse(self.report.exists())
+
+    # --- the check's pin -------------------------------------------------------
+
+    def pin(self, report):
+        return report["settings"]["check_source"]
+
+    def test_the_pin_puts_back_the_rulesets_own_keys_with_the_check_from_github_actions(self):
+        """Once GitHub Actions has queued the check on the head, the
+        repository's own ruleset is read by id and put back with the keys a
+        PUT takes and nothing of GitHub's own, the check pinned to app 15368
+        and every other rule as it was; the PUT carries the Setup App's
+        token, and the check runs alone the main App's."""
+        github = FakeGitHub()
+        code, report, out, err = self.apply(github)
+        self.assertEqual((code, err), (0, ""))
+        self.assertEqual(self.pin(report), {"state": "done", "detail": ""})
+        put = [body for method, path, body in github.writes() if (method, path) == ("PUT", RULESET_PATH)]
+        self.assertEqual(put, [PINNED])
+        self.assertEqual(list(put[0]), list(setup.RULESET_KEYS))
+        calls = [(method, path) for method, path, _, _ in github.calls]
+        self.assertLess(calls.index(("GET", CHECK_RUNS)), calls.index(("GET", OWN_RULESETS)))
+        self.assertLess(calls.index(("GET", RULESET_PATH)), calls.index(("PUT", RULESET_PATH)))
+        self.assertEqual(self.clock.pauses, [])
+        self.assertIn(PIN_LOG + "GitHub Actions", out.splitlines())
+
+    def test_the_pin_waits_for_the_check_run_and_takes_any_status(self):
+        """No check run yet, then one of another app's, which never counts,
+        then GitHub Actions' in progress: two pauses of 15 s and the pin."""
+        other = {"name": "check", "status": "completed", "app": {"id": 99, "slug": "someone-else"}}
+        running = dict(ACTIONS_RUN, status="in_progress")
+        github = FakeGitHub({("GET", CHECK_RUNS): [(200, {"check_runs": []}), (200, {"check_runs": [other]}),
+                                                   (200, {"check_runs": [other, running]})]})
+        _, report, _, _ = self.apply(github)
+        self.assertEqual(self.pin(report)["state"], "done")
+        self.assertEqual(self.clock.pauses, [15, 15])
+        self.assertIn(("PUT", RULESET_PATH, PINNED), github.writes())
+
+    def test_a_422_from_the_put_is_tried_again_within_the_bound(self):
+        """GitHub may not count the app as one that reported the check yet:
+        its 422 is waited out, and the next PUT pins."""
+        refused = (422, {"message": "Validation Failed",
+                         "errors": ["Invalid rule 'required_status_checks': integration 15368 has not reported"]})
+        github = FakeGitHub({("PUT", RULESET_PATH): [refused, (200, {"id": RULESET_ID})]})
+        _, report, out, _ = self.apply(github)
+        self.assertEqual(self.pin(report), {"state": "done", "detail": ""})
+        self.assertEqual([path for method, path, _ in github.writes() if path == RULESET_PATH], [RULESET_PATH] * 2)
+        self.assertEqual(self.clock.pauses, [15])
+        self.assertIn(PIN_LOG + "GitHub Actions", out.splitlines())
+
+    def test_a_422_to_the_end_of_the_bound_is_a_failure_in_githubs_words(self):
+        github = FakeGitHub({("PUT", RULESET_PATH): (422, {"message": "Validation Failed", "errors": ["not reported"]})})
+        _, report, out, _ = self.apply(github)
+        self.assertEqual(self.pin(report), {"state": "failed", "detail": "HTTP 422: Validation Failed not reported"})
+        self.assertLessEqual(sum(self.clock.pauses), 600)
+        self.assertGreaterEqual(sum(self.clock.pauses), 600 - 15)
+        self.assertIn(PIN_LOG + "not set", out.splitlines())
+        self.assertNotIn("Validation", out)
+
+    def test_no_check_run_within_the_bound_is_not_yet(self):
+        """GitHub Actions never reported: the ruleset stays as created, the
+        report says not yet, and the run goes on; about ten minutes passed
+        on the clock, in pauses of 15 s."""
+        github = FakeGitHub({("GET", CHECK_RUNS): (200, {"total_count": 0, "check_runs": []})})
+        code, report, out, err = self.apply(github)
+        self.assertEqual((code, err), (0, ""))
+        self.assertEqual(self.pin(report), {"state": "not-yet", "detail": "GitHub Actions had not reported the check"
+                                            " named \"check\" on the branch symphony/adopt within 10 minutes"})
+        self.assertNotIn(RULESET_PATH, [path for _, path, _ in github.writes()])
+        self.assertEqual(set(self.clock.pauses), {15})
+        self.assertLessEqual(sum(self.clock.pauses), 600)
+        self.assertEqual(len(self.clock.pauses), 40)
+        self.assertEqual(out.splitlines()[-1], PIN_LOG + "not set yet")
+        others = {key: state for key, state in self.states(report).items() if key != "check_source"}
+        self.assertEqual(set(others.values()), {"done"})
+
+    def test_a_server_error_while_waiting_is_waited_out_and_a_refusal_is_not(self):
+        """A 502 may pass, so the wait goes on, and a round that went through
+        afterwards finding nothing is not yet, not the 502; a 403, as from a
+        token without Checks, stays, and is a failure at once."""
+        github = FakeGitHub({("GET", CHECK_RUNS): [(502, {"message": "Bad Gateway"}), (200, {"check_runs": []})]})
+        _, report, _, _ = self.apply(github)
+        self.assertEqual(self.pin(report)["state"], "not-yet")
+        github = FakeGitHub({("GET", CHECK_RUNS): [(502, None), (200, {"check_runs": [ACTIONS_RUN]})]})
+        _, report, _, _ = self.apply(github)
+        self.assertEqual(self.pin(report)["state"], "done")
+        self.clock.pauses.clear()
+        github = FakeGitHub({("GET", CHECK_RUNS): (403, {"message": "Resource not accessible by integration"})})
+        _, report, out, _ = self.apply(github)
+        self.assertEqual(self.pin(report),
+                         {"state": "failed", "detail": "HTTP 403: Resource not accessible by integration"})
+        self.assertEqual(self.clock.pauses, [])
+        self.assertIn(PIN_LOG + "not set", out.splitlines())
+
+    def test_a_check_with_a_source_already_is_left_as_it_is(self):
+        """A check already pinned, to GitHub Actions or another app, keeps its
+        source and nothing is written; a ruleset that no longer requires the
+        check by the time it is read is not tried."""
+        for pinned_to in (15368, 99):
+            with self.subTest(pinned_to=pinned_to):
+                given = json.loads(json.dumps(GIVEN_BACK))
+                given["rules"][2]["parameters"]["required_status_checks"] = [
+                    {"context": "check", "integration_id": pinned_to}]
+                github = FakeGitHub({("GET", RULESET_PATH): (200, given)})
+                _, report, out, _ = self.apply(github)
+                self.assertEqual(self.pin(report), {"state": "exists", "detail": ""})
+                self.assertNotIn(RULESET_PATH, [path for _, path, _ in github.writes()])
+                self.assertIn(PIN_LOG + "set already", out.splitlines())
+        given = dict(json.loads(json.dumps(GIVEN_BACK)), rules=[{"type": "deletion"}])
+        github = FakeGitHub({("GET", RULESET_PATH): (200, given)})
+        _, report, _, _ = self.apply(github)
+        self.assertEqual(self.pin(report), {"state": "not-tried",
+                                            "detail": "the ruleset requires no check named \"check\" any more"})
+        self.assertNotIn(RULESET_PATH, [path for _, path, _ in github.writes()])
+
+    def test_an_organizations_ruleset_of_that_name_is_never_touched(self):
+        """The list is the repository's own (includes_parents=false), and an
+        entry whose source is the organization is passed over even if GitHub
+        listed it: with no ruleset of its own by that name the pin fails at
+        once, and the organization's is neither read nor written."""
+        org_ruleset = {"id": 3, "name": RULESET["name"], "source_type": "Organization", "source": "octo-org"}
+        github = FakeGitHub({("GET", OWN_RULESETS): (200, [org_ruleset])})
+        _, report, _, _ = self.apply(github)
+        self.assertIn(("GET", OWN_RULESETS), [(method, path) for method, path, _, _ in github.calls])
+        self.assertNotIn(f"/repos/{REPO}/rulesets/3", [path for _, path, _, _ in github.calls])
+        self.assertEqual(self.pin(report), {"state": "failed",
+                                            "detail": "the repository's own rulesets include none named"
+                                            " \"Protect the default branch\""})
+        self.assertEqual(self.clock.pauses, [])
+        github = FakeGitHub({("GET", OWN_RULESETS): (200, [org_ruleset, LISTED])})
+        _, report, _, _ = self.apply(github)
+        self.assertEqual(self.pin(report)["state"], "done")
+        self.assertIn(("PUT", RULESET_PATH, PINNED), github.writes())
+
+    def test_existing_mode_does_not_try_the_pin(self):
+        github = FakeGitHub()
+        _, report, out, _ = self.apply(github, mode="existing")
+        self.assertEqual(self.pin(report), {"state": "not-tried", "detail":
+                                            "the protocol alone brings no check, and its ruleset requires none"})
+        paths = [path for _, path, _, _ in github.calls]
+        self.assertNotIn(CHECK_RUNS, paths)
+        self.assertNotIn(OWN_RULESETS, paths)
+        self.assertEqual(out.splitlines()[-1], PIN_LOG + "not tried")
+
+    def test_without_the_checks_token_the_pin_is_not_tried(self):
+        """The Setup App cannot read check runs, so without the main App's
+        Checks token nothing is read or written for the pin."""
+        with mock.patch.dict(os.environ, {"GH_CHECKS_TOKEN": ""}):
+            github = FakeGitHub()
+            code, report, out, _ = self.apply(github)
+        self.assertEqual(code, 0)
+        self.assertEqual(self.pin(report), {"state": "not-tried",
+                                            "detail": "no token that reads check runs could be made for this run"})
+        self.assertNotIn(CHECK_RUNS, [path for _, path, _, _ in github.calls])
+        self.assertNotIn(RULESET_PATH, [path for _, path, _ in github.writes()])
+        self.assertEqual(self.states(report)["ruleset"], "done")
+
+    def test_without_a_head_that_is_a_sha_the_pin_alone_is_not_tried(self):
+        """No head, or one that is not a commit's full sha, costs the pin and
+        nothing else: no check run is read and every other setting stands."""
+        for head in (None, "", "main", "A" * 40):
+            with self.subTest(head=head):
+                github = FakeGitHub()
+                code, report, _, err = self.apply(github, head=head)
+                self.assertEqual((code, err), (0, ""))
+                self.assertEqual(self.pin(report), {"state": "not-tried",
+                                                    "detail": "the run named no commit to read the check run on"})
+                self.assertNotIn("check-runs", " ".join(path for _, path, _, _ in github.calls))
+                others = {key: state for key, state in self.states(report).items() if key != "check_source"}
+                self.assertEqual(set(others.values()), {"done"})
+
+    def test_a_ruleset_left_as_it_was_or_not_created_is_not_pinned(self):
+        """A ruleset of that name the repository had is left as it is, as the
+        pull request says, so it is not pinned either; with no ruleset
+        created there is nothing to pin."""
+        listed = {("GET", f"/repos/{REPO}/rulesets?includes_parents=false"): (200, [{"name": RULESET["name"]}])}
+        github = FakeGitHub(listed)
+        _, report, _, _ = self.apply(github)
+        self.assertEqual(self.pin(report), {"state": "not-tried",
+                                            "detail": "the ruleset of that name was there already and is left as it is"})
+        self.assertNotIn(CHECK_RUNS, [path for _, path, _, _ in github.calls])
+        _, report, _, _ = self.apply(FakeGitHub({("POST", f"/repos/{REPO}/rulesets"): (403, {"message": "no"})}))
+        self.assertEqual(self.pin(report), {"state": "not-tried", "detail": "no ruleset was created"})
+        _, report, _, _ = self.apply(FakeGitHub(), ruleset=self.root / "missing.json")
+        self.assertEqual(self.pin(report), {"state": "not-tried", "detail": "no ruleset was created"})
 
     def test_the_report_is_one_the_body_reads(self):
         self.apply(FakeGitHub())
