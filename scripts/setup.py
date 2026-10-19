@@ -648,10 +648,11 @@ def apply_check_source(github, checks_github, repo, head, report, waiting):
         pin_check_source(github, checks_github, repo, report["ruleset_name"], head, report, waiting)
 
 
-# The run's own reason, for the pull request, where the requester's login
-# names slots that kept no account id.
-BY_LOGIN_ALONE = ("a token in it names you by login alone, from before the pool kept account ids, and is not lent"
-                  " from an issue; press Add Token on the control panel's Tokens page once, which keeps yours")
+# The run's own hint, for the pull request, whenever none of the pool's
+# tokens is the requester's. It is the same whatever the pool holds, so a
+# login taken over from a renamed account learns nothing of the old owner's
+# slots.
+NONE_OWNED_HINT = "press Add Token on the control panel's Tokens page to lend one of yours"
 
 
 def secret_of(slot):
@@ -696,15 +697,6 @@ def owned_secrets(settings_text, requester, requester_id):
         return []
     return [secret_of(slot) for slot, setting in pool_slots(settings_text)
             if owned_by_login(setting, requester) and str(kept_account_id(setting)) == requester_id]
-
-
-def slots_by_login_alone(settings_text, requester):
-    """How many slots name the requester's login and kept no account id,
-    which the pull request tells the requester how to mend."""
-    if not LOGIN.fullmatch(requester or ""):
-        return 0
-    return sum(1 for _, setting in pool_slots(settings_text)
-               if owned_by_login(setting, requester) and kept_account_id(setting) is None)
 
 
 def reaches(visibility, repo_visibility):
@@ -796,8 +788,7 @@ def apply_token_lending(lend_github, repo, repo_id, repo_visibility, owner_type,
         return
     owned = owned_secrets(value, requester, requester_id)
     if not owned:
-        alone = slots_by_login_alone(value, requester)
-        record(report, TOKEN_LENDING, NONE_OWNED, BY_LOGIN_ALONE if alone else "")
+        record(report, TOKEN_LENDING, NONE_OWNED, NONE_OWNED_HINT)
         return
     refused = lend_each(lend_github, org, "secrets", owned, repo_id, repo_visibility, report)
     if not secrets_reaching(report):

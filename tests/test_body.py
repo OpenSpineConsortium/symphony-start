@@ -507,8 +507,8 @@ class Body(unittest.TestCase):
                       " repositories to lend it here; `CLAUDE_CODE_OAUTH_TOKEN` is not among the organization's"
                       " secrets, and the run makes none.", body)
 
-    def test_a_slot_kept_by_login_alone_is_explained(self):
-        detail = "a token in it names you by login alone"
+    def test_a_requester_with_no_token_is_told_how_to_lend_one(self):
+        detail = "press Add Token on the control panel's Tokens page to lend one of yours"
         body = self.body(settings=self.lending_report("none-owned", detail=detail), owner_type="Organization")
         self.assertIn(f"gives each token's owner; {detail}.{LEND_MORE}", body)
         self.assertNotIn("GitHub said", body.split(LENDING)[1].split("\n")[0])

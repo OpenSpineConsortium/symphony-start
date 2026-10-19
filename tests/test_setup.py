@@ -1135,7 +1135,7 @@ class Lending(unittest.TestCase):
         of mona's login, with another account id, gets none of her slots."""
         github = FakeGitHub(pool_answers())
         report, out = self.lend(github, requester_id="99")
-        self.assertEqual(report["settings"]["token_lending"], {"state": "none-owned", "detail": ""})
+        self.assertEqual(report["settings"]["token_lending"], {"state": "none-owned", "detail": setup.NONE_OWNED_HINT})
         self.assertEqual(self.organization_writes(github), [])
         self.assertFalse([path for _, path, _, _ in github.calls if "/secrets/" in path])
         self.assertIn(NOT_LENT_LOG, out.splitlines())
@@ -1149,7 +1149,7 @@ class Lending(unittest.TestCase):
                 github = FakeGitHub(pool_answers(settings=settings))
                 report, _ = self.lend(github)
                 self.assertEqual(report["settings"]["token_lending"],
-                                 {"state": "none-owned", "detail": setup.BY_LOGIN_ALONE})
+                                 {"state": "none-owned", "detail": setup.NONE_OWNED_HINT})
                 self.assertEqual(self.organization_writes(github), [])
 
     def test_a_slot_whose_login_and_account_id_match_is_lent(self):
