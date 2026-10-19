@@ -542,12 +542,18 @@ GitHub's page gives, which the page renews and revokes through the service in th
 stops asking when GitHub gives the token or refuses, when the code runs out, or when you press
 Cancel, sign in another way, paste a token GitHub accepts or press "Forget the token"; a token
 GitHub gives after that, for a code the page has let go of, goes once more to the service, so that
-GitHub revokes it. Once you are signed in by code, the page keeps exactly what the sign-in by
-GitHub's page keeps, as above, by "Keep me signed in" as it stands when the token comes: ticked, the
-token and the refresh token in the browser's storage until you press "Forget the token"; unticked,
-the token in the tab's own storage and the refresh token in the open page's memory alone. The
-service keeps nothing of a sign-in by code either: no store, no cookie and no log of its own, and
-its two device routes answer the site's origin alone.
+GitHub revokes it. Once you are signed in by code, the page keeps what the sign-in by GitHub's page
+keeps, as above, by "Keep me signed in" as it stands when the token comes: ticked, the token and the
+refresh token in the browser's storage until you press "Forget the token"; unticked, the token in
+the tab's own storage and the refresh token in the open page's memory alone. Save where the browser
+refuses to store the token, as it can for a sign-in by code, which, unlike the sign-in by GitHub's
+page, needs no storage to finish: the page then holds the token and the refresh token in the open
+page's memory alone, never renews them, and drops them once that page is gone or you press "Forget
+the token", which in that case asks GitHub to revoke nothing, so the token stays good at GitHub
+until it runs out within eight hours, or until Revoke at
+https://github.com/settings/apps/authorizations, below, ends it. The service keeps nothing of a
+sign-in by code either: no store, no cookie and no log of its own, and its two device routes answer
+the site's origin alone.
 
 Ticking "Enable Device Flow" opens a way in that no page can close: anyone, not only this page, may
 then ask GitHub for a SymphonyBoard code with the App's public client id, and whoever asked for a
@@ -561,10 +567,13 @@ in as you." The developer never sends anyone a code. And whoever holds the refre
 sign-in by code can keep that sign-in going without end: GitHub renews such a refresh token with the
 client id alone, with no client secret and without the sign-in service, each renewal giving a new
 refresh token good for six months more, so the sign-in ends only when it is revoked or goes six
-months without a renewal. "Forget the token" revokes the sign-in that tab and that browser hold, and
-no other; Revoke beside SymphonyBoard under your GitHub Settings, Applications, Authorized GitHub
-Apps, https://github.com/settings/apps/authorizations, ends every token SymphonyBoard holds for you,
-one from a code someone else started among them.
+months without a renewal. "Forget the token" drops the token and the refresh token that tab and that
+browser hold and, where the browser's storage holds that token, asks GitHub through the service to
+revoke it, and no other; whether GitHub then refuses that sign-in's refresh token too is not
+established, though the page no longer holds it. Revoke beside SymphonyBoard under your GitHub
+Settings, Applications, Authorized GitHub Apps, https://github.com/settings/apps/authorizations,
+ends every token SymphonyBoard holds for you, refresh tokens and one from a code someone else
+started among them.
 
 The control panel's Assistant section asks the repository's own Claude workflow a question, through
 GitHub and nothing else. Once per repository and person, on your press, the page opens an issue of
@@ -863,10 +872,11 @@ closed; the label holds no token, name or e-mail address. What
 they start, a worker's run or the Claude workflow's answer to a mention, runs on the token the
 repository holds, as the repository's own workflows do. To stop: press "Forget the token", which
 drops the token and the refresh token from the browser and, for a token from "Sign in with
-GitHub", by GitHub's page or by a code, asks GitHub through the service to revoke the token; a
-personal access token is revoked on GitHub under Settings, Developer settings, Personal access
-tokens, and the App's authorization, which covers every token and refresh token it issued you, under
-Settings, Applications, Authorized GitHub Apps.
+GitHub", by GitHub's page or by a code, asks GitHub through the service to revoke the token, save
+one the browser refused to store, which the page held in its memory alone and which runs out within
+eight hours, as above; a personal access token is revoked on GitHub under Settings, Developer
+settings, Personal access tokens, and the App's authorization, which covers every token and refresh
+token it issued you, under Settings, Applications, Authorized GitHub Apps.
 
 ## The control panel's Folders tab
 
@@ -1096,17 +1106,21 @@ GitHub", or in a browser's tab of "Sign in with a code instead", has the sign-in
 page holds the device code in the open page's memory alone and sends it to the service's route
 /device/token, at most once every five seconds, which passes it to GitHub with the client id and no
 client secret until you have typed the short code at https://github.com/login/device and allowed
-SymphonyBoard; the page then keeps what the sign-in by GitHub's page keeps, and the service keeps
-nothing of it. It says that "Enable Device Flow", which sign-in by code needs ticked on
-SymphonyBoard, lets anyone ask GitHub for a SymphonyBoard code and talk a person into typing it,
-which hands whoever asked a token that acts as that person, so the page warns beside every code to
-type only one started on that page a moment ago; and that such a sign-in's refresh token renews at
-GitHub with the client id alone, each renewal good for six months more, so that it lasts until it is
-revoked or goes six months unrenewed, and where you revoke it. It names, as no earlier version did,
-the stylesheet of Google Fonts that the control panel and the cost page link for the site's
-typefaces, Newsreader, IBM Plex Sans and IBM Plex Mono, as the site's other Symphony pages do, which
-your browser asks Google for, with the font files it names, as the pages load, with nothing of the
-page's own in those requests. And it says that the control panel installs as an app, the same page
+SymphonyBoard; the page then keeps what the sign-in by GitHub's page keeps, save where the browser
+refuses to store the token, which a sign-in by code, needing no storage to finish, can meet: there
+the page holds it in its memory alone, never renews it, and "Forget the token" drops it without
+asking GitHub to revoke it, so it runs out within eight hours; and the service keeps nothing of it.
+It says that "Enable Device Flow", which sign-in by code needs ticked on SymphonyBoard, lets anyone
+ask GitHub for a SymphonyBoard code and talk a person into typing it, which hands whoever asked a
+token that acts as that person, so the page warns beside every code to type only one started on
+that page a moment ago; and that such a sign-in's refresh token renews at GitHub with the client id
+alone, each renewal good for six months more, so that it lasts until it is revoked or goes six
+months unrenewed, and where you revoke it; and that "Forget the token" asks GitHub to revoke the
+token it drops, while whether GitHub then refuses that sign-in's refresh token too is not
+established. It names, as no earlier version did, the stylesheet of Google Fonts that the control
+panel and the cost page link for the site's typefaces, Newsreader, IBM Plex Sans and IBM Plex Mono,
+as the site's other Symphony pages do, which your browser asks Google for, with the font files it
+names, as the pages load, with nothing of the page's own in those requests. And it says that the control panel installs as an app, the same page
 in a window of its own, whose "Sign in with GitHub" may come back from GitHub's page to your browser
 rather than to the app, where the page sends the code nowhere and the code signs nobody in; earlier
 versions said that GitHub sends your browser back to the page, which holds in a browser's tab alone.
