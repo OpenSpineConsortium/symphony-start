@@ -130,7 +130,7 @@ class TheForm(unittest.TestCase):
                 with self.subTest(place=place, setting=name):
                     self.assertIn(name, text)
         privacy = " ".join((ROOT / "PRIVACY.md").read_text(encoding="utf-8").split())
-        self.assertIn("applies up to six settings", privacy)
+        self.assertIn("applies up to seven settings", privacy)
         self.assertIn(f"ticks \"{adopt.ACTIONS_LABEL}\"", privacy)
 
     def test_blank_issues_are_off(self):
