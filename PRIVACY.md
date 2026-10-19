@@ -36,10 +36,12 @@ page used up to version 13 of this statement to make a Codespace and no longer u
 on the App until the developer takes it off; Actions (read and write), for the control panel's buttons
 that start a workflow run by hand, such as the Tokens page's "Read every slot now" and "Add a Claude
 account", and its reads
-of the repository's workflow runs, their jobs and a job's log (the control panel, below); Administration (read and write), for two things only: the
-control panel's Share tab invites a person you name by their GitHub username as a collaborator on the repository, as
-you, when you press "Invite", and its Notebooks tab makes a notebook's public or internal repository private, as
-you, when you press "Make private" and confirm (the control panel, below); no adoption run, workflow or other page uses it;
+of the repository's workflow runs, their jobs and a job's log (the control panel, below); Administration (read and write), for the
+control panel's Share tab and its Notebooks tab's "Make private", each as you (the control panel, below): the Share tab
+reads the invitations waiting for an answer and, when you press the button that says so, invites a person you name by
+their GitHub username, or one who asked to join, as a collaborator on the repository, gives a collaborator or a waiting
+invitation a new role, removes a collaborator or withdraws an invitation, and the Notebooks tab makes a notebook's public
+or internal repository private when you press "Make private" and confirm; no adoption run, workflow or other page uses it;
 Secrets (read and write), for the control panel's Folders tab, which reads whether the repository's
 secret SYMPHONY_DRIVE_REFRESH is set and, when you press Track, saves a drive's refresh token as
 that secret, and for the Tokens page on a personal account's repository, which holds its Claude
@@ -511,8 +513,11 @@ that branch, as you, over the version it read, so that a change the organizer ma
 never written over; when you take out the last notebook it deletes the file, and whatever else the
 organizer wrote in it goes with it. Where a notebook's repository is public or internal and GitHub
 does not say you are not its administrator, the side panel offers Make private: once you confirm, after
-a question that says what GitHub erases with the change (its stars and watchers) and what becomes of
-its forks, the page asks GitHub, as you, to make that repository private, which takes SymphonyBoard's
+a question that says what GitHub erases with the change (its stars and watchers), what becomes of its
+forks and, for a public repository, what stops with it (on a free plan its GitHub Pages site and the
+enforcement of its rulesets and branch protection, its code scanning unless its owner has GitHub Code
+Security, and its secret scanning and push protection unless its owner has GitHub Secret Protection),
+the page asks GitHub, as you, to make that repository private, which takes SymphonyBoard's
 Administration permission (or, with a pasted token, the token's), and shows what GitHub answers; it
 changes nothing else about the repository. It writes nothing else: in your browser's storage only the width
 of its side panel, kept with the layout (above), and nothing to the drive, of which Microsoft is
@@ -814,9 +819,11 @@ SymphonyBoard's, to GitHub's that revokes one. No token, key or signature is eve
 ## What the Apps never do
 
 They send nothing to any service but GitHub's own API. They have no analytics, no error reporting
-and no third party. SymphonyBoard holds Administration only to send the invitation you ask for on the
-control panel's Share tab and to make a notebook's repository private when you press Make private on
-its Notebooks tab, each as you, and changes no other setting with it; Symphony Setup holds it where you
+and no third party. SymphonyBoard holds Administration only for the control panel's Share tab, which
+reads the invitations waiting and, when you ask, invites a collaborator, changes a collaborator's or an
+invitation's role, removes a collaborator or withdraws an invitation, and for its Notebooks tab's Make
+private, which makes a notebook's repository private when you press it and confirm, each as you, and uses
+it for nothing else; Symphony Setup holds it where you
 installed it, uses it only during an adoption run, and stays installed until you uninstall it. They
 read your repository's code only as the
 adoption above says (the tree listing, a one-commit checkout of the default branch, and the few
@@ -858,10 +865,13 @@ this text.
 
 Version 33 adds the Notebooks tab's Make private, the owner's choice of 2026-10-19: where a notebook's
 repository is public or internal, a button in its side panel makes it private on GitHub, as you, once
-you confirm, which is a second use of SymphonyBoard's repository permission Administration beside the
-Share tab's invitation; the tab also reads, from the answer it already asked for, whether GitHub counts
-you the repository's administrator, and offers the button only where GitHub does not say you are not.
-Nothing the developer receives or keeps changed.
+you confirm, which SymphonyBoard's repository permission Administration allows, as it allows the Share
+tab's changes; the tab also reads, from the answer it already asked for, whether GitHub counts you the
+repository's administrator, and offers the button only where GitHub does not say you are not. The list
+of what SymphonyBoard asks for, and the section on what the Apps never do, now name in full what the
+Share tab does with Administration (it reads the invitations waiting, invites, changes a role, removes
+a collaborator and withdraws an invitation), where earlier versions named only the invitation; the
+Share tab itself does what it did. Nothing the developer receives or keeps changed.
 
 Version 32 adds Symphony Setup's two organization permissions Secrets and Variables (read and
 write), used only in an adoption run to add the adopted repository to the lists of repositories that
