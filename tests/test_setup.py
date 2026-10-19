@@ -1153,7 +1153,7 @@ class Lending(unittest.TestCase):
                 self.assertEqual(self.organization_writes(github), [])
 
     def test_a_slot_in_the_organizations_keeping_is_not_lent(self):
-        # symphony-template#253: a token lent with no say is placed by the
+        # symphony-template#254: a token lent with no say is placed by the
         # organization's owners alone, never by its lender's adoption.
         settings = {"3": {"owner": "mona", "uid": 583231, "keeping": "organization"}}
         github = FakeGitHub(pool_answers(settings=settings))
