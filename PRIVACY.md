@@ -1,6 +1,6 @@
 # Symphony GitHub Apps privacy statement
 
-Version 31, 2026-10-19. This text is also at https://openspineconsortium.com/symphony/apps-privacy.html.
+Version 32, 2026-10-19. This text is also at https://openspineconsortium.com/symphony/apps-privacy.html.
 The Symphony browser extension has a statement of its own, at https://openspineconsortium.com/symphony/privacy.html.
 
 Who makes the Apps: Gregory Schwing, trading as OpenSpineConsortium ("the developer"). Questions:
@@ -99,14 +99,37 @@ it up to version 13 of this statement to hand its GitHub sign-in to a Codespace;
 it, and it stays on the App until the developer takes it off.
 
 Symphony Setup asks for two repository permissions, Administration (read and write), for the seven
-settings below, and Metadata (read), and, on an organization, one organization permission,
-Administration (read and write). It uses that one for one thing only: where the organization holds
+settings below, and Metadata (read), and, on an organization, three organization permissions:
+Administration (read and write), Secrets (read and write) and Variables (read and write). It uses
+Administration for one thing only: where the organization holds
 off "Allow GitHub Actions to create and approve pull requests" for its repositories, as a new
 organization does, and the repository takes the whole template, the run allows that box for the
 organization, leaving the default permissions of GitHub Actions' token as they were, and then ticks
 it on the repository. It reads and changes no other setting of the organization. That setting of
 the organization stays allowed after the run, and repositories the organization makes later inherit
-it; an owner turns it off under the organization's Settings, Actions, General, Workflow permissions. It has no webhook and receives no event. It is meant to be
+it; an owner turns it off under the organization's Settings, Actions, General, Workflow permissions.
+
+It uses Secrets and Variables for one thing only, lending the person who asked for the adoption their
+own Claude tokens of the organization's pool, and only where the installation on the organization has
+them, which GitHub asks an owner of the organization to accept. In the adoption run of one of the
+organization's repositories, it reads the organization variable SYMPHONY_CLAUDE_SETTINGS, which gives
+each slot's owner by login and account id, keeps the slots whose owner is the login of the person who
+asked, compared without case, and adds the new repository to the repositories that may read each of
+those slots' organization secrets (SYMPHONY_CLAUDE_1 to SYMPHONY_CLAUDE_32, and CLAUDE_CODE_OAUTH_TOKEN
+for the slot main) and the two variables SYMPHONY_CLAUDE_ACCOUNTS and SYMPHONY_CLAUDE_SETTINGS, so the
+repository's Claude workflows can run on those tokens. It touches only a secret or a variable that
+exists and is shared with selected repositories, and only that list: it never reads a secret's value,
+which GitHub gives no one, changes no visibility, creates nothing and lends no one else's slot. The
+variable's value stays in the run's memory; the run's public log says only whether tokens were lent,
+never whose, which or how many, and the pull request in your repository names the secrets lent. Once
+they are lent, the settings variable, with every slot owner's login and account id, reaches the new
+repository too, as the section on SymphonyBoard's pool says of every repository a token is lent to.
+Where the installation has not these two permissions, or for a person's own repository, nothing is
+lent and the adoption runs as before; an owner of the organization takes a repository off a secret's
+or a variable's list under the organization's Settings, Secrets and variables, Actions, Repository
+access.
+
+It has no webhook and receives no event. It is meant to be
 installed on the repository being adopted. It stays installed after the run, after an adoption or
 after a request refused because the repository is adopted already, acting only during an adoption
 run. Its token is made only during a run and revoked when the run's settings are applied. You can uninstall it at any time from the repository's or the organization's Settings,
@@ -731,7 +754,8 @@ Each App's private key is the developer's and is never given to anyone: it lives
 secrets of the developer's own repositories and in the server's environment, outside any
 repository. Every token minted from it is an installation token that lives one hour, asked with the
 fewest permissions the step needs (metadata alone to resolve a number, contents read to read, the
-four write permissions only for the adoption itself) and revoked as soon as the step is done where
+four write permissions only for the adoption itself, Symphony Setup's Secrets and Variables only for
+lending the requester's own tokens) and revoked as soon as the step is done where
 the code can, except in the Token workflow of the developer's own organization, which mints it with
 every permission the installation has, for all the organization's repositories the App reaches, in
 a job that runs only the default branch's script and that anyone who may open an issue there can
@@ -751,7 +775,10 @@ read your repository's code only as the
 adoption above says (the tree listing, a one-commit checkout of the default branch, and the few
 files named), never to keep or send it. They never write to a repository but the adoption's branch,
 pull request, labels, issue and settings, each of them yours to undo, and the README that begins a
-repository with no commit; in the pool of Claude tokens of the developer's own organization, the
+repository with no commit, and, in an organization whose Symphony Setup installation has Secrets and
+Variables, the lists of repositories that read the requester's own token slots and the pool's two
+variables, as the section on what each App asks for says; in the pool of Claude tokens of the
+developer's own organization, the
 only one holding SymphonyBoard's key, the Token workflow writes with SymphonyBoard's token only what
 the section on the control panel says, a slot, the two variables and the lists of repositories that
 read them, for the person who lends or manages the token.
@@ -781,6 +808,12 @@ Symphony is for people who administer GitHub repositories. It is not directed at
 A new version of this statement is published at https://openspineconsortium.com/symphony/apps-privacy.html
 and in the front door repository, github.com/OpenSpineConsortium/symphony-start, whose PRIVACY.md is
 this text.
+
+Version 32 adds Symphony Setup's two organization permissions Secrets and Variables (read and write),
+used only in an adoption run to add the new repository to the lists of repositories that read the
+token slots of the organization's pool the requester owns and the pool's two variables, as the
+section on what each App asks for says; it reads the settings variable, which names each slot's owner,
+and no secret's value. Nothing the developer receives or keeps changed.
 
 Version 31 adds the control panel's Notebooks tab, as the section on the control panel says: it reads
 the drive organizer's proposal of notebooks and its catalog from the branch drive-catalog of a private
