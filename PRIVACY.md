@@ -735,9 +735,11 @@ weights 400, 500 and 600 and italic at 400 and 500, across its optical sizes 6 t
 fonts.googleapis.com and fonts.gstatic.com as it loads. Your browser asks fonts.googleapis.com for
 that stylesheet and fonts.gstatic.com for the font files it names, as the page's text comes to need
 them, unless it holds them from an earlier load. Google receives those requests as it receives any,
-with your network address and the headers your browser sends with every request, under Google's own
-privacy policy; the page puts nothing of its own into them, no token, no repository's name and
-nothing you type, and the developer receives nothing of them.
+with your network address and the headers your browser sends with every request, under Google's
+own privacy policy, and the request for the stylesheet names the page it came from as browsers do
+unless set otherwise, by the site's address alone, https://openspineconsortium.com/, and not by the
+page's own address, whose query can name a repository; the page puts nothing of its own into them,
+no token, no repository's name and nothing you type, and the developer receives nothing of them.
 
 Sign-in by code, GitHub's device flow, is built into both pages for the installed app and switched
 off: a setting in the page's script, CODE_SIGNIN, holds it off until the developer turns it on, and
@@ -770,9 +772,10 @@ keeps, as above, by "Keep me signed in" as it stands when the token comes: ticke
 refresh token in the browser's storage until you press "Forget the token"; unticked, the token in
 the tab's own storage and the refresh token in the open page's memory alone. Save where the browser
 refuses to store the token, as it can for a sign-in by code, which, unlike the sign-in by GitHub's
-page, needs no storage to finish: the page then holds the token and the refresh token in the open
-page's memory alone, never renews them, and drops them once that page is gone or you press "Forget
-the token", which in that case asks GitHub to revoke nothing, so the token stays good at GitHub
+page, needs no storage to finish: the page then holds the token in the open page's memory alone,
+and the refresh token there too where "Keep me signed in" is unticked and nowhere where it is
+ticked, never renews them, and drops them once that page is gone or you press "Forget the token",
+which in that case does not ask GitHub to revoke that token, so the token stays good at GitHub
 until it runs out within eight hours, or until Revoke at
 https://github.com/settings/apps/authorizations, below, ends it. The service keeps nothing of a
 sign-in by code either: no store, no cookie and no log of its own, and its two device routes answer
@@ -795,8 +798,8 @@ browser hold and, where the browser's storage holds that token, asks GitHub thro
 revoke it, and no other; whether GitHub then refuses that sign-in's refresh token too is not
 established, though the page no longer holds it. Revoke beside SymphonyBoard under your GitHub
 Settings, Applications, Authorized GitHub Apps, https://github.com/settings/apps/authorizations,
-ends every token SymphonyBoard holds for you, refresh tokens and one from a code someone else
-started among them.
+ends every token and refresh token GitHub has issued SymphonyBoard for you, one from a code someone
+else started among them.
 
 The control panel's Assistant section asks the repository's own Claude workflow a question, through
 GitHub and nothing else. Once per repository and person, on your press, the page opens an issue of
@@ -1367,10 +1370,12 @@ token it drops, while whether GitHub then refuses that sign-in's refresh token t
 established. It names, as no earlier version did, the stylesheet of Google Fonts that the control
 panel and the cost page link for the site's typefaces, Newsreader, IBM Plex Sans and IBM Plex Mono,
 as the site's other Symphony pages do, which your browser asks Google for, with the font files it
-names, as the pages load, with nothing of the page's own in those requests. And it says that the control panel installs as an app, the same page
-in a window of its own, whose "Sign in with GitHub" may come back from GitHub's page to your browser
-rather than to the app, where the page sends the code nowhere and the code signs nobody in; earlier
-versions said that GitHub sends your browser back to the page, which holds in a browser's tab alone.
+names, as the pages load, with nothing of the page's own in those requests, the stylesheet's naming
+the page it came from by the site's address alone, as browsers do unless set otherwise. And it says
+that the control panel installs as an app, the same page in a window of its own, whose "Sign in
+with GitHub" may come back from GitHub's page to your browser rather than to the app, where the page
+sends the code nowhere and the code signs nobody in; earlier versions said that GitHub sends your
+browser back to the page, which holds in a browser's tab alone.
 Nothing the developer receives or keeps changed.
 
 Version 34 adds the Sync run, symphony-template#257, as the section of that name says: a workflow of
