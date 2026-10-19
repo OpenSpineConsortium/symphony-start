@@ -189,6 +189,7 @@ class TheWorkflows(unittest.TestCase):
         self.assertIn("uses: ./.github/workflows/adopt-run.yml", text)
         self.assertIn("if: needs.request.result == 'success' && needs.request.outputs.refused != 'true'", text)
         self.assertIn("requester: ${{ github.event.issue.user.login }}", text)
+        self.assertEqual(text.count("requester_id: ${{ github.event.issue.user.id }}"), 2)
         self.assertIn("issue: ${{ github.event.issue.number }}", text)
         self.assertIn("installation_id: ${{ needs.request.outputs.installation_id }}", text)
         self.assertIn("repository_id: ${{ matrix.repository_id }}", text)
@@ -282,9 +283,44 @@ class TheWorkflows(unittest.TestCase):
         self.assertIn("continue-on-error: true", asking[0])
         self.assertNotIn("permission-contents", asking[0])
         # The key is minted for Administration once, for the organization's
-        # Administration once, probed once and read as set-or-not once; the
-        # App no longer uninstalls itself, so no JWT of its is signed here.
-        self.assertEqual(text.count("secrets.SDLC_SETUP_APP_PRIVATE_KEY"), 4)
+        # Administration once, probed once, read as set-or-not once, and
+        # signs the JWT that mints the organization's Secrets and Variables
+        # token once; the App no longer uninstalls itself.
+        self.assertEqual(text.count("secrets.SDLC_SETUP_APP_PRIVATE_KEY"), 5)
+        lend, = [step for step in steps if "id: lend-token" in step]
+        self.assertIn("APP_ID: ${{ vars.SDLC_SETUP_APP_ID }}", lend)
+        self.assertIn("continue-on-error: true", lend)
+        self.assertIn("steps.setup-token.outcome == 'success'", lend)
+        self.assertIn("steps.target.outputs.owner_type == 'Organization'", lend)
+        self.assertIn('"permissions": {"organization_secrets": "write", "organization_actions_variables": "write",'
+                      ' "metadata": "read"}', lend)
+        # It prints nothing: the settings step's one line is the lending's.
+        self.assertNotIn("echo \"the token", lend)
+        self.assertIn('"repositories": [os.environ["NAME"]]', lend)
+        self.assertNotIn("administration", lend)
+        # Its answers stay out of the log: every curl and Python read is
+        # silenced, and the step says one fixed line either way.
+        for line in lend.splitlines():
+            if "curl " in line or "python3 -c 'import json, sys" in line:
+                self.assertTrue("2>/dev/null" in line or line.rstrip().endswith("\\"), line)
+        self.assertIn('echo "::add-mask::$token"', lend)
+        # The token goes to a file, never a step output, whose presence in
+        # a later step's env would tell this log whether it was made.
+        written = """(umask 077; printf '%s' "$token" > "$RUNNER_TEMP/lend-token")"""
+        self.assertLess(lend.index('echo "::add-mask::$token"'), lend.index(written))
+        self.assertNotIn("GITHUB_OUTPUT", lend)
+        self.assertNotIn("steps.lend-token.outputs", text)
+        revoke, = [step for step in steps if "name: Revoke the token that lends" in step]
+        self.assertIn("if: always() && steps.lend-token.outcome != 'skipped'", revoke)
+        self.assertNotIn("echo", revoke)
+        self.assertIn("name: Revoke the token that lends the requester's Claude tokens", text)
+        # The requester's account id reaches the shell only through env:,
+        # digits or nothing, and setup.py lends only by login and id.
+        self.assertIn("REQUESTER_ID_GIVEN: ${{ inputs.requester_id }}", text)
+        self.assertIn('--requester-id="$REQUESTER_ID"', text)
+        for line in text.splitlines():
+            if "inputs.requester_id" in line:
+                self.assertTrue(line.strip().startswith("REQUESTER_ID_GIVEN:") or "group:" in line, line)
         org, = [step for step in steps if "id: setup-org-token" in step]
         self.assertIn("app-id: ${{ vars.SDLC_SETUP_APP_ID }}", org)
         self.assertIn("repositories: ${{ env.NAME }}", org)

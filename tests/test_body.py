@@ -54,6 +54,14 @@ PIN_FIX = ("Until it is, a commit status named \"check\", which anyone with writ
            " or, once this pull request's check has run on the default branch after the merge, run"
            " `bash scripts/setup-repo.sh` from a clone, which pins it too.")
 
+# The requester's own Claude tokens lent to an organization's repository.
+LENDING = "- Your Claude tokens in the organization's pool:"
+LEND_MORE = (" To lend more, an owner of the organization opens the secret at"
+             " https://github.com/organizations/octo-org/settings/secrets/actions, and each of"
+             " `SYMPHONY_CLAUDE_ACCOUNTS` and `SYMPHONY_CLAUDE_SETTINGS` at"
+             " https://github.com/organizations/octo-org/settings/variables/actions, and adds this repository under"
+             " Repository access; a token is lent only by its owner's word.")
+
 
 def report(outcome="applied", states=ALL_DONE, details=None, mode="new", private=False, required_check=True):
     """A report as scripts/setup.py writes it."""
@@ -467,10 +475,79 @@ class Body(unittest.TestCase):
 
     def test_an_organization_uninstalls_from_its_own_page(self):
         body = self.body(settings=report(), owner_type="Organization")
-        self.assertIn("It holds Administration on this repository and, where its installation accepted it, on the"
-                      " organization; you can uninstall it at any time, from the repository's Settings, GitHub Apps,"
+        self.assertIn("It holds Administration on this repository and, where its installation accepted them,"
+                      " Administration, Secrets and Variables on the organization; you can uninstall it at any time, from the repository's Settings, GitHub Apps,"
                       " at https://github.com/octo-org/widget/settings/installations, or from the organization's at"
                       " https://github.com/organizations/octo-org/settings/installations.", body)
+
+    def lending_report(self, state, lent=(), left=(), failed=(), detail="", mode="new", unreached=(), missing=()):
+        settings = report(states=dict(ALL_DONE, token_lending=state), details={"token_lending": detail}, mode=mode)
+        settings["lending"] = {"lent": list(lent), "left": list(left), "unreached": list(unreached),
+                               "missing": list(missing), "failed": list(failed)}
+        return settings
+
+    def test_the_tokens_lent_are_named_with_how_to_lend_more(self):
+        body = self.body(settings=self.lending_report("done", lent=("SYMPHONY_CLAUDE_3", "SYMPHONY_CLAUDE_ACCOUNTS"),
+                                                      left=("CLAUDE_CODE_OAUTH_TOKEN",)),
+                         owner_type="Organization")
+        self.assertIn(f"{LENDING} lent to this repository: `SYMPHONY_CLAUDE_3` and `SYMPHONY_CLAUDE_ACCOUNTS`;"
+                      " `CLAUDE_CODE_OAUTH_TOKEN` reaches this repository already, shared with all the"
+                      " organization's repositories or its private ones, and is left as GitHub shares it. Only your"
+                      " own tokens are lent, never another person's, and no value or visibility"
+                      f" was changed.{LEND_MORE}\n", body)
+        self.assertLess(body.index(ACTIONS), body.index(LENDING))
+
+    def test_tokens_that_cannot_reach_the_repository_say_so(self):
+        body = self.body(settings=self.lending_report("none-lent", unreached=("SYMPHONY_CLAUDE_3",),
+                                                      missing=("CLAUDE_CODE_OAUTH_TOKEN",)),
+                         owner_type="Organization")
+        self.assertIn(f"{LENDING} `SYMPHONY_CLAUDE_3` does not reach this repository, shared only with the"
+                      " organization's private and internal repositories or in another way than with selected ones,"
+                      " and the run changes no visibility; an owner of the organization switches it to selected"
+                      " repositories to lend it here; `CLAUDE_CODE_OAUTH_TOKEN` is not among the organization's"
+                      " secrets and variables, and the run makes none.", body)
+
+    def test_a_requester_with_no_token_is_told_how_to_lend_one(self):
+        detail = "press Add Token on the control panel's Tokens page to lend one of yours"
+        body = self.body(settings=self.lending_report("none-owned", detail=detail), owner_type="Organization")
+        self.assertIn(f"gives each token's owner; {detail}.{LEND_MORE}", body)
+        self.assertNotIn("GitHub said", body.split(LENDING)[1].split("\n")[0])
+
+    def test_a_loan_refused_keeps_githubs_words(self):
+        body = self.body(settings=self.lending_report("failed", lent=("SYMPHONY_CLAUDE_3",),
+                                                      failed=("SYMPHONY_CLAUDE_SETTINGS",),
+                                                      detail="SYMPHONY_CLAUDE_SETTINGS: HTTP 500: boom"),
+                         owner_type="Organization")
+        self.assertIn("not lent: `SYMPHONY_CLAUDE_SETTINGS` (GitHub said: SYMPHONY_CLAUDE_SETTINGS: HTTP 500: boom)",
+                      body)
+
+    def test_tokens_not_lent_say_why_and_how(self):
+        body = self.body(settings=self.lending_report("not-granted"), owner_type="Organization")
+        self.assertIn(f"{LENDING} not lent, since the run could not make a token with the organization permissions"
+                      " Secrets and Variables (Read and write), most often because the Symphony Setup App's installation"
+                      " on the organization has not granted them; an owner of the organization accepts them at"
+                      f" https://github.com/organizations/octo-org/settings/installations.{LEND_MORE}", body)
+        body = self.body(settings=self.lending_report("none-owned", mode="existing"), mode="existing",
+                         files=THEIR_FILES, owner_type="Organization")
+        self.assertIn(f"{LENDING} none lent, since no token in it names you as its owner", body)
+        self.assertIn(LEND_MORE, body)
+
+    def test_the_runs_own_reason_is_not_given_as_githubs(self):
+        body = self.body(settings=self.lending_report("failed", detail="the repository's id could not be read"),
+                         owner_type="Organization")
+        self.assertIn(f"{LENDING} not lent (the repository's id could not be read).", body)
+        body = self.body(settings=self.lending_report("not-granted", detail="HTTP 403: Resource not accessible"),
+                         owner_type="Organization")
+        self.assertIn("(Read and write) (GitHub said: HTTP 403: Resource not accessible), most often", body)
+
+    def test_no_lending_line_for_a_personal_account_or_an_older_report(self):
+        body = self.body(settings=self.lending_report("not-tried"))
+        self.assertNotIn(LENDING, body)
+        body = self.body(settings=self.lending_report("done", lent=("SYMPHONY_CLAUDE_3",)))
+        self.assertNotIn(LENDING, body)
+        self.assertNotIn(LENDING, self.body(settings=report(), owner_type="Organization"))
+        body = self.body(settings=self.lending_report("not-tried"), owner_type="Organization")
+        self.assertNotIn(LENDING, body)
 
     def test_a_private_repositorys_ruleset_is_said_to_be_unenforced_on_free(self):
         body = self.body(settings=report(private=True))
