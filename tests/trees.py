@@ -91,7 +91,10 @@ METRICS = {
 # The modules the metrics script imports, as the template's own files.
 METRICS_MODULES = ("tools/economics.py", "tools/usage.py")
 # Each workflow mode existing may bring, with the script it runs.
-WORKFLOWS = {".github/workflows/board.yml": "tools/board.py", ".github/workflows/metrics.yml": "tools/metrics.py"}
+WORKFLOWS = {".github/workflows/board.yml": "tools/board.py", ".github/workflows/metrics.yml": "tools/metrics.py",
+             ".github/workflows/token.yml": "tools/token_run.py"}
+# The folders a script puts on its path beyond its own, as adopt.py's SEARCH.
+SEARCHED = {"tools/token_run.py": ("tools", "scripts")}
 # The script of a template from before the breakdown, which a repository
 # adopted from it keeps, since no later change of the template reaches it.
 METRICS_BEFORE_BREAKDOWN = "print('metrics')\n"
@@ -209,7 +212,7 @@ def unmet_imports(root, script, brought):
     a module found in the script's folder must be one of them, and is
     followed but for the library, which is brought whole and checked by its
     own record; any other must be one of Python's own."""
-    folder = PurePosixPath(script).parent.as_posix()
+    folders = SEARCHED.get(script, (PurePosixPath(script).parent.as_posix(),))
     unmet, seen, waiting = [], set(), [script]
     while waiting:
         rel = waiting.pop()
@@ -217,7 +220,7 @@ def unmet_imports(root, script, brought):
             continue
         seen.add(rel)
         for name in sorted(imported_names((Path(root) / rel).read_bytes())):
-            found = local_module(root, folder, name)
+            found = next((hit for hit in (local_module(root, f, name) for f in folders) if hit), [])
             if not found and name in sys.stdlib_module_names:
                 continue
             if not found or not set(found) <= set(brought):

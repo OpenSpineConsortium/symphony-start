@@ -156,10 +156,22 @@ SWITCHES = (SWITCH, OLD_SWITCH)
 # modules never lie next to an older copy's, and a workflow whose scripts
 # import the library stays out with it; the metrics workflow stays out with
 # its switch too, which it reads as on where there is none.
+# The Token workflow mints a Claude token for the control panel's Tokens
+# page in the repository itself, so a repository adopted for the protocol
+# alone needs no other repository of its owner's to sign in through (the
+# owner, 2026-10-19). Its script puts the template's scripts folder on its
+# path after its own, so its modules are looked for in both (SEARCH).
+TOKEN_WORKFLOW = ".github/workflows/token.yml"
+TOKEN_SCRIPT = "tools/token_run.py"
 UNITS = (
     ("the board's workflow and its script", BOARD_WORKFLOW, BOARD_SCRIPT),
     ("the metrics workflow and the scripts it runs", METRICS_WORKFLOW, METRICS_SCRIPT),
+    ("the Token workflow and the scripts it runs", TOKEN_WORKFLOW, TOKEN_SCRIPT),
 )
+# Where a unit's script finds the template's modules, every one it imports
+# and every one those import, in Python's order, for a script that puts
+# more than its own folder on its path: tools/token_run.py adds scripts/.
+SEARCH = {TOKEN_SCRIPT: ("tools", "scripts")}
 LIBRARY_UNIT = "the vendored library and its record"
 # A file the repository ignores is committed only by force, and git then
 # replaces each person's own copy of it on their next pull without a word.
@@ -521,12 +533,17 @@ def loaded_by_path(call):
     return names
 
 
-def module_files(plan, folder, name):
-    """The files of the template's module name where a script in folder
-    finds it, Python putting the script's folder first on its path: name.py,
-    or every file of the package name; none for a module the template does
-    not have, such as one of Python's own."""
-    return sorted(rel for rel in plan if rel == f"{folder}/{name}.py" or rel.startswith(f"{folder}/{name}/"))
+def module_files(plan, folder, name, script=""):
+    """The files of the template's module name where the unit's script, in
+    folder, finds it, Python putting the script's folder first on its path,
+    or the folders SEARCH gives for the script: name.py, or every file of
+    the package name, in the first folder that has it; none for a module
+    the template does not have, such as one of Python's own."""
+    for place in SEARCH.get(script, (folder,)):
+        found = sorted(r for r in plan if r == f"{place}/{name}.py" or r.startswith(f"{place}/{name}/"))
+        if found:
+            return found
+    return []
 
 
 def unit_files(plan, workflow, script):
@@ -545,7 +562,7 @@ def unit_files(plan, workflow, script):
         files.append(rel)
         if rel.endswith(".py"):
             for name in sorted(imported_modules(rel, plan[rel][0]) - {LIBRARY_PACKAGE}):
-                waiting += module_files(plan, folder, name)
+                waiting += module_files(plan, folder, name, script)
     return files
 
 
