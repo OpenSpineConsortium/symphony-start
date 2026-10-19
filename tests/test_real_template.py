@@ -183,6 +183,19 @@ class RealTemplate(unittest.TestCase):
                 self.assertIn(workflow, manifest["added"])
                 self.assertEqual(unmet_imports(target, script, manifest["added"]), [])
 
+    def test_a_module_of_theirs_python_finds_first_holds_the_token_unit_back(self):
+        """tools/token_run.py finds its modules in tools/ before scripts/, so
+        a tools/tokens.py of theirs would be imported in place of the
+        template's scripts/tokens.py: the unit stays out whole."""
+        for shadow in ("tools/tokens.py", "tools/tokens/__init__.py"):
+            with self.subTest(shadow=shadow):
+                target = make_target(self.root / shadow.replace("/", "_"), {**THEIR_FILES, shadow: "x = 1\n"})
+                code, manifest, err = apply(TEMPLATE, target, self.root / (shadow.replace("/", "_") + ".json"),
+                                            mode="existing")
+                self.assertEqual(code, 0, err)
+                self.assertNotIn(".github/workflows/token.yml", manifest["added"])
+                self.assertFalse((target / "scripts" / "tokens.py").exists())
+
     def test_each_workflow_runs_only_the_script_it_comes_with(self):
         """A workflow comes with the one script adopt.py names for it and that
         script's imports, so another script it came to run would be left

@@ -534,11 +534,13 @@ def loaded_by_path(call):
 
 
 def module_files(plan, folder, name, script=""):
-    """The files of the template's module name where the unit's script, in
-    folder, finds it, Python putting the script's folder first on its path,
-    or the folders SEARCH gives for the script: name.py, or every file of
-    the package name, in the first folder that has it; none for a module
-    the template does not have, such as one of Python's own."""
+    """The files of the template's module name where the unit's script
+    finds it: in folder, the script's own, which Python puts first on its
+    path, or, for a script SEARCH names, in the first of SEARCH's folders
+    that has it, folder then being passed over: name.py, or every file of
+    the package name; none for a module the template does not have, such
+    as one of Python's own. A file of theirs in an earlier folder would be
+    imported first, which first_shadow holds the unit back for."""
     for place in SEARCH.get(script, (folder,)):
         found = sorted(r for r in plan if r == f"{place}/{name}.py" or r.startswith(f"{place}/{name}/"))
         if found:
@@ -564,6 +566,26 @@ def unit_files(plan, workflow, script):
             for name in sorted(imported_modules(rel, plan[rel][0]) - {LIBRARY_PACKAGE}):
                 waiting += module_files(plan, folder, name, script)
     return files
+
+
+def first_shadow(target, files):
+    """For a unit whose script SEARCH gives several folders, the first file
+    of theirs that Python would import in place of one of the unit's
+    modules, since it lies in a folder searched earlier, said as "`rel` is
+    ...", or None."""
+    folders = SEARCH.get(files[1], ()) if len(files) > 1 else ()
+    for rel in files[1:]:
+        module = PurePosixPath(rel)
+        top = module.parts[0]
+        if top not in folders or len(module.parts) < 2:
+            continue
+        name = module.parts[1].removesuffix(".py")
+        for earlier in folders[:folders.index(top)]:
+            for shadow in (f"{earlier}/{name}.py", f"{earlier}/{name}/__init__.py"):
+                if (target / shadow).exists() or (target / shadow).is_symlink():
+                    return (f"`{shadow}` is this repository's own, and Python would import it in place of the"
+                            f" template's `{rel}`")
+    return None
 
 
 def needs_library(plan, files):
@@ -836,7 +858,7 @@ def unit_holdbacks(target, plan, ignored):
     switch = switch_left_out(target, ignored)
     landing = []
     for name, files, needs in workflow_units(plan):
-        blocker = first_unlike_the_templates(target, plan, files, ignored)
+        blocker = first_shadow(target, files) or first_unlike_the_templates(target, plan, files, ignored)
         if blocker:
             hold_back(held, target, files, ignored, f"{blocker}, and {name} are brought together or not at all")
         elif needs and unlike:

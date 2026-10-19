@@ -93,8 +93,8 @@ METRICS_MODULES = ("tools/economics.py", "tools/usage.py")
 # Each workflow mode existing may bring, with the script it runs.
 WORKFLOWS = {".github/workflows/board.yml": "tools/board.py", ".github/workflows/metrics.yml": "tools/metrics.py",
              ".github/workflows/token.yml": "tools/token_run.py"}
-# The folders a script puts on its path beyond its own, as adopt.py's SEARCH.
-SEARCHED = {"tools/token_run.py": ("tools", "scripts")}
+# The folders a script puts on its path beyond its own.
+SEARCHED = adopt.SEARCH
 # The script of a template from before the breakdown, which a repository
 # adopted from it keeps, since no later change of the template reaches it.
 METRICS_BEFORE_BREAKDOWN = "print('metrics')\n"
