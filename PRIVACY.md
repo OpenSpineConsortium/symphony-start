@@ -12,8 +12,8 @@ of that repository once a day for anonymous aggregates. **Symphony Setup** (gith
 applies up to seven settings to a repository in the adoption run, and stays installed, acting only
 during an adoption run, until you uninstall it. Both work only through GitHub: nothing of yours goes
 anywhere but to GitHub's own API, to your own repository and, as aggregates, to the developer, save
-a Claude token you lend into the pool of the developer's own organization, which that organization
-then holds (the control panel, below). This
+a Claude token you lend, with your login and account id, into the pool of the developer's own
+organization, which that organization then holds (the control panel, below). This
 statement says what each App can see, what it writes, what the developer receives and keeps, and
 how to stop any of it.
 
@@ -87,8 +87,10 @@ the section on keys says, is the developer's own repositories. So, as this state
 the only pool the App writes is the one of the developer's own organization, OpenSpineConsortium:
 a token lent there, from the page or from an issue, is held by the developer's organization as an
 Actions secret its workflows run on, which its owners, the developer among them, place and delete
-but never read, beside the lender's login and account id, which they see. The developer's
-collector receives nothing of it.
+and which GitHub never shows them, beside the lender's login and account id, which they see; as with
+any Actions secret, whoever may write to a repository it is lent to, the developer among them, can
+have a workflow there use the token or send it elsewhere. The developer's collector receives nothing
+of it.
 
 SymphonyBoard also asks for one account permission, Codespaces user secrets (read and write), which
 GitHub asks each person for when they sign in with GitHub on the control panel. The Tokens page used
@@ -458,8 +460,8 @@ SYMPHONY_CLAUDE_SETTINGS as yours by your GitHub login and account id, the list
 SYMPHONY_CLAUDE_ACCOUNTS, and the repository on the lists of repositories that may read the three;
 where you have a token in the pool already, that one is lent to the repository instead and no
 sign-in is asked; and nothing else. The Claude token is never on the page, in the issue, in the run's log,
-at the sign-in service or readable by the developer, though on that path it is held in the
-developer's own organization (the section above). The issue and its comments stay on your repository,
+at the sign-in service or shown to the developer by GitHub, though on that path it is held in the
+developer's own organization, with what that allows (the section above). The issue and its comments stay on your repository,
 as any issue does, and anyone who can read the repository can read them: the link, the sealed box
 or the slot's number with, where your token was in the pool already, the ids of every repository it
 is lent to, and, until the run deletes it, the code, none of which gives a Claude token to anyone else. Delete
@@ -727,7 +729,9 @@ only one holding SymphonyBoard's key, the Token workflow writes with SymphonyBoa
 the section on the control panel says, a slot, the two variables and the lists of repositories that
 read them, for the person who lends or manages the token.
 They never read a Claude credential (a token you paste into the Tokens page is sealed in your browser
-for GitHub, and neither App nor the developer can read it), and nothing here runs on
+for GitHub, and neither App nor the developer can read it; a token the Token workflow stores for a
+lender is plain only on the runner, beside SymphonyBoard's token, until it is sealed, as the section
+on organization permissions says), and nothing here runs on
 anyone's Claude account but the one a project's own maintainer chooses to run the judge with. The
 control panel's Folders tab and the sign-in service, neither of them an App, talk to Microsoft for
 the OneDrive you connect, as the section on the Folders tab says; the Apps themselves send Microsoft
@@ -758,8 +762,8 @@ that start the Token workflow without the page, a lend and a manage, which anyon
 issue on a repository carrying the workflow may use, the issue's author being the person the run
 acts for and the run closing the issue; among them the lend with no say, whose token goes to the
 repositories the organization variable SYMPHONY_LEND_TO names, or nowhere yet, and whose lender is
-told only that the token is in the organization's keeping. The settings variable also keeps each
-token's account id beside its login and, for such a token, the word organization, which a save on
+told the slot's number and that the token is in the organization's keeping. The settings variable
+also keeps each token's account id beside its login and, for such a token, the word organization, which a save on
 the page now keeps; a token a collaborator adds is lent to the repository it was added on, and where
 they have a token in the pool already that one is lent and no second one is made. It says that the
 pool the App writes can only be the developer's own organization's, where the App's key is, whose
