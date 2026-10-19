@@ -21,7 +21,7 @@ name: Adopt
 # delete-on-merge and auto-merge, the topic symphony, secret scanning
 # with push protection and, for the whole template, letting GitHub
 # Actions create and approve pull requests) and stays installed
-# afterwards, so a later run can keep them current, until the person
+# afterwards, acting only during an adoption run, until the person
 # uninstalls it. Installing the Setup App on the repository is the
 # person's consent to those settings, so a named
 # repository without it is refused with its install link, which brings
@@ -343,7 +343,7 @@ jobs:
           fi
           OWNER_ID="$(gh api "repos/$TARGET" --jq .owner.id)"
           REPOSITORY_ID="$(gh api "repos/$TARGET" --jq .id)"
-          bash start/scripts/refuse.sh "Nothing was done: Symphony Setup is not installed on $TARGET. It applies the repository's settings in the adoption run (the default branch's ruleset, delete-on-merge and auto-merge, the topic symphony, secret scanning with push protection and, for the whole template, letting GitHub Actions create and approve pull requests) and stays installed afterwards, so a later run can keep them current, until you uninstall it; an adoption needs both Apps. Install it at https://github.com/apps/symphony-setup/installations/new/permissions?suggested_target_id=$OWNER_ID&repository_ids[]=$REPOSITORY_ID&state=$TARGET (\"Only select repositories\", that one): it brings you back to the form with the repository filled in; press Create. This one is closed."
+          bash start/scripts/refuse.sh "Nothing was done: Symphony Setup is not installed on $TARGET. It applies the repository's settings in the adoption run (the default branch's ruleset, delete-on-merge and auto-merge, the topic symphony, secret scanning with push protection and, for the whole template, letting GitHub Actions create and approve pull requests) and stays installed afterwards, acting only during an adoption run, until you uninstall it; an adoption needs both Apps. Install it at https://github.com/apps/symphony-setup/installations/new/permissions?suggested_target_id=$OWNER_ID&repository_ids[]=$REPOSITORY_ID&state=$TARGET (\"Only select repositories\", that one): it brings you back to the form with the repository filled in; press Create. This one is closed."
 
       # What the second job reads: a refusal here means nothing to adopt.
       - name: Say whether the request goes on

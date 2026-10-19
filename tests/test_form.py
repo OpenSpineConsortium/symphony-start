@@ -99,7 +99,7 @@ class TheForm(unittest.TestCase):
         for words in ("never code, text or names", ".github/symphony-metrics", "This issue is public", "installations/new",
                       "Press Create", "the newest repository the installation reaches", "press Create again",
                       "Both Apps are needed", "https://github.com/apps/symphonyboard/installations/new",
-                      "stays installed for later runs", "without the Setup App is refused"):
+                      "stays installed, acting only during an adoption run", "without the Setup App is refused"):
             self.assertIn(words, self.text)
         prose = re.search(r"value: \|\n((?:        .*\n)+)", self.text).group(1)
         self.assertLess(len(prose.split()), 140)
@@ -251,8 +251,8 @@ class TheWorkflows(unittest.TestCase):
         """Merge for me: the run merges, or arms auto-merge where a ruleset
         requires the check, and says which; the Setup App stays installed,
         after an adoption and after a request refused because the
-        repository is adopted already, so a later run can keep the settings
-        current, and its token is still revoked after the settings."""
+        repository is adopted already, acting only during an adoption run,
+        and its token is still revoked after the settings."""
         run = (ROOT / ".github/workflows/adopt-run.yml").read_text(encoding="utf-8")
         merge = run.index("name: Merge the pull request when asked")
         self.assertIn("if: env.REFUSED != 'true' && inputs.merge == 'true'", run[merge:])
@@ -264,7 +264,7 @@ class TheWorkflows(unittest.TestCase):
         self.assertLess(run.index("name: Revoke the Setup App's token"), run.index("name: Write the pull request's text"))
         for words in ("Uninstall the Setup App", "/app/installations/$id", "SETUP_UNINSTALLED", '"uninstalled"'):
             self.assertNotIn(words, run)
-        self.assertIn("the App stays installed, so a later run can keep them current, and you can uninstall it at"
+        self.assertIn("the App stays installed, acting only during an adoption run, and you can uninstall it at"
                       " any time.", run)
 
     def test_only_the_setup_app_is_asked_for_administration(self):

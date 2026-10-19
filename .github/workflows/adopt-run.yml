@@ -37,8 +37,8 @@ name: Adopt (run)
 # installation path's checks, and a second adoption would put the
 # template's files over the repository's own or, for the protocol alone,
 # bring back what it took out; the Setup App, which both paths need,
-# stays installed, as after an adoption, for a later run to keep the
-# settings current, and the person removes it whenever they like. And
+# stays installed, as after an adoption, acting only during an adoption
+# run, and the person removes it whenever they like. And
 # apply refuses an adoption that could not write docs/agents/PROTOCOL.md,
 # the one file that rule reads, so every adoption made is one the next
 # request knows.
@@ -775,7 +775,7 @@ jobs:
           esac
           settings=""
           case "${SETTINGS:-}" in
-            applied|not-reported) settings=" The pull request's section Settings says what the Setup App could do for the repository's settings; the App stays installed, so a later run can keep them current, and you can uninstall it at any time." ;;
+            applied|not-reported) settings=" The pull request's section Settings says what the Setup App could do for the repository's settings; the App stays installed, acting only during an adoption run, and you can uninstall it at any time." ;;
           esac
           merged=""
           case "${MERGED:-}" in

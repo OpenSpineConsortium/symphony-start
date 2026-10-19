@@ -6,7 +6,7 @@ body:
   - type: markdown
     attributes:
       value: |
-        Landed here from the install? Press Create: the pull request opens in the repository named below or, when none is named, in the newest repository the installation reaches that has no adoption yet, within about two minutes; press Create again for the next. Both Apps are needed: SymphonyBoard (https://github.com/apps/symphonyboard/installations/new) opens the pull request; Symphony Setup (https://github.com/apps/symphony-setup/installations/new, "Only select repositories", that one) holds Administration, applies the repository's settings and stays installed for later runs; uninstall it whenever you like. A request for a repository without the Setup App is refused, with its install link. This issue is public: a name typed here shows, an installation's number says nothing.
+        Landed here from the install? Press Create: the pull request opens in the repository named below or, when none is named, in the newest repository the installation reaches that has no adoption yet, within about two minutes; press Create again for the next. Both Apps are needed: SymphonyBoard (https://github.com/apps/symphonyboard/installations/new) opens the pull request; Symphony Setup (https://github.com/apps/symphony-setup/installations/new, "Only select repositories", that one) holds Administration, applies the repository's settings and stays installed, acting only during an adoption run; uninstall it whenever you like. A request for a repository without the Setup App is refused, with its install link. This issue is public: a name typed here shows, an installation's number says nothing.
   - type: input
     id: installation_id
     attributes:

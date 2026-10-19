@@ -38,7 +38,7 @@ MEANWHILE = ("Until it is on, `protocol.yml` brings each new release as an issue
 # only of a landed script that counts by setting.
 PARALLEL = "Some of those counts say how the work ran in parallel"
 # The Setup App stays installed after the run (the owner, 2026-10-19).
-STAYS = ("The Symphony Setup App stays installed, so a later run can keep these settings current. It holds"
+STAYS = ("The Symphony Setup App stays installed, acting only during an adoption run. It holds"
          " Administration on this repository; you can uninstall it at any time, from the repository's Settings,"
          " GitHub Apps, at https://github.com/octo-org/widget/settings/installations, or from your account's at"
          " https://github.com/settings/installations. The Symphony App, which opened this pull request, stays too;"
@@ -785,7 +785,7 @@ class Body(unittest.TestCase):
                       f" https://github.com/octo-org/widget/settings and {ACTIONS_PAGE}. Step 2 of the next steps"
                       " applies them by hand", body)
         self.assertIn("applies them by hand, with `scripts/setup-repo.sh`. The Symphony Setup App stays installed,"
-                      " so a later run can keep these settings current.", body)
+                      " acting only during an adoption run.", body)
         self.assertIn("or from the organization's at https://github.com/organizations/octo-org/settings/installations",
                       body)
         self.assertIn("2. From a clone", body)

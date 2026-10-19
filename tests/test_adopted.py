@@ -329,8 +329,7 @@ class TheRunsCheck(unittest.TestCase):
                       " it is one of your own and not this protocol, then ask again", answer)
         # The Setup App the form asked for, and the topic the extension reads.
         self.assertIn("Symphony Setup, where it was installed for this request, did nothing here; it stays installed,"
-                      " so a later run can keep the repository's settings current, and you can uninstall it at any"
-                      " time", answer)
+                      " acting only during an adoption run, and you can uninstall it at any time", answer)
         self.assertNotIn("uninstalls itself", answer)
         self.assertIn("add the topic symphony with the gear beside About", answer)
         for word in (OWNER, NAME, "https://github.com/" + OWNER):
@@ -443,7 +442,7 @@ def stage_environ(runner, status, said=REPOSITORY):
 class TheSetupAppStaysInstalled(unittest.TestCase):
     """The owner's decision of 2026-10-19: Symphony Setup stays installed
     after an adoption, and after a request refused because the repository
-    is adopted already, so a later run can keep the settings current; no
+    is adopted already, acting only during an adoption run; no
     step of the run deletes its installation."""
 
     def test_no_step_uninstalls_the_setup_app(self):

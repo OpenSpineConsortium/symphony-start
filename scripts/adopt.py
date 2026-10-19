@@ -194,8 +194,8 @@ FRONT_DOOR = "https://github.com/OpenSpineConsortium/symphony-start"
 
 # The Setup App: a second App, holding Administration, which the person
 # installs on the repository so the run applies the template's
-# repository settings (scripts/setup.py), and which stays installed, so
-# a later run can keep them current, until the person uninstalls it. Its
+# repository settings (scripts/setup.py), and which stays installed,
+# acting only during an adoption run, until the person uninstalls it. Its
 # report says what was done, and the pull request's text follows it.
 SETUP_APP = "Symphony Setup"
 SETUP_SCHEMA = "sdlc-setup/1"
@@ -1759,14 +1759,14 @@ def by_hand_pointer(manifest):
 
 def stays_installed_sentence(manifest):
     """The Setup App stays installed after the run, by the owner's decision
-    of 2026-10-19, so a later run can keep the settings current; the
+    of 2026-10-19, acting only during an adoption run; the
     person may uninstall it whenever they like, and the sentence says
     where. A report from before that decision may carry "uninstalled",
     which nothing reads any more."""
     holds = ("Administration on this repository and, where its installation accepted it, on the organization"
              if manifest["owner_type"] == "Organization" else "Administration on this repository")
     owner = "the organization's" if manifest["owner_type"] == "Organization" else "your account's"
-    return (f"The {SETUP_APP} App stays installed, so a later run can keep these settings current. It holds {holds};"
+    return (f"The {SETUP_APP} App stays installed, acting only during an adoption run. It holds {holds};"
             " you can uninstall it at any time, from the repository's Settings, GitHub Apps, at"
             f" https://github.com/{manifest['repository']}/settings/installations, or from {owner} at"
             f" {installations_page(manifest)}. The Symphony App, which opened this pull request, stays too;"
