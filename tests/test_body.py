@@ -514,6 +514,14 @@ class Body(unittest.TestCase):
         self.assertIn(f"{LENDING} none lent, since no token in it names you as its owner", body)
         self.assertIn(LEND_MORE, body)
 
+    def test_the_runs_own_reason_is_not_given_as_githubs(self):
+        body = self.body(settings=self.lending_report("failed", detail="the repository's id could not be read"),
+                         owner_type="Organization")
+        self.assertIn(f"{LENDING} not lent (the repository's id could not be read).", body)
+        body = self.body(settings=self.lending_report("not-granted", detail="HTTP 403: Resource not accessible"),
+                         owner_type="Organization")
+        self.assertIn("(Read and write) (GitHub said: HTTP 403: Resource not accessible);", body)
+
     def test_no_lending_line_for_a_personal_account_or_an_older_report(self):
         body = self.body(settings=self.lending_report("not-tried"))
         self.assertNotIn(LENDING, body)

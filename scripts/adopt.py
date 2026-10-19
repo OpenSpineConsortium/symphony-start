@@ -1702,9 +1702,13 @@ def token_lending_line(manifest, report):
                           if isinstance(lending.get(key), list) else [] for key in ("lent", "left", "failed"))
     head = "- Your Claude tokens in the organization's pool:"
     by_hand = lend_by_hand(org)
+    # GitHub's words where GitHub gave them, else the run's own reason.
+    detail = report["settings"][TOKEN_LENDING].get("detail") or ""
+    said = github_said(report, TOKEN_LENDING) if detail.startswith("HTTP ") or ": HTTP " in detail else (
+        f" ({detail})" if detail else "")
     if state == "not-granted":
         return (f"{head} not lent, since the {SETUP_APP} App's installation on the organization has not granted the"
-                f" organization permissions Secrets and Variables (Read and write){github_said(report, TOKEN_LENDING)};"
+                f" organization permissions Secrets and Variables (Read and write){said};"
                 f" an owner of the organization accepts them at {installations_page(manifest)}.{by_hand}")
     if state == "none-owned":
         return (f"{head} none lent, since no token in it names you as its owner: the organization variable"
@@ -1717,9 +1721,9 @@ def token_lending_line(manifest, report):
         parts.append(f"{code_list(left)} {'is' if len(left) == 1 else 'are'} shared with more than selected"
                      " repositories and left as GitHub has it")
     if failed:
-        parts.append(f"not lent: {code_list(failed)}{github_said(report, TOKEN_LENDING)}")
-    said = "; ".join(parts) if parts else f"not lent{github_said(report, TOKEN_LENDING)}"
-    return (f"{head} {said}. Only your own tokens are lent, never another person's, and no value or visibility"
+        parts.append(f"not lent: {code_list(failed)}{said}")
+    what = "; ".join(parts) if parts else f"not lent{said}"
+    return (f"{head} {what}. Only your own tokens are lent, never another person's, and no value or visibility"
             f" was changed.{by_hand}")
 
 

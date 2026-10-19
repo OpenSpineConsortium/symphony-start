@@ -712,8 +712,7 @@ def apply_token_lending(lend_github, repo, repo_id, owner_type, requester, repor
         record(report, TOKEN_LENDING, NOT_TRIED, "the repository belongs to a personal account")
         return
     if lend_github is None:
-        record(report, TOKEN_LENDING, NOT_GRANTED, "no token with the organization permissions Secrets and Variables"
-               " could be made")
+        record(report, TOKEN_LENDING, NOT_GRANTED)
         return
     if repo_id is None:
         record(report, TOKEN_LENDING, FAILED, "the repository's id could not be read")
