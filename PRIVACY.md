@@ -338,7 +338,7 @@ in the pull request reach you.
 An adoption copies the template's files once. So that a repository keeps up with the template's later
 versions of the files Symphony's board and the control panel run on, the developer runs a workflow in
 the template's own repository, the Sync run (the template's `.github/workflows/sync.yml` and
-`tools/sync_adopted.py`), whenever the board's, tidy, metrics or Token workflow, `scripts/tokens.py` or
+`tools/sync_adopted.py`), whenever the board's, tidy, metrics, Token or drive sync workflow, `scripts/tokens.py` or
 any file under `tools/` changes on the template's default branch, once a week, on Tuesdays at 07:29
 UTC, and when someone who may write to the template's repository starts it by hand. It runs nowhere but
 there, on GitHub Actions, where SymphonyBoard's private key is kept: with the key, which it hands to
