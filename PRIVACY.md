@@ -71,10 +71,10 @@ settings step ends.
 
 On an organization, SymphonyBoard also asks for two organization permissions: Secrets (read and
 write) and Variables (read and write), for the control panel's Tokens page, which saves a Claude
-account's token as one of the organization's Actions secrets, and Secrets for the Folders tab's
+account's token as one of the organization's Actions secrets, and Secrets and Variables for the Folders tab's
 Track in an organization's repository, which saves a drive's refresh token as the organization's
-secret SYMPHONY_DRIVE_REFRESH and adds the repository to the repositories that may read it (the
-control panel, below). A page you
+secret SYMPHONY_DRIVE_REFRESH and the drive's id as its variable SYMPHONY_DRIVE_ID, and adds the
+repository to the repositories that may read them (the control panel, below). A page you
 are signed in to makes those writes, as you, where you are an owner of the organization. What the
 App itself writes is in the organization's pool of Claude tokens, and only there: where someone
 lends a token through the Token workflow, from the Tokens page where they are not an owner of the
@@ -1210,25 +1210,28 @@ the default branch, one run of drive-sync.yml started by hand. With the file it 
 repository's Actions variable `SYMPHONY_DRIVE` to `on`, which says nothing of the drive and
 which whoever can read the repository's settings can see, so that the workflow's half-hourly schedule
 runs there; until it is set, the schedule starts nothing. Where the tab opens on a repository whose
-default branch holds drive.json and whose variable is not `on`, as in one that tracked a drive before
+default branch holds drive.json and drive-sync.yml and whose variable is not `on`, as in one that tracked a drive before
 the variable existed, it reads the variable and sets it then, as you, where your token may. Where your token may not save the
 secret, the page says so and writes nothing else; where the file cannot be written, the secret stays
 saved, and the page says so and starts no run; where the run cannot be started, the page says so and
 links the workflow's page on GitHub, where you press "Run workflow".
 
-In a repository of an organization, where you are an owner of the organization, Track saves the
-refresh token not in the repository but once for the organization, as the organization's secret
-`SYMPHONY_DRIVE_REFRESH`, shared with selected repositories only, never with all of the
-organization's repositories or its private ones: it reads the organization's public key for secrets
-and whether that secret is there, with the list of repositories it is shared with, and then either
-saves the token sealed in your browser as that secret, shared with the repositories already on its
-list and this one, or, where the secret is there and you pressed Track with no new connection, adds
-this repository to its list and leaves the token as it is; it writes no secret into the repository
-itself, since a repository's own secret of that name would take its place there. Where you are not
-an owner of the organization, or GitHub refuses the organization's secret, Track saves the
-repository's own secret as above. So one connection serves every repository of the organization
-that tracks your drive, and a new connection, pressed in any of them, replaces the token for all of
-them. A repository that carries the workflow `.github/workflows/drive-catalog.yml`, the drive
+In a repository of an organization, Track saves the refresh token not in the repository but once
+for the organization, as the organization's secret `SYMPHONY_DRIVE_REFRESH`, where all of these
+hold: the repository has no secret of that name of its own, which would take the organization's
+place there; your token may read the organization's public key for secrets, as an owner's may; and
+the organization holds no such secret yet, or its variable `SYMPHONY_DRIVE_ID` names the same drive
+you connected, so that one person's Track never replaces another person's drive. To tell, it reads
+that key, whether that secret is there and the variable's value, a drive's id, which says nothing of
+what the drive holds. It then reads the list of repositories the secret is shared with, saves the
+token sealed in your browser as that secret, shared with selected repositories only, those already
+on its list and this one, never with all of the organization's repositories or its private ones,
+and saves the drive's id as the organization's variable `SYMPHONY_DRIVE_ID`, shared with the same
+repositories, which whoever can read the organization's or those repositories' settings can see.
+Otherwise Track saves the repository's own secret as above. So one connection serves every
+repository of the organization that tracks the same drive, and a new connection, pressed in any of
+them, replaces the token for all of them.
+A repository that carries the workflow `.github/workflows/drive-catalog.yml`, the drive
 catalog's own repository, takes from Track the secret alone: Track writes no drive.json there and
 starts no run. "Sync now", which the tab shows
 once the repository tracks a drive, reads the default branch and starts one run of drive-sync.yml on
@@ -1473,20 +1476,23 @@ A new version of this statement is published at https://openspineconsortium.com/
 and in the front door repository, github.com/OpenSpineConsortium/symphony-start, whose PRIVACY.md is
 this text.
 
-Version 38 says that in an organization's repository, where you are an owner of the organization,
-the Folders tab's Track saves a drive's refresh token once for the organization, as its secret
-SYMPHONY_DRIVE_REFRESH shared with selected repositories alone, adding each repository you track
-to that secret's list, with SymphonyBoard's organization permission Secrets it already held for the
-Tokens page, and writes no secret into the repository; that anyone who may write to any repository
-on the list can then reach the whole drive; that a new connection replaces the token, and its
-90-day lapse, for every repository the secret serves; and that in a repository carrying the drive
-catalog's workflow, drive-catalog.yml, Track saves the secret alone, writing no drive.json and
-starting no run, and that workflow walks the drive from its top as the organizer's does, with no
-step organize. It says that Track also sets the repository's Actions variable SYMPHONY_DRIVE,
-with SymphonyBoard's repository permission Variables it already held for the Tokens page, so that the
-drive sync's schedule runs only where a drive is tracked, and that the Sync run adds the drive sync's
-workflow and its scripts where an adopted repository lacks them, as it adds the Token workflow.
-Nothing the developer receives or keeps changed, and neither App's permissions changed.
+Version 38 says that in an organization's repository the Folders tab's Track saves a drive's
+refresh token once for the organization, as its secret SYMPHONY_DRIVE_REFRESH, and the drive's id as
+its variable SYMPHONY_DRIVE_ID, each shared with selected repositories alone, adding each repository
+that tracks the drive to their lists, with SymphonyBoard's organization permissions Secrets and
+Variables it already held for the Tokens page, where the repository has no secret of its own, the
+organization's public key is yours to read and the organization holds no such secret or one for the
+same drive, and otherwise the repository's own secret as before, so another person's drive never
+replaces it; that anyone who may write to any repository on the list can then reach the whole drive;
+and that a new connection replaces the token, and its 90-day lapse, for every repository the secret
+serves. It says that in a repository carrying the drive catalog's workflow, drive-catalog.yml, Track
+saves the secret alone, writing no drive.json and starting no run, and that workflow walks the drive
+from its top as the organizer's does, with no step organize. It says that Track also sets the
+repository's Actions variable SYMPHONY_DRIVE, with SymphonyBoard's repository permission Variables
+it already held for the Tokens page, so that the drive sync's schedule runs only where a drive is
+tracked, and that the Sync run adds the drive sync's workflow and its scripts where an adopted
+repository lacks them, as it adds the Token workflow. Nothing the developer receives or keeps
+changed, and neither App's permissions changed.
 
 Version 37 adds the environment `token-store` to what Symphony Setup makes in an adoption run, of
 either kind, as the section on the adoption says: it reads the repository's default branch from the
