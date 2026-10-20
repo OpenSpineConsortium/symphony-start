@@ -1,6 +1,6 @@
 # Symphony GitHub Apps privacy statement
 
-Version 37, 2026-10-20. This text is also at https://openspineconsortium.com/symphony/apps-privacy.html.
+Version 38, 2026-10-20. This text is also at https://openspineconsortium.com/symphony/apps-privacy.html.
 The Symphony browser extension has a statement of its own, at https://openspineconsortium.com/symphony/privacy.html.
 
 Who makes the Apps: Gregory Schwing, trading as OpenSpineConsortium ("the developer"). Questions:
@@ -55,7 +55,8 @@ that secret, and for the Tokens page on a personal account's repository, which h
 tokens as secrets of its own, each as you (the control panel, below); Variables (read and write), for
 the Tokens page on a personal account's repository, which holds a Claude slot's settings and the list
 of accounts (SYMPHONY_CLAUDE_SETTINGS and SYMPHONY_CLAUDE_ACCOUNTS) as that repository's own Actions
-variables, each as you (the control panel, below); and Metadata (read), which
+variables, and for the Folders tab's Track, which sets the repository's variable SYMPHONY_DRIVE
+so that the drive sync's schedule runs there, each as you (the control panel, below); and Metadata (read), which
 every App has, to list the
 repositories it reaches. It subscribes to five event types (issues, issue comments, pull requests,
 pushes and check suites), which GitHub delivers only while the App's webhook is turned on; as this
@@ -70,7 +71,10 @@ settings step ends.
 
 On an organization, SymphonyBoard also asks for two organization permissions: Secrets (read and
 write) and Variables (read and write), for the control panel's Tokens page, which saves a Claude
-account's token as one of the organization's Actions secrets (the control panel, below). A page you
+account's token as one of the organization's Actions secrets, and Secrets and Variables for the Folders tab's
+Track in an organization's repository, which saves a drive's refresh token as the organization's
+secret SYMPHONY_DRIVE_REFRESH and the drive's id as its variable SYMPHONY_DRIVE_ID, and adds the
+repository to the repositories that may read them (the control panel, below). A page you
 are signed in to makes those writes, as you, where you are an owner of the organization. What the
 App itself writes is in the organization's pool of Claude tokens, and only there: where someone
 lends a token through the Token workflow, from the Tokens page where they are not an owner of the
@@ -334,7 +338,7 @@ in the pull request reach you.
 An adoption copies the template's files once. So that a repository keeps up with the template's later
 versions of the files Symphony's board and the control panel run on, the developer runs a workflow in
 the template's own repository, the Sync run (the template's `.github/workflows/sync.yml` and
-`tools/sync_adopted.py`), whenever the board's, tidy, metrics or Token workflow, `scripts/tokens.py` or
+`tools/sync_adopted.py`), whenever the board's, tidy, metrics, Token or drive sync workflow, `scripts/tokens.py` or
 any file under `tools/` changes on the template's default branch, once a week, on Tuesdays at 07:29
 UTC, and when someone who may write to the template's repository starts it by hand. It runs nowhere but
 there, on GitHub Actions, where SymphonyBoard's private key is kept: with the key, which it hands to
@@ -385,8 +389,9 @@ compares your files with the template's by the ids in the listing alone.
 
 What it offers comes in units, as the adoption of the protocol alone brings them: the vendored library
 with its record (`tools/sdlc_protocol` and `tools/VENDORED`), the board's workflow with its script, the
-workflow that tidies closed claims, the metrics workflow with the scripts it runs and the Token
-workflow with the scripts it runs, each script with every module of the template it imports and every
+workflow that tidies closed claims, the metrics workflow with the scripts it runs, the Token
+workflow with the scripts it runs and the drive sync's workflow, `.github/workflows/drive-sync.yml`,
+with the scripts it runs, each script with every module of the template it imports and every
 one it loads by its path, as the metrics workflow's `tools/usage.py` loads `tools/profile.py`, all as
 the template holds them at its newest commit. A unit is offered whole or not at all. A file of yours is
 replaced only where it holds, by that id, a version that some commit in the history of the template's
@@ -397,8 +402,10 @@ where Python would import a file of yours in place of one of the unit's modules,
 and a pull request the run opens or writes anew for the other units names that file. Whether your
 default branch has a unit is read from one file of it alone, the unit's workflow or, for the library,
 `tools/VENDORED`. A unit your default branch does not have is not added, since you removed it or never
-took it, with one exception, the Token workflow and its scripts, which are added where they are
-missing; a unit you have gains every file of it that your default branch lacks, whether a module its
+took it, with two exceptions, the Token workflow and the drive sync's workflow, each with its
+scripts, which are added where they are missing (the drive sync's runs nothing on its schedule until
+Track has set the repository's variable SYMPHONY_DRIVE, below, and reads no drive until a drive's
+token is there); a unit you have gains every file of it that your default branch lacks, whether a module its
 newer scripts import or load by its path, a file the newer library holds that yours does not, a script
 or module of the unit you deleted while keeping its workflow or, where `tools/VENDORED` stands without
 `tools/sdlc_protocol`, the whole library. So the metrics workflow, which shares aggregates,
@@ -1169,7 +1176,7 @@ has chosen. It reads nothing until you open it, or until it opens itself on Micr
 (below). Once open, it reads with your GitHub token, for the chosen repository, the file
 `.github/symphony/drive.json`, whether the repository's secret `SYMPHONY_DRIVE_REFRESH` is set and
 when it was last updated (never the secret itself, which GitHub gives nobody back) and whether its
-workflow `.github/workflows/drive-sync.yml` is there. When you press "Find the repository I just
+workflows `.github/workflows/drive-sync.yml` and `.github/workflows/drive-catalog.yml` are there. When you press "Find the repository I just
 made", it reads GitHub's list of the ten repositories your token reaches that were made last and,
 for each one not on the bar's list yet whose entry there shows neither the template nor the topic
 symphony, that repository's own record, to add to the list those made from the Symphony template or
@@ -1190,7 +1197,7 @@ the names of what its default branch holds at its top, to refuse a folder the re
 holds there, such as one its checks run, unless it is the folder the repository tracks already, and
 its public key for secrets. Where the repository is public, Track writes nothing until you tick
 the box beside it that says what you tick will be readable by anyone, a box the tab shows for a
-public repository and never ticks for you. It then writes three things, as you, in this order: the
+public repository and never ticks for you. It then writes, as you, in this order: the
 secret `SYMPHONY_DRIVE_REFRESH`, the drive's refresh token sealed in your browser with that key the
 way GitHub's own secrets page seals one, so that GitHub alone can open it; the file drive.json,
 which names the provider, the folder in the repository, the name, the id and the drive's id of each
@@ -1199,10 +1206,32 @@ reads first, on the default branch or, where that branch takes only pull request
 `symphony/drive`, which it makes from the default branch's head, or sets back to that head where a
 branch of that name is there already, so that it holds this one commit and nothing else, with a pull
 request for you to merge, or the one already open from that branch; and, only where the file went to
-the default branch, one run of drive-sync.yml started by hand. Where your token may not save the
+the default branch, one run of drive-sync.yml started by hand. With the file it also sets the
+repository's Actions variable `SYMPHONY_DRIVE` to `on`, which says nothing of the drive and
+which whoever can read the repository's settings can see, so that the workflow's half-hourly schedule
+runs there; until it is set, the schedule starts nothing. Where your token may not save the
 secret, the page says so and writes nothing else; where the file cannot be written, the secret stays
 saved, and the page says so and starts no run; where the run cannot be started, the page says so and
-links the workflow's page on GitHub, where you press "Run workflow". "Sync now", which the tab shows
+links the workflow's page on GitHub, where you press "Run workflow".
+
+In a repository of an organization, Track saves the refresh token not in the repository but once
+for the organization, as the organization's secret `SYMPHONY_DRIVE_REFRESH`, where all of these
+hold: the repository has no secret of that name of its own, which would take the organization's
+place there; your token may read the organization's public key for secrets, as an owner's may; and
+the organization holds no such secret yet, or its variable `SYMPHONY_DRIVE_ID` names the same drive
+you connected, so that one person's Track never replaces another person's drive. To tell, it reads
+that key, whether that secret is there and the variable's value, a drive's id, which says nothing of
+what the drive holds. It then reads the list of repositories the secret is shared with, saves the
+token sealed in your browser as that secret, shared with selected repositories only, those already
+on its list and this one, never with all of the organization's repositories or its private ones,
+and saves the drive's id as the organization's variable `SYMPHONY_DRIVE_ID`, shared with the same
+repositories, which whoever can read the organization's or those repositories' settings can see.
+Otherwise Track saves the repository's own secret as above. So one connection serves every
+repository of the organization that tracks the same drive, and a new connection, pressed in any of
+them, replaces the token for all of them.
+A repository that carries the workflow `.github/workflows/drive-catalog.yml` and not drive-sync.yml,
+the drive catalog's own repository, takes from Track the secret alone: Track writes no drive.json there and
+starts no run. "Sync now", which the tab shows
 once the repository tracks a drive, reads the default branch and starts one run of drive-sync.yml on
 it.
 
@@ -1301,18 +1330,19 @@ down (until a pull request carrying a new list merges, the newly saved secret is
 already there), brings what changed in the drive into the repository by pull request, sends up what
 changed in the repository and, where a file changed on both sides, puts the repository's copy beside
 the drive's in the same folder; it touches nothing else in the drive. The drive organizer's workflow,
-drive-organize.yml, where a private repository runs it, trades the same secret at the same route for
-an access token in the same way and reads at Microsoft Graph alone, the workflow itself using no
+drive-organize.yml, where a private repository runs it, and the drive catalog's workflow,
+drive-catalog.yml, which has no step organize and always starts from the drive's top, each trade the same secret at the same route for
+an access token in the same way and read at Microsoft Graph alone, the workflow itself using no
 other connector, the names, kinds, sizes, dates, ids, folders and web addresses of the files and
 folders under what drive.json names for it (the whole drive where that is its top), up to 20,000
 entries, and the contents of a sample of them, at most 400 files of up to 5 MB each and 120 MB in all;
 where it starts from the drive's top, the folders Microsoft 365 keeps there (Apps, Attachments,
 Meetings, Recordings, Notebooks, Desktop, Documents, Pictures and the Teams and Copilot chat folders)
-it lists by name without reading inside. It writes what it found, the list and, for each file of the
+it lists by name without reading inside. Each writes what it found, the list and, for each file of the
 sample, a text of at most 1,500 characters taken from it (a document's headings, opening and
 comments, a sheet's header, first rows and column totals, a deck's slide text), to the branch
 drive-catalog of that repository as one commit on top of what the branch holds, where whoever can
-read the repository can read it, and changes nothing in the drive. Its step organize, when started,
+read the repository can read it, and changes nothing in the drive. The organizer's step organize, when started,
 also gives that list and those texts to Claude, on the repository's own Claude token and under
 Anthropic's terms for that account, and opens issues in the repository naming the files, folders and
 links of the projects Claude proposes. What comes down, and
@@ -1322,8 +1352,10 @@ the repository, readable the same way. The route of the service that trades a re
 access token answers whoever sends it one, the workflow's request, which comes from no page, among
 them. The access Microsoft grants reaches every file of your OneDrive, not only what you ticked, so
 whoever can run a workflow on the repository, anyone who may write to it, can read the secret and,
-through that route, reach the whole drive until the token lapses or you withdraw the access;
-deleting the secret withdraws nothing at Microsoft. You withdraw it at
+through that route, reach the whole drive until the token lapses or you withdraw the access; where
+the secret is the organization's, that is anyone who may write to any repository on its list, which
+an owner of the organization sees and changes under the organization's Settings, Secrets and
+variables, Actions; deleting the secret withdraws nothing at Microsoft. You withdraw it at
 https://account.live.com/consent/Manage for a personal account, or in My Apps,
 https://myapps.microsoft.com, for a work or school account, where its administrator may have to. The
 service's word on which drives it is set up for, a public client id, is given to whoever asks; every
@@ -1332,7 +1364,8 @@ nothing of any of it: no store, no cookie and no log of its own of the code, the
 its host's request logs are off, as that section says; the refresh token passes through it on
 Connect and on every sync and rests only in your repository's secret, and the newer refresh token
 Microsoft issues with each access token is dropped there. A Microsoft refresh token lasts 90 days,
-and the workflow cannot keep the newer one, so the tab shows the day you connected, which drive.json
+and the workflow cannot keep the newer one (where the secret is the organization's, one day for
+every repository it serves), so the tab shows the day you connected, which drive.json
 records, and the day by which to press "Connect OneDrive" again and then Track, which replaces the
 secret and that day, and once that day has passed it says that the connection has run out and that
 every sync since stops before it reaches the drive. Google Drive is not offered: Google's own picker
@@ -1440,6 +1473,25 @@ Symphony is for people who administer GitHub repositories. It is not directed at
 A new version of this statement is published at https://openspineconsortium.com/symphony/apps-privacy.html
 and in the front door repository, github.com/OpenSpineConsortium/symphony-start, whose PRIVACY.md is
 this text.
+
+Version 38 says that in an organization's repository the Folders tab's Track saves a drive's
+refresh token once for the organization, as its secret SYMPHONY_DRIVE_REFRESH, and the drive's id as
+its variable SYMPHONY_DRIVE_ID, each shared with selected repositories alone, adding each repository
+that tracks the drive to their lists, with SymphonyBoard's organization permissions Secrets and
+Variables it already held for the Tokens page, where the repository has no secret of its own, the
+organization's public key is yours to read and the organization holds no such secret or one for the
+same drive, and otherwise the repository's own secret as before, so another person's drive never
+replaces it; that anyone who may write to any repository on the list can then reach the whole drive;
+and that a new connection replaces the token, and its 90-day lapse, for every repository the secret
+serves. It says that in a repository carrying the drive catalog's workflow, drive-catalog.yml, and no drive
+sync, Track
+saves the secret alone, writing no drive.json and starting no run, and that workflow walks the drive
+from its top as the organizer's does, with no step organize. It says that Track also sets the
+repository's Actions variable SYMPHONY_DRIVE, with SymphonyBoard's repository permission Variables
+it already held for the Tokens page, so that the drive sync's schedule runs only where a drive is
+tracked, and that the Sync run adds the drive sync's workflow and its scripts where an adopted
+repository lacks them, as it adds the Token workflow. Nothing the developer receives or keeps
+changed, and neither App's permissions changed.
 
 Version 37 adds the environment `token-store` to what Symphony Setup makes in an adoption run, of
 either kind, as the section on the adoption says: it reads the repository's default branch from the
