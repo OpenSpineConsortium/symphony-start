@@ -267,21 +267,33 @@ class TheWorkflows(unittest.TestCase):
             self.assertNotIn(words, run)
         self.assertIn("the App stays installed, acting only during an adoption run, and you can uninstall it at"
                       " any time.", run)
+        # The answer names the App that applied the settings.
+        answer = run[run.index("name: Answer the request and close it"):]
+        self.assertIn('if [ "${SETTINGS_BY:-}" = board ]; then', answer)
+        self.assertIn("says what the Symphony App could do", answer)
 
-    def test_only_the_setup_app_is_asked_for_administration(self):
-        """The main App's tokens never carry Administration: the one mint
-        that asks for it is the Setup App's, for the one repository, and
-        its key reaches nothing but that mint."""
+    def test_the_symphony_app_asks_for_administration_first_and_the_setup_app_after(self):
+        """SymphonyBoard first, the Setup App the fallback (the owner's rule
+        of 2026-10-20): two mints ask for Administration, each for the one
+        repository and each allowed to fail, the main App's first and the
+        Setup App's only where it made none."""
         text = (ROOT / ".github/workflows/adopt-run.yml").read_text(encoding="utf-8")
         steps = re.split(r"\n      - (?=uses:|name:)", text)
         asking = [step for step in steps if "permission-administration" in step]
-        self.assertEqual(len(asking), 1)
-        self.assertIn("app-id: ${{ vars.SDLC_SETUP_APP_ID }}", asking[0])
-        self.assertIn("private-key: ${{ secrets.SDLC_SETUP_APP_PRIVATE_KEY }}", asking[0])
-        self.assertIn("repositories: ${{ env.NAME }}", asking[0])
-        self.assertIn("permission-administration: write", asking[0])
-        self.assertIn("continue-on-error: true", asking[0])
-        self.assertNotIn("permission-contents", asking[0])
+        self.assertEqual(len(asking), 2)
+        board, fallback = asking
+        self.assertIn("id: board-settings-token", board)
+        self.assertIn("app-id: ${{ vars.SDLC_APP_ID }}", board)
+        self.assertIn("id: setup-token", fallback)
+        self.assertIn("steps.board-settings-token.outcome != 'success'", fallback)
+        self.assertIn("app-id: ${{ vars.SDLC_SETUP_APP_ID }}", fallback)
+        self.assertIn("private-key: ${{ secrets.SDLC_SETUP_APP_PRIVATE_KEY }}", fallback)
+        for step in asking:
+            self.assertIn("repositories: ${{ env.NAME }}", step)
+            self.assertIn("permission-administration: write", step)
+            self.assertIn("continue-on-error: true", step)
+            self.assertNotIn("permission-contents", step)
+        self.assertLess(text.index("id: board-settings-token"), text.index("id: setup-token"))
         # The key is minted for Administration once, for the organization's
         # Administration once, probed once, read as set-or-not once, and
         # signs the JWTs that mint the organization's Secrets and Variables
@@ -289,9 +301,11 @@ class TheWorkflows(unittest.TestCase):
         # the App no longer uninstalls itself.
         self.assertEqual(text.count("secrets.SDLC_SETUP_APP_PRIVATE_KEY"), 6)
         pages, = [step for step in steps if "id: pages-token" in step]
-        self.assertIn("APP_ID: ${{ vars.SDLC_SETUP_APP_ID }}", pages)
+        self.assertIn("BOARD_ID: ${{ vars.SDLC_APP_ID }}", pages)
+        self.assertIn("SETUP_ID: ${{ vars.SDLC_SETUP_APP_ID }}", pages)
+        self.assertIn("for app in BOARD SETUP; do", pages)
         self.assertIn("continue-on-error: true", pages)
-        self.assertIn("steps.setup-token.outcome == 'success'", pages)
+        self.assertIn("env.SETTINGS_BY != ''", pages)
         self.assertIn("env.MODE == 'new'", pages)
         self.assertIn('"repositories": [os.environ["NAME"]]', pages)
         self.assertIn('"permissions": {"pages": "write", "actions_variables": "write", "administration": "write",'
@@ -299,9 +313,10 @@ class TheWorkflows(unittest.TestCase):
         self.assertIn('"https://api.github.com/repos/$OWNER/$NAME/installation"', pages)
         self.assertNotIn("echo \"the token", pages)
         lend, = [step for step in steps if "id: lend-token" in step]
-        self.assertIn("APP_ID: ${{ vars.SDLC_SETUP_APP_ID }}", lend)
+        self.assertIn("BOARD_ID: ${{ vars.SDLC_APP_ID }}", lend)
+        self.assertIn("for app in BOARD SETUP; do", lend)
         self.assertIn("continue-on-error: true", lend)
-        self.assertIn("steps.setup-token.outcome == 'success'", lend)
+        self.assertIn("env.SETTINGS_BY != ''", lend)
         self.assertIn("steps.target.outputs.owner_type == 'Organization'", lend)
         self.assertIn('"permissions": {"organization_secrets": "write", "organization_actions_variables": "write",'
                       ' "metadata": "read"}', lend)
@@ -337,7 +352,7 @@ class TheWorkflows(unittest.TestCase):
         self.assertIn("repositories: ${{ env.NAME }}", org)
         self.assertIn("permission-organization-administration: write", org)
         self.assertIn("continue-on-error: true", org)
-        self.assertIn("steps.setup-token.outcome == 'success'", org)
+        self.assertIn("env.SETTINGS_BY != ''", org)
         self.assertIn("env.MODE == 'new'", org)
         self.assertIn("steps.target.outputs.owner_type == 'Organization'", org)
         for word in ("permission-contents", "permission-administration:", "permission-metadata"):
@@ -348,10 +363,15 @@ class TheWorkflows(unittest.TestCase):
         self.assertIn("permission-metadata: read", probe)
         self.assertNotIn("administration", probe)
         self.assertIn("steps.setup-token.outcome == 'failure'", probe)
+        # The main App's tokens carry Administration in three mints alone,
+        # each for the settings of this one repository: its settings token,
+        # and the Pages and lending tokens it makes before the Setup App's.
         main_mints = [step for step in steps if "vars.SDLC_APP_ID" in step]
         self.assertTrue(main_mints)
+        settings_mints = ("id: board-settings-token", "id: pages-token", "id: lend-token")
         for step in main_mints:
-            self.assertNotIn("administration", step)
+            if not any(mint in step for mint in settings_mints):
+                self.assertNotIn("administration", step)
         # The issue path holds the Setup App's key to sign the JWT that
         # tells its installation's number from the App's, to read whether
         # it is set, and to mint metadata-only tokens that say whether the
@@ -415,7 +435,7 @@ class TheWorkflows(unittest.TestCase):
         self.assertLess(applied, revoked)
         self.assertLess(revoked, written)
         self.assertLess(written, opened)
-        for why in ("not-set-up", "not-installed", "front-door-broken"):
+        for why in ("not-granted", "not-installed", "front-door-broken"):
             self.assertIn(f"why={why}", text)
         self.assertIn("setup.py skip --why not-reported", text)
         self.assertIn("--ruleset template/docs/setup/ruleset-main.json", text)

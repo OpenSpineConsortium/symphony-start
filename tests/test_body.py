@@ -511,7 +511,7 @@ class Body(unittest.TestCase):
         self.assertIn(pages + "on, built by GitHub Actions, but the variable `SYMPHONY_DOCS` was not set", body)
         self.assertIn("https://github.com/octo-org/widget/settings/variables/actions", body)
         body = self.body(settings=report(states=dict(ALL_DONE, pages="not-granted")))
-        self.assertIn(pages + "not turned on, since the Setup App's installation has not accepted", body)
+        self.assertIn(pages + "not turned on, since neither the Symphony App's installation nor the Setup App's has accepted", body)
         # The protocol alone, and a report from before the step, say nothing of it.
         self.assertNotIn(pages, self.body(settings=report(states=dict(ALL_DONE, pages="not-tried"))))
         self.assertNotIn(pages, self.body(settings=report()))
@@ -560,8 +560,8 @@ class Body(unittest.TestCase):
     def test_tokens_not_lent_say_why_and_how(self):
         body = self.body(settings=self.lending_report("not-granted"), owner_type="Organization")
         self.assertIn(f"{LENDING} not lent, since the run could not make a token with the organization permissions"
-                      " Secrets and Variables (Read and write), most often because the Symphony Setup App's installation"
-                      " on the organization has not granted them; an owner of the organization accepts them at"
+                      " Secrets and Variables (Read and write), most often because neither the Symphony"
+                      " App's installation on the organization nor the Symphony Setup App's has granted them; an owner of the organization accepts them at"
                       f" https://github.com/organizations/octo-org/settings/installations.{LEND_MORE}", body)
         body = self.body(settings=self.lending_report("none-owned", mode="existing"), mode="existing",
                          files=THEIR_FILES, owner_type="Organization")
@@ -847,14 +847,35 @@ class Body(unittest.TestCase):
         self.assertIn("applied in this run the settings", body)
         self.assertNotIn("in that ruleset", self.body(settings=report()))
 
+    def test_settings_the_symphony_app_applied_name_it_and_no_setup_app(self):
+        """The main App first (the owner's rule of 2026-10-20): its settings
+        say so, and nothing tells the person of a Setup App they never
+        installed."""
+        settings = report(states=ALL_DONE)
+        settings["app"] = "board"
+        body = self.body(settings=settings)
+        self.assertIn("## Settings\n\nThe Symphony App, which opened this pull request, applied in this run", body)
+        self.assertNotIn("Symphony Setup App stays installed", body)
+        self.assertIn("Symphony Setup App, if you installed it, was not needed for these settings", body)
+        self.assertNotIn("Setup App could do", body)
+
+    def test_the_symphony_app_not_granted_administration(self):
+        body = self.body(settings=report(outcome="not-granted"))
+        self.assertIn("None of the settings was changed: the Symphony App's installation has not accepted the"
+                      " permission Administration", body)
+        self.assertIn("Review request, Accept new permissions", body)
+        self.assertIn("Step 2 of the next steps applies them by hand", body)
+
     def test_the_setup_app_not_installed(self):
         body = self.body(settings=report(outcome="not-installed"))
-        self.assertIn("## Settings\n\nNone of the settings was changed: no token for this repository could be made"
-                      " from the Symphony Setup App, which means it is not installed on this repository, or its"
-                      " installation does not include it, or GitHub did not answer; so this run could not apply the"
-                      " settings `scripts/setup-repo.sh` applies", body)
+        self.assertIn("## Settings\n\nNone of the settings was changed: no token for this repository with the"
+                      " permission Administration could be made, neither from the Symphony App, whose installation"
+                      " has not accepted it, nor from the Symphony Setup App, the fallback, which is not installed on"
+                      " this repository, or its installation does not include it, or GitHub did not answer; so this"
+                      " run could not apply the settings `scripts/setup-repo.sh` applies", body)
         self.assertIn("Step 2 of the next steps applies them by hand, with `scripts/setup-repo.sh`.", body)
-        self.assertIn("If you did install it, check that its installation includes this repository and say so on"
+        self.assertIn("Or accept Administration for the Symphony App at https://github.com/settings/installations", body)
+        self.assertIn("If you did install the Setup App, check that its installation includes this repository and say so on"
                       " your request's issue; it stays installed, and you can uninstall it at any time at"
                       " https://github.com/settings/installations.", body)
         self.assertIn("2. From a clone", body)

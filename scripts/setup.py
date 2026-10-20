@@ -141,10 +141,16 @@ REQUIRED_CHECKS_RULE = "required_status_checks"
 # below), or nothing was, for one of two reasons.
 APPLIED = "applied"
 NOT_SET_UP = "not-set-up"
+# SymphonyBoard's installation has not accepted Administration, and this
+# front door has no Setup App to fall back on.
+NOT_GRANTED_ANY = "not-granted"
 NOT_INSTALLED = "not-installed"
 FRONT_DOOR_BROKEN = "front-door-broken"
 NOT_REPORTED = "not-reported"
-WHYS = (NOT_SET_UP, NOT_INSTALLED, FRONT_DOOR_BROKEN, NOT_REPORTED)
+WHYS = (NOT_SET_UP, NOT_GRANTED_ANY, NOT_INSTALLED, FRONT_DOOR_BROKEN, NOT_REPORTED)
+# Which App's token applied the settings: the main App first, the Setup App
+# the fallback (the owner's rule of 2026-10-20).
+APPS = ("board", "setup")
 # One setting's state. Forbidden is a setting the policy of the
 # repository's organization, or of its enterprise, keeps off, which no
 # repository setting overrides: GitHub answers 409 to it.
@@ -1063,6 +1069,7 @@ def command_apply(options, transport=urllib_transport):
     try:
         report = apply_settings(github, options.repo, ruleset, options.mode, org_github, checks_github, options.head,
                                 lending=lending, pages_github=pages_github)
+        report["app"] = options.app
         write_report(options.report, report)
     except OSError as problem:
         print(f"setup: {problem}", file=sys.stderr)
@@ -1096,6 +1103,7 @@ def parse_args(argv):
     applying.add_argument("--owner-type", default="", help="the repository owner's type, Organization or User")
     applying.add_argument("--requester", default="", help="the login of the administrator who asked")
     applying.add_argument("--requester-id", default="", help="the account id of the administrator who asked")
+    applying.add_argument("--app", default="setup", choices=APPS, help="whose token GH_TOKEN is")
     applying.add_argument("--api", default=API, help=argparse.SUPPRESS)
 
     skipping = commands.add_parser("skip", help="write a report that says why nothing was applied")

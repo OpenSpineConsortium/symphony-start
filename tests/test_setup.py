@@ -996,6 +996,20 @@ class Lending(unittest.TestCase):
         self.assertEqual(code, 0)
         return json.loads(self.report.read_text(encoding="utf-8")), out.getvalue()
 
+    def test_the_report_names_the_app_whose_token_applied(self):
+        """--app says whose token GH_TOKEN is, and the report keeps it, so
+        the pull request names the right App; the default is the Setup App,
+        as every report before the option read."""
+        for app in ("board", "setup"):
+            out = io.StringIO()
+            with contextlib.redirect_stdout(out):
+                setup.main(["apply", "--repo", REPO, "--mode", "existing", "--ruleset", str(self.ruleset),
+                            "--report", str(self.report), "--owner-type", "User", "--app", app],
+                           transport=FakeGitHub(pool_answers()))
+            self.assertEqual(json.loads(self.report.read_text(encoding="utf-8"))["app"], app)
+        self.assertEqual(setup.parse_args(["apply", "--repo", REPO, "--mode", "new", "--ruleset", "x",
+                                           "--report", "y"]).app, "setup")
+
     def organization_writes(self, github):
         return [(method, path) for method, path, _ in github.writes() if path.startswith("/orgs/")]
 
@@ -1409,7 +1423,7 @@ class Transport(unittest.TestCase):
 
 class Skip(unittest.TestCase):
     def test_skip_writes_why_nothing_was_applied(self):
-        self.assertEqual(setup.WHYS, ("not-set-up", "not-installed", "front-door-broken", "not-reported"))
+        self.assertEqual(setup.WHYS, ("not-set-up", "not-granted", "not-installed", "front-door-broken", "not-reported"))
         with tempfile.TemporaryDirectory() as scratch:
             report = Path(scratch) / "settings.json"
             for why in setup.WHYS:

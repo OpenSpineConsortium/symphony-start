@@ -211,7 +211,7 @@ FRONT_DOOR = "https://github.com/OpenSpineConsortium/symphony-start"
 # report says what was done, and the pull request's text follows it.
 SETUP_APP = "Symphony Setup"
 SETUP_SCHEMA = "sdlc-setup/1"
-SETUP_OUTCOMES = ("applied", "not-set-up", "not-installed", "front-door-broken", "not-reported")
+SETUP_OUTCOMES = ("applied", "not-set-up", "not-granted", "not-installed", "front-door-broken", "not-reported")
 SETUP_SCRIPT = "scripts/setup-repo.sh"
 THE_SETTINGS = ("the default branch's ruleset", "delete-on-merge and auto-merge", "the topic symphony",
                 "secret scanning with push protection")
@@ -1751,8 +1751,8 @@ def token_lending_line(manifest, report):
         f" ({detail})" if detail else "")
     if state == "not-granted":
         return (f"{head} not lent, since the run could not make a token with the organization permissions Secrets and"
-                f" Variables (Read and write){said}, most often because the {SETUP_APP} App's installation on the"
-                f" organization has not granted them; an owner of the organization accepts them at"
+                f" Variables (Read and write){said}, most often because neither the Symphony App's installation on the"
+                f" organization nor the {SETUP_APP} App's has granted them; an owner of the organization accepts them at"
                 f" {installations_page(manifest)}.{by_hand}")
     if state == "none-owned":
         why = f"; {detail}" if detail else ""
@@ -1813,8 +1813,8 @@ def pages_line(manifest, report):
                 f" https://github.com/{manifest['repository']}/settings/variables/actions and docs.yml publishes the"
                 " documentation site from its next run.")
     if state == "not-granted":
-        return ("- GitHub Pages: not turned on, since the Setup App's installation has not accepted the permissions"
-                " Pages and Variables; once it has, under the installation's settings, adopting again turns the"
+        return ("- GitHub Pages: not turned on, since neither the Symphony App's installation nor the Setup App's has"
+                " accepted the permissions Pages and Variables; once one has, under the installation's settings, adopting again turns the"
                 f" documentation site on, or at {where} choose GitHub Actions as the source and set the repository"
                 " variable `SYMPHONY_DOCS` to `pages`.")
     return (f"- GitHub Pages: not set up{github_said(report, 'pages')}; at {where}, under Build and deployment, choose"
@@ -1938,6 +1938,16 @@ def stays_installed_sentence(manifest):
             " uninstalling it undoes nothing here and only stops what is shared, above, from being read.")
 
 
+def board_needs_no_setup_sentence(manifest):
+    """When the Symphony App applied the settings, the Setup App, which the
+    form's paths still ask for, did nothing here; the person is told it may
+    go, and where."""
+    return (f"The {SETUP_APP} App, if you installed it, was not needed for these settings and acted on nothing"
+            " here; you can uninstall it at any time, from the repository's Settings, GitHub Apps, at"
+            f" https://github.com/{manifest['repository']}/settings/installations, or at"
+            f" {installations_page(manifest)}. The Symphony App, which opened this pull request, stays.")
+
+
 def settings_section(manifest, report):
     """What the Setup App did in this run, or why nothing was done, so the
     person knows what is set before they merge and what is left by hand."""
@@ -1945,9 +1955,12 @@ def settings_section(manifest, report):
     named = f"`{SETUP_SCRIPT}`" if manifest["mode"] == "new" else "the template's setup script"
     what = f"the settings {named} applies ({the_settings(manifest)})"
     outcome = report["outcome"]
+    by_board = outcome == "applied" and report.get("app") == "board"
     if outcome == "applied":
         did = "applied in this run" if every_setting_done(manifest, report) else "was used in this run for"
-        parts.append(f"The {SETUP_APP} App, which you installed on this repository, {did} {what}; what it could do"
+        who = ("The Symphony App, which opened this pull request," if by_board
+               else f"The {SETUP_APP} App, which you installed on this repository,")
+        parts.append(f"{who} {did} {what}; what it could do"
                      " does not wait for the merge, and closing this pull request leaves it as it is:")
         parts.append("")
         pin = check_source_line(manifest, report) if manifest["mode"] == "new" else None
@@ -1965,12 +1978,21 @@ def settings_section(manifest, report):
         if pages:
             parts.append(pages)
         parts.append("")
-        parts.append(stays_installed_sentence(manifest))
+        parts.append(board_needs_no_setup_sentence(manifest) if by_board else stays_installed_sentence(manifest))
+    elif outcome == "not-granted":
+        parts.append(f"None of the settings was changed: the Symphony App's installation has not accepted the"
+                     f" permission Administration, which the settings take, or GitHub did not answer, so this run could not apply {what}."
+                     f" Accept it at {installations_page(manifest)} (Configure, then Review request, Accept new"
+                     " permissions) and ask again, and the Symphony App applies them itself."
+                     f" {by_hand_pointer(manifest)}")
     elif outcome == "not-installed":
-        parts.append(f"None of the settings was changed: no token for this repository could be made from the"
-                     f" {SETUP_APP} App, which means it is not installed on this repository, or its installation"
-                     f" does not include it, or GitHub did not answer; so this run could not apply {what}."
-                     f" {by_hand_pointer(manifest)} If you did install it, check that its installation includes this"
+        parts.append(f"None of the settings was changed: no token for this repository with the permission"
+                     f" Administration could be made, neither from the Symphony App, whose installation has not"
+                     f" accepted it, nor from the {SETUP_APP} App, the fallback, which is not installed on this"
+                     f" repository, or its installation does not include it, or GitHub did not answer; so this run"
+                     f" could not apply {what}. {by_hand_pointer(manifest)} Or accept Administration for the"
+                     f" Symphony App at {installations_page(manifest)} and ask again, and it applies them itself."
+                     " If you did install the Setup App, check that its installation includes this"
                      " repository and say so on your request's issue; it stays installed, and you can uninstall it at"
                      f" any time at {installations_page(manifest)}.")
     elif outcome == "front-door-broken":

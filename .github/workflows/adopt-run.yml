@@ -503,15 +503,35 @@ jobs:
             echo "the front door has no Setup App yet; the settings are left to the pull request's next steps"
           fi
 
-      # For this one repository, with Administration, which the settings
-      # need and which the main App never holds. It fails where the person
+      # SymphonyBoard first, the App the person installed to ask (the
+      # owner's rule of 2026-10-20: the App he built applies the settings,
+      # and Symphony Setup is only the fallback where a person cannot grant
+      # it the permissions): a token of the main App's for this one
+      # repository with Administration. A separate mint, so an installation
+      # that has not accepted Administration still adopts, through the Setup
+      # App below where it is installed; revoked after the settings.
+      - uses: actions/create-github-app-token@v1
+        id: board-settings-token
+        if: env.REFUSED != 'true'
+        continue-on-error: true
+        with:
+          app-id: ${{ vars.SDLC_APP_ID }}
+          private-key: ${{ secrets.SDLC_APP_PRIVATE_KEY }}
+          owner: ${{ env.OWNER }}
+          repositories: ${{ env.NAME }}
+          permission-administration: write
+          permission-metadata: read
+          skip-token-revoke: true
+
+      # The fallback, only where SymphonyBoard's token could not be made:
+      # for this one repository, with Administration. It fails where the person
       # did not install the Setup App on the repository, which the report
       # says once the probe below has ruled out the App itself; the token
       # is revoked by the step after the settings, so the post step has
       # nothing to revoke.
       - uses: actions/create-github-app-token@v1
         id: setup-token
-        if: env.REFUSED != 'true' && env.SETUP_APP == 'present'
+        if: env.REFUSED != 'true' && env.SETUP_APP == 'present' && steps.board-settings-token.outcome != 'success'
         continue-on-error: true
         with:
           app-id: ${{ vars.SDLC_SETUP_APP_ID }}
@@ -522,6 +542,23 @@ jobs:
           permission-metadata: read
           skip-token-revoke: true
 
+      # Which App's token the settings go with, for every step after.
+      - name: Say which App applies the settings
+        if: env.REFUSED != 'true'
+        env:
+          BOARD_OUTCOME: ${{ steps.board-settings-token.outcome }}
+          SETUP_OUTCOME: ${{ steps.setup-token.outcome }}
+        run: |
+          if [ "$BOARD_OUTCOME" = success ]; then
+            echo "SETTINGS_BY=board" >> "$GITHUB_ENV"
+            echo "the settings go with the Symphony App's token"
+          elif [ "$SETUP_OUTCOME" = success ]; then
+            echo "SETTINGS_BY=setup" >> "$GITHUB_ENV"
+            echo "the settings go with the Setup App's token"
+          else
+            echo "SETTINGS_BY=" >> "$GITHUB_ENV"
+          fi
+
       # For an organization's repository in mode new, a second token with
       # the organization permission Administration, which setup.py uses
       # only where the organization's policy holds off the box for GitHub
@@ -531,7 +568,7 @@ jobs:
       # 409 stays a 409. Revoked with the first.
       - uses: actions/create-github-app-token@v1
         id: setup-org-token
-        if: env.REFUSED != 'true' && env.SETUP_APP == 'present' && steps.setup-token.outcome == 'success' && env.MODE == 'new' && steps.target.outputs.owner_type == 'Organization'
+        if: env.REFUSED != 'true' && env.SETUP_APP == 'present' && env.SETTINGS_BY != '' && env.MODE == 'new' && steps.target.outputs.owner_type == 'Organization'
         continue-on-error: true
         with:
           app-id: ${{ vars.SDLC_SETUP_APP_ID }}
@@ -552,7 +589,7 @@ jobs:
       # Setup App's.
       - uses: actions/create-github-app-token@v1
         id: checks-token
-        if: env.REFUSED != 'true' && env.SETUP_APP == 'present' && steps.setup-token.outcome == 'success' && env.MODE == 'new'
+        if: env.REFUSED != 'true' && env.SETTINGS_BY != '' && env.MODE == 'new'
         continue-on-error: true
         with:
           app-id: ${{ vars.SDLC_APP_ID }}
@@ -562,8 +599,9 @@ jobs:
           permission-checks: read
           skip-token-revoke: true
 
-      # For an organization's repository, in either mode, a token of the
-      # Setup App's with the organization permissions Secrets and Variables
+      # For an organization's repository, in either mode, a token of
+      # SymphonyBoard's, or else the Setup App's, with the organization
+      # permissions Secrets and Variables
       # (write) and Metadata (read), which setup.py uses only to add the repository to
       # the selected repositories of the requester's own token secrets and
       # of the pool's two variables. create-github-app-token takes no input
@@ -583,32 +621,43 @@ jobs:
       # the others.
       - name: Make the token that lends the requester's own Claude tokens
         id: lend-token
-        if: env.REFUSED != 'true' && env.SETUP_APP == 'present' && steps.setup-token.outcome == 'success' && steps.target.outputs.owner_type == 'Organization'
+        if: env.REFUSED != 'true' && env.SETTINGS_BY != '' && steps.target.outputs.owner_type == 'Organization'
         continue-on-error: true
         env:
-          APP_ID: ${{ vars.SDLC_SETUP_APP_ID }}
-          APP_PRIVATE_KEY: ${{ secrets.SDLC_SETUP_APP_PRIVATE_KEY }}
+          BOARD_ID: ${{ vars.SDLC_APP_ID }}
+          BOARD_KEY: ${{ secrets.SDLC_APP_PRIVATE_KEY }}
+          SETUP_ID: ${{ vars.SDLC_SETUP_APP_ID }}
+          SETUP_KEY: ${{ secrets.SDLC_SETUP_APP_PRIVATE_KEY }}
         run: |
-          jwt="$(bash start/scripts/jwt.sh 2>/dev/null)" || exit 0
-          echo "::add-mask::$jwt"
-          installation="$(curl -sSf -H "Authorization: Bearer $jwt" -H "Accept: application/vnd.github+json" \
-            "https://api.github.com/orgs/$OWNER/installation" 2>/dev/null \
-            | python3 -c 'import json, sys; print(int(json.load(sys.stdin)["id"]))' 2>/dev/null)" || installation=""
-          if [ -z "$installation" ]; then
-            exit 0
-          fi
-          body="$(python3 -c 'import json, os; print(json.dumps({"repositories": [os.environ["NAME"]], "permissions": {"organization_secrets": "write", "organization_actions_variables": "write", "metadata": "read"}}))')"
-          token="$(curl -sSf -X POST -H "Authorization: Bearer $jwt" -H "Accept: application/vnd.github+json" \
-            -d "$body" "https://api.github.com/app/installations/$installation/access_tokens" 2>/dev/null \
-            | python3 -c 'import json, sys; print(json.load(sys.stdin)["token"])' 2>/dev/null)" || token=""
-          if [ -z "$token" ]; then
-            exit 0
-          fi
-          echo "::add-mask::$token"
-          (umask 077; printf '%s' "$token" > "$RUNNER_TEMP/lend-token")
+          # SymphonyBoard's key first, the Setup App's where that one makes
+          # no token: the App the person installed to ask comes first.
+          for app in BOARD SETUP; do
+            id_var="${app}_ID" key_var="${app}_KEY"
+            if [ -z "${!id_var}" ] || [ -z "${!key_var}" ]; then
+              continue
+            fi
+            jwt="$(APP_ID="${!id_var}" APP_PRIVATE_KEY="${!key_var}" bash start/scripts/jwt.sh 2>/dev/null)" || continue
+            echo "::add-mask::$jwt"
+            installation="$(curl -sSf -H "Authorization: Bearer $jwt" -H "Accept: application/vnd.github+json" \
+              "https://api.github.com/orgs/$OWNER/installation" 2>/dev/null \
+              | python3 -c 'import json, sys; print(int(json.load(sys.stdin)["id"]))' 2>/dev/null)" || installation=""
+            if [ -z "$installation" ]; then
+              continue
+            fi
+            body="$(python3 -c 'import json, os; print(json.dumps({"repositories": [os.environ["NAME"]], "permissions": {"organization_secrets": "write", "organization_actions_variables": "write", "metadata": "read"}}))')"
+            token="$(curl -sSf -X POST -H "Authorization: Bearer $jwt" -H "Accept: application/vnd.github+json" \
+              -d "$body" "https://api.github.com/app/installations/$installation/access_tokens" 2>/dev/null \
+              | python3 -c 'import json, sys; print(json.load(sys.stdin)["token"])' 2>/dev/null)" || token=""
+            if [ -z "$token" ]; then
+              continue
+            fi
+            echo "::add-mask::$token"
+            (umask 077; printf '%s' "$token" > "$RUNNER_TEMP/lend-token")
+            break
+          done
 
-      # For mode new, a token of the Setup App's for this one repository
-      # with Pages and Variables (write), beside the Administration (write)
+      # For mode new, a token of SymphonyBoard's, or else the Setup App's,
+      # for this one repository with Pages and Variables (write), beside the Administration (write)
       # that GitHub asks for with Pages on the calls that change a site,
       # and Metadata (read): setup.py turns on GitHub Pages built by
       # GitHub Actions with it and sets the variable SYMPHONY_DOCS, so the
@@ -621,29 +670,40 @@ jobs:
       # token's does. Revoked with the others.
       - name: Make the token that turns on the documentation site
         id: pages-token
-        if: env.REFUSED != 'true' && env.SETUP_APP == 'present' && steps.setup-token.outcome == 'success' && env.MODE == 'new'
+        if: env.REFUSED != 'true' && env.SETTINGS_BY != '' && env.MODE == 'new'
         continue-on-error: true
         env:
-          APP_ID: ${{ vars.SDLC_SETUP_APP_ID }}
-          APP_PRIVATE_KEY: ${{ secrets.SDLC_SETUP_APP_PRIVATE_KEY }}
+          BOARD_ID: ${{ vars.SDLC_APP_ID }}
+          BOARD_KEY: ${{ secrets.SDLC_APP_PRIVATE_KEY }}
+          SETUP_ID: ${{ vars.SDLC_SETUP_APP_ID }}
+          SETUP_KEY: ${{ secrets.SDLC_SETUP_APP_PRIVATE_KEY }}
         run: |
-          jwt="$(bash start/scripts/jwt.sh 2>/dev/null)" || exit 0
-          echo "::add-mask::$jwt"
-          installation="$(curl -sSf -H "Authorization: Bearer $jwt" -H "Accept: application/vnd.github+json" \
-            "https://api.github.com/repos/$OWNER/$NAME/installation" 2>/dev/null \
-            | python3 -c 'import json, sys; print(int(json.load(sys.stdin)["id"]))' 2>/dev/null)" || installation=""
-          if [ -z "$installation" ]; then
-            exit 0
-          fi
-          body="$(python3 -c 'import json, os; print(json.dumps({"repositories": [os.environ["NAME"]], "permissions": {"pages": "write", "actions_variables": "write", "administration": "write", "metadata": "read"}}))')"
-          token="$(curl -sSf -X POST -H "Authorization: Bearer $jwt" -H "Accept: application/vnd.github+json" \
-            -d "$body" "https://api.github.com/app/installations/$installation/access_tokens" 2>/dev/null \
-            | python3 -c 'import json, sys; print(json.load(sys.stdin)["token"])' 2>/dev/null)" || token=""
-          if [ -z "$token" ]; then
-            exit 0
-          fi
-          echo "::add-mask::$token"
-          (umask 077; printf '%s' "$token" > "$RUNNER_TEMP/pages-token")
+          # SymphonyBoard's key first, the Setup App's where that one makes
+          # no token: the App the person installed to ask comes first.
+          for app in BOARD SETUP; do
+            id_var="${app}_ID" key_var="${app}_KEY"
+            if [ -z "${!id_var}" ] || [ -z "${!key_var}" ]; then
+              continue
+            fi
+            jwt="$(APP_ID="${!id_var}" APP_PRIVATE_KEY="${!key_var}" bash start/scripts/jwt.sh 2>/dev/null)" || continue
+            echo "::add-mask::$jwt"
+            installation="$(curl -sSf -H "Authorization: Bearer $jwt" -H "Accept: application/vnd.github+json" \
+              "https://api.github.com/repos/$OWNER/$NAME/installation" 2>/dev/null \
+              | python3 -c 'import json, sys; print(int(json.load(sys.stdin)["id"]))' 2>/dev/null)" || installation=""
+            if [ -z "$installation" ]; then
+              continue
+            fi
+            body="$(python3 -c 'import json, os; print(json.dumps({"repositories": [os.environ["NAME"]], "permissions": {"pages": "write", "actions_variables": "write", "administration": "write", "metadata": "read"}}))')"
+            token="$(curl -sSf -X POST -H "Authorization: Bearer $jwt" -H "Accept: application/vnd.github+json" \
+              -d "$body" "https://api.github.com/app/installations/$installation/access_tokens" 2>/dev/null \
+              | python3 -c 'import json, sys; print(json.load(sys.stdin)["token"])' 2>/dev/null)" || token=""
+            if [ -z "$token" ]; then
+              continue
+            fi
+            echo "::add-mask::$token"
+            (umask 077; printf '%s' "$token" > "$RUNNER_TEMP/pages-token")
+            break
+          done
 
       # Only after that mint failed, on the owner's own installation of
       # the Setup App, which is on this repository and nothing else, with
@@ -651,7 +711,7 @@ jobs:
       # requester, and the pull request and the run's end say so.
       - uses: actions/create-github-app-token@v1
         id: setup-probe
-        if: env.REFUSED != 'true' && env.SETUP_APP == 'present' && steps.setup-token.outcome == 'failure'
+        if: env.REFUSED != 'true' && env.SETUP_APP == 'present' && env.SETTINGS_BY == '' && steps.setup-token.outcome == 'failure'
         continue-on-error: true
         with:
           app-id: ${{ vars.SDLC_SETUP_APP_ID }}
@@ -673,23 +733,22 @@ jobs:
         if: env.REFUSED != 'true'
         continue-on-error: true
         env:
-          SETUP_OUTCOME: ${{ steps.setup-token.outcome }}
           PROBE_OUTCOME: ${{ steps.setup-probe.outcome }}
-          GH_TOKEN: ${{ steps.setup-token.outputs.token }}
+          GH_TOKEN: ${{ steps.board-settings-token.outputs.token || steps.setup-token.outputs.token }}
           GH_ORG_TOKEN: ${{ steps.setup-org-token.outputs.token }}
           GH_CHECKS_TOKEN: ${{ steps.checks-token.outputs.token }}
           OWNER_TYPE: ${{ steps.target.outputs.owner_type }}
           TARGET: ${{ env.TARGET }}
         run: |
-          if [ "$SETUP_APP" = present ] && [ "$SETUP_OUTCOME" = success ]; then
+          if [ -n "$SETTINGS_BY" ]; then
             GH_LEND_TOKEN="$(cat "$RUNNER_TEMP/lend-token" 2>/dev/null || true)" \
               GH_PAGES_TOKEN="$(cat "$RUNNER_TEMP/pages-token" 2>/dev/null || true)" \
               python3 start/scripts/setup.py apply --repo "$TARGET" --mode "$MODE" --head "${ADOPT_HEAD:-}" \
               --owner-type "$OWNER_TYPE" --requester="$REQUESTER" --requester-id="$REQUESTER_ID" \
-              --ruleset template/docs/setup/ruleset-main.json --report "$RUNNER_TEMP/settings.json"
+              --ruleset template/docs/setup/ruleset-main.json --report "$RUNNER_TEMP/settings.json" --app "$SETTINGS_BY"
           else
             if [ "$SETUP_APP" != present ]; then
-              why=not-set-up
+              why=not-granted
             elif [ "$PROBE_OUTCOME" = success ]; then
               why=not-installed
             else
@@ -709,6 +768,14 @@ jobs:
         run: |
           gh api --method DELETE installation/token --silent \
             || echo "::warning::the Setup App's token could not be revoked; it expires within the hour"
+
+      - name: Revoke the Symphony App's settings token
+        if: always() && steps.board-settings-token.outputs.token != ''
+        env:
+          GH_TOKEN: ${{ steps.board-settings-token.outputs.token }}
+        run: |
+          gh api --method DELETE installation/token --silent \
+            || echo "::warning::the Symphony App's settings token could not be revoked; it expires within the hour"
 
       - name: Revoke the Setup App's organization token
         if: always() && steps.setup-org-token.outputs.token != ''
@@ -897,7 +964,12 @@ jobs:
           esac
           settings=""
           case "${SETTINGS:-}" in
-            applied|not-reported) settings=" The pull request's section Settings says what the Setup App could do for the repository's settings; the App stays installed, acting only during an adoption run, and you can uninstall it at any time." ;;
+            applied|not-reported)
+              if [ "${SETTINGS_BY:-}" = board ]; then
+                settings=" The pull request's section Settings says what the Symphony App could do for the repository's settings."
+              else
+                settings=" The pull request's section Settings says what the Setup App could do for the repository's settings; the App stays installed, acting only during an adoption run, and you can uninstall it at any time."
+              fi ;;
           esac
           merged=""
           case "${MERGED:-}" in
@@ -938,11 +1010,14 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           RUN: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-          SETUP_MINTED: ${{ steps.setup-token.outcome }}
+          SETUP_MINTED: ${{ steps.board-settings-token.outcome == 'success' && 'success' || steps.setup-token.outcome }}
           TARGET: ${{ env.TARGET }}
         run: |
           settings=""
           if [ "$SETUP_MINTED" = success ]; then
-            settings=" This run had made the Setup App's token before it stopped, so some of the repository's settings may be applied: review $SETTINGS_WORDS. The Setup App stays installed; you can uninstall it at any time."
+            settings=" This run had made the token that applies the settings before it stopped, so some of the repository's settings may be applied: review $SETTINGS_WORDS."
+          fi
+          if [ "${SETTINGS_BY:-}" = setup ]; then
+            settings="$settings The Setup App stays installed; you can uninstall it at any time."
           fi
           gh issue comment "$ISSUE" --repo "$GITHUB_REPOSITORY" --body "Something went wrong while handling this request, and it stopped; the run is $RUN. This issue stays open for the owner of this repository to look at. If the run pushed a branch symphony/adopt to your repository before it stopped, delete that branch before a new request.$settings"
