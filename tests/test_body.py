@@ -173,6 +173,20 @@ class Body(unittest.TestCase):
         self.assertNotIn("Never target", body)
         self.assertNotIn("gh workflow run board.yml", body)
 
+    def test_the_last_step_adds_a_claude_account_with_no_organization(self):
+        """A personal account has no organization secret to lend, so the
+        Token workflow saves the account as this repository's own secret,
+        the one press after the merge."""
+        write(self.template, ".github/workflows/token.yml", "name: Token\n")
+        steps = self.body().split("## Next steps")[1]
+        self.assertIn("Add your Claude account, after the merge: open"
+                      " https://openspineconsortium.com/symphony/control/?repo=octo-org/widget#tokens", steps)
+        last = [line for line in steps.splitlines() if line[:1].isdigit()][-1]
+        self.assertIn("Add your Claude account", last)
+
+    def test_no_claude_account_step_without_the_token_workflow(self):
+        self.assertNotIn("Add your Claude account", self.body())
+
     def test_a_kept_board_workflow_goes_on_rendering_the_board(self):
         files = dict(THEIR_FILES, **{".github/workflows/board.yml": "theirs\n", "tools/board.py": "theirs\n"})
         body = self.body(files, mode="existing")

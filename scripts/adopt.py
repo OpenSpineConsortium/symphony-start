@@ -2125,8 +2125,26 @@ def next_steps_existing(manifest, report=None):
     ]
 
 
+CONTROL_PANEL = "https://openspineconsortium.com/symphony/control/"
+
+
+def claude_account_step(manifest, number):
+    """The last step, where the Token workflow lands: one press on the
+    control panel's Tokens page signs a Claude account in on GitHub
+    Actions and saves its token, sealed, as this repository's own secret,
+    which needs no organization, or, in an organization, lends it into the
+    pool; nothing is pasted and no terminal runs."""
+    if TOKEN_WORKFLOW not in manifest["added"] and TOKEN_WORKFLOW not in manifest["replaced"]:
+        return []
+    repo = manifest["repository"]
+    return [f"{number}. Add your Claude account, after the merge: open {CONTROL_PANEL}?repo={repo}#tokens, sign in"
+            " with GitHub and press Add a Claude account. It signs in on GitHub Actions and saves the token, sealed,"
+            " as this repository's own secret, so a personal account needs no organization; nothing is pasted."]
+
+
 def next_steps_section(manifest, report=None):
     steps = next_steps_new(manifest, report) if manifest["mode"] == "new" else next_steps_existing(manifest, report)
+    steps += claude_account_step(manifest, sum(1 for step in steps if step[:1].isdigit()) + 1)
     return [
         "## Next steps", "", *steps, "",
         "The same run makes the labels the board reads on this repository. Later releases of the protocol come from"
