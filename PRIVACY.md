@@ -1,6 +1,6 @@
 # Symphony GitHub Apps privacy statement
 
-Version 40, 2026-10-20. This text is also at https://openspineconsortium.com/symphony/apps-privacy.html.
+Version 41, 2026-10-20. This text is also at https://openspineconsortium.com/symphony/apps-privacy.html.
 The Symphony browser extension has a statement of its own, at https://openspineconsortium.com/symphony/privacy.html.
 
 Who makes the Apps: Gregory Schwing, trading as OpenSpineConsortium ("the developer"). Questions:
@@ -1247,11 +1247,13 @@ it.
 
 When the Folders tab opens a repository that tracks a drive already, which it tells by the
 workflow drive-sync.yml there, the file drive.json on its default branch, the repository's own
-secret `SYMPHONY_DRIVE_REFRESH` set and the connection that drive.json records not run out, it also
-reads the repository's Actions variable `SYMPHONY_DRIVE` and, where that is not `on`, sets it to
-`on`, as you, without a press of Track, the owner's choice of 2026-10-20, so that a drive tracked
-before Track set the switch syncs each half hour. It writes nothing else, reads no drive and starts
-no run, and says on the page when it set the variable or could not.
+secret `SYMPHONY_DRIVE_REFRESH` set and the connection that drive.json records not known to have run
+out, it also reads the repository's Actions variable `SYMPHONY_DRIVE` and, where that variable was
+never set, creates it set to `on`, as you, without a press of Track, the owner's choice of
+2026-10-20, so that a drive tracked before Track set the switch syncs each half hour. A switch set to
+anything else, `off` among them, is left as it is. It writes nothing else, reads no drive and starts
+no run, writes nothing where the panel has been signed in as someone else since it read, and says on
+the page when it created the variable, could not, or could not read it.
 
 The drive's side goes through Microsoft and the sign-in service. When you first open the tab, it
 asks the sign-in service which drives it is set up for, and the service answers with the public
@@ -1491,6 +1493,11 @@ Symphony is for people who administer GitHub repositories. It is not directed at
 A new version of this statement is published at https://openspineconsortium.com/symphony/apps-privacy.html
 and in the front door repository, github.com/OpenSpineConsortium/symphony-start, whose PRIVACY.md is
 this text.
+
+Version 41 says that the Folders tab, when it opens a repository that tracks a drive already,
+creates SYMPHONY_DRIVE set to on only where that variable was never set, leaving a switch set to off
+as it is, where version 40 said it set any value but on to on. Nothing the developer receives or
+keeps changed, and neither App's permissions changed.
 
 Version 40 says that the Folders tab, when it opens a repository that tracks a drive already, its
 workflow drive-sync.yml, its drive.json on the default branch and its own secret
