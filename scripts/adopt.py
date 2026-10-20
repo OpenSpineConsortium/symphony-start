@@ -1751,8 +1751,8 @@ def token_lending_line(manifest, report):
         f" ({detail})" if detail else "")
     if state == "not-granted":
         return (f"{head} not lent, since the run could not make a token with the organization permissions Secrets and"
-                f" Variables (Read and write){said}, most often because the {SETUP_APP} App's installation on the"
-                f" organization has not granted them; an owner of the organization accepts them at"
+                f" Variables (Read and write){said}, most often because neither the Symphony App's installation on the"
+                f" organization nor the {SETUP_APP} App's has granted them; an owner of the organization accepts them at"
                 f" {installations_page(manifest)}.{by_hand}")
     if state == "none-owned":
         why = f"; {detail}" if detail else ""
@@ -1813,8 +1813,8 @@ def pages_line(manifest, report):
                 f" https://github.com/{manifest['repository']}/settings/variables/actions and docs.yml publishes the"
                 " documentation site from its next run.")
     if state == "not-granted":
-        return ("- GitHub Pages: not turned on, since the Setup App's installation has not accepted the permissions"
-                " Pages and Variables; once it has, under the installation's settings, adopting again turns the"
+        return ("- GitHub Pages: not turned on, since neither the Symphony App's installation nor the Setup App's has"
+                " accepted the permissions Pages and Variables; once one has, under the installation's settings, adopting again turns the"
                 f" documentation site on, or at {where} choose GitHub Actions as the source and set the repository"
                 " variable `SYMPHONY_DOCS` to `pages`.")
     return (f"- GitHub Pages: not set up{github_said(report, 'pages')}; at {where}, under Build and deployment, choose"
@@ -1938,6 +1938,16 @@ def stays_installed_sentence(manifest):
             " uninstalling it undoes nothing here and only stops what is shared, above, from being read.")
 
 
+def board_needs_no_setup_sentence(manifest):
+    """When the Symphony App applied the settings, the Setup App, which the
+    form's paths still ask for, did nothing here; the person is told it may
+    go, and where."""
+    return (f"The {SETUP_APP} App, if you installed it, was not needed for these settings and acted on nothing"
+            " here; you can uninstall it at any time, from the repository's Settings, GitHub Apps, at"
+            f" https://github.com/{manifest['repository']}/settings/installations, or at"
+            f" {installations_page(manifest)}. The Symphony App, which opened this pull request, stays.")
+
+
 def settings_section(manifest, report):
     """What the Setup App did in this run, or why nothing was done, so the
     person knows what is set before they merge and what is left by hand."""
@@ -1967,12 +1977,11 @@ def settings_section(manifest, report):
         pages = pages_line(manifest, report)
         if pages:
             parts.append(pages)
-        if not by_board:
-            parts.append("")
-            parts.append(stays_installed_sentence(manifest))
+        parts.append("")
+        parts.append(board_needs_no_setup_sentence(manifest) if by_board else stays_installed_sentence(manifest))
     elif outcome == "not-granted":
         parts.append(f"None of the settings was changed: the Symphony App's installation has not accepted the"
-                     f" permission Administration, which the settings take, so this run could not apply {what}."
+                     f" permission Administration, which the settings take, or GitHub did not answer, so this run could not apply {what}."
                      f" Accept it at {installations_page(manifest)} (Configure, then Review request, Accept new"
                      " permissions) and ask again, and the Symphony App applies them itself."
                      f" {by_hand_pointer(manifest)}")

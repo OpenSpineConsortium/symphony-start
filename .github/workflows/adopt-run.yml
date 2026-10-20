@@ -964,7 +964,12 @@ jobs:
           esac
           settings=""
           case "${SETTINGS:-}" in
-            applied|not-reported) settings=" The pull request's section Settings says what the Setup App could do for the repository's settings; the App stays installed, acting only during an adoption run, and you can uninstall it at any time." ;;
+            applied|not-reported)
+              if [ "${SETTINGS_BY:-}" = board ]; then
+                settings=" The pull request's section Settings says what the Symphony App could do for the repository's settings."
+              else
+                settings=" The pull request's section Settings says what the Setup App could do for the repository's settings; the App stays installed, acting only during an adoption run, and you can uninstall it at any time."
+              fi ;;
           esac
           merged=""
           case "${MERGED:-}" in
@@ -1011,5 +1016,8 @@ jobs:
           settings=""
           if [ "$SETUP_MINTED" = success ]; then
             settings=" This run had made the token that applies the settings before it stopped, so some of the repository's settings may be applied: review $SETTINGS_WORDS."
+          fi
+          if [ "${SETTINGS_BY:-}" = setup ]; then
+            settings="$settings The Setup App stays installed; you can uninstall it at any time."
           fi
           gh issue comment "$ISSUE" --repo "$GITHUB_REPOSITORY" --body "Something went wrong while handling this request, and it stopped; the run is $RUN. This issue stays open for the owner of this repository to look at. If the run pushed a branch symphony/adopt to your repository before it stopped, delete that branch before a new request.$settings"

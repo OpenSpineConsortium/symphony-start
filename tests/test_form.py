@@ -267,6 +267,10 @@ class TheWorkflows(unittest.TestCase):
             self.assertNotIn(words, run)
         self.assertIn("the App stays installed, acting only during an adoption run, and you can uninstall it at"
                       " any time.", run)
+        # The answer names the App that applied the settings.
+        answer = run[run.index("name: Answer the request and close it"):]
+        self.assertIn('if [ "${SETTINGS_BY:-}" = board ]; then', answer)
+        self.assertIn("says what the Symphony App could do", answer)
 
     def test_the_symphony_app_asks_for_administration_first_and_the_setup_app_after(self):
         """SymphonyBoard first, the Setup App the fallback (the owner's rule
