@@ -847,7 +847,7 @@ as it keeps any issue's comments, and are sent to nobody else: the developer rec
 
 The bar's button "Ask in claude.ai" opens claude.ai in a new browser tab, signed in as whoever you are
 there, with your question and a line or two naming what the page shows (the repository and the tab,
-and the task, the OneDrive folder and item, or the Explore level you are at, each with its GitHub or
+and the task, the OneDrive folder and item or the words of a search of your drive, or the Explore level you are at, each with its GitHub or
 OneDrive link) carried in that tab's address, as the question claude.ai starts with. The page itself
 sends nothing to claude.ai, reads nothing from it and writes nothing for it, asks no write access to
 the repository for it, and cuts the whole to 2,000 characters, which an address carries. What you and
@@ -1232,7 +1232,8 @@ names, kinds, sizes, dates, ids, paths in the drive and web addresses of the fil
 folders you open, to draw the list you tick in, laid out as a file explorer with a tree of the
 folders you open in it, each read asking Microsoft also for a small picture of each file, which
 your browser then loads from Microsoft's own servers with no token and no referrer (where Microsoft
-refuses that request, the page reads the list again without the pictures); nothing of that list
+refuses it as a bad request, the page reads the list again without the pictures and asks for none
+again until the page is reloaded; a search asks for none); nothing of that list
 leaves your browser but the name, the id and the drive's id of what you tick, which go into
 drive.json. When you open a file from the list, by a
 double click, Enter or its menu, the page hands your browser the file's address and nothing else: a
@@ -1248,35 +1249,40 @@ access token.
 
 The explorer's own actions also go from your browser to Microsoft Graph alone, as you and with the
 same access token, each only when you press it, and each changes your drive as the same action in
-OneDrive would. New folder makes a folder in the folder you are in, under the name you type, or
-under a numbered name where one of that name is there. Rename gives an item the name you type. Delete
+OneDrive would. New folder makes a folder named New folder, numbered where that name is taken, in
+the folder you are in, and then lets you rename it. Rename gives an item the name you type, and
+where the item is one you ticked, that name is the one Track writes into drive.json. Delete
 asks you on the page first and then deletes each item you chose, one request each, into your
-drive's recycle bin, from which OneDrive lets you restore it. Upload, by its button or by dropping
+drive's recycle bin, from which OneDrive lets you restore it, and unticks an item you had ticked. Upload, by its button or by dropping
 files on the list, sends each file you chose from your computer into the folder you are in: a file
 of up to 4 MB in one request, a larger one through an upload session Microsoft opens, in pieces of
-about 3.2 MB sent to the address Microsoft gives for it with no token; where a file of that name is
+about 3.3 MB sent to the address Microsoft gives for it with no token; where a file of that name is
 there, the page asks you first whether to replace it, keep both or skip it. Download asks Microsoft
 for a short-lived address of the file and hands it to your browser, which saves the file from
-Microsoft with no token; the page never reads the file's contents. Cut, copy and paste move or copy
+Microsoft with no token; the page never reads the file's contents. Cut, copy and paste, or dragging
+items onto a folder, move or copy
 the items you chose into the folder you paste in (to know the drive's top folder the page reads its
 id once for each connection); Microsoft makes a copy in its own time, so the page reads the folder
-again a few seconds later to show it. Share makes, only when you press Create link, a sharing link to one item, for
+again a few seconds later to show it; a copy whose name is taken gets a numbered name, and a move
+whose name is taken is refused and the page says so. Share makes, only when you press Create link, a sharing link to one item, for
 viewing or for editing, as you choose: on a work or school drive one that works for people in your
-organization, its default, or for anyone who has the link; on a personal drive one for anyone who has
-the link, the only kind it offers; whoever you then give the link to can open the item, and edit it
+organization, its default, or for anyone who has the link; on a personal drive (or on any drive whose
+type the page could not read) one for anyone who has the link, the only kind it offers; whoever you then give the link to can open the item, and edit it
 where you chose editing, until you remove the link in OneDrive, which the page does not do. Copy puts
-the link on your device's clipboard. Properties reads one item's name, size, kind, folder, dates, web
-address and whether it is shared, with the display names of the people who made it and last changed
-it; for several items it adds up what the list already shows. The preview pane, off until you turn
+the link on your device's clipboard. Properties reads one item's name, id, size, kind and file details, folder and the number of
+items it holds, dates, web address and whether it is shared, and who made it and last changed it
+(Microsoft's record of each, of which the page shows the display name); for several items it adds up what the list already shows. The preview pane, off until you turn
 it on, shows the one file you choose: for an image, a larger picture read from Microsoft; for any
 other file, Microsoft's own preview, from a short-lived address Microsoft makes for it, drawn in a
-closed-off frame on Microsoft's own site with no referrer; a folder reads nothing. Search, when you
+frame limited by the browser's sandbox on Microsoft's own site with no referrer, or, where Microsoft
+makes none, a larger picture; a folder reads nothing. Search, when you
 press Enter, sends the words you typed to Microsoft to find the matching files and folders anywhere in
 the drive, up to two thousand of them; typing without pressing Enter only filters the list already
 shown, in your browser. The views, the sort order and choosing several items with Shift or Ctrl ask
 nothing of anyone. The page keeps the view, the sort order, whether the preview is on, what you have
 chosen, what you cut or copied, the words you searched for and the preview's addresses in the open
-page's memory alone, with nothing of them in the browser's storage, the address or a log, and forgets
+page's memory alone, with nothing of them in the browser's storage, the address or a log, unless you press "Ask in
+claude.ai", which carries the words of a search shown, as the bar's section says, and forgets
 them, with the drive's tokens, when you reload or leave the page. None of these actions sends anything
 to GitHub, the sign-in service or the developer.
 
