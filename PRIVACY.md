@@ -1176,7 +1176,7 @@ has chosen. It reads nothing until you open it, or until it opens itself on Micr
 (below). Once open, it reads with your GitHub token, for the chosen repository, the file
 `.github/symphony/drive.json`, whether the repository's secret `SYMPHONY_DRIVE_REFRESH` is set and
 when it was last updated (never the secret itself, which GitHub gives nobody back) and whether its
-workflow `.github/workflows/drive-sync.yml` is there. When you press "Find the repository I just
+workflows `.github/workflows/drive-sync.yml` and `.github/workflows/drive-catalog.yml` are there. When you press "Find the repository I just
 made", it reads GitHub's list of the ten repositories your token reaches that were made last and,
 for each one not on the bar's list yet whose entry there shows neither the template nor the topic
 symphony, that repository's own record, to add to the list those made from the Symphony template or
@@ -1209,9 +1209,7 @@ request for you to merge, or the one already open from that branch; and, only wh
 the default branch, one run of drive-sync.yml started by hand. With the file it also sets the
 repository's Actions variable `SYMPHONY_DRIVE` to `on`, which says nothing of the drive and
 which whoever can read the repository's settings can see, so that the workflow's half-hourly schedule
-runs there; until it is set, the schedule starts nothing. Where the tab opens on a repository whose
-default branch holds drive.json and drive-sync.yml and whose variable is not `on`, as in one that tracked a drive before
-the variable existed, it reads the variable and sets it then, as you, where your token may. Where your token may not save the
+runs there; until it is set, the schedule starts nothing. Where your token may not save the
 secret, the page says so and writes nothing else; where the file cannot be written, the secret stays
 saved, and the page says so and starts no run; where the run cannot be started, the page says so and
 links the workflow's page on GitHub, where you press "Run workflow".
@@ -1231,8 +1229,8 @@ repositories, which whoever can read the organization's or those repositories' s
 Otherwise Track saves the repository's own secret as above. So one connection serves every
 repository of the organization that tracks the same drive, and a new connection, pressed in any of
 them, replaces the token for all of them.
-A repository that carries the workflow `.github/workflows/drive-catalog.yml`, the drive
-catalog's own repository, takes from Track the secret alone: Track writes no drive.json there and
+A repository that carries the workflow `.github/workflows/drive-catalog.yml` and not drive-sync.yml,
+the drive catalog's own repository, takes from Track the secret alone: Track writes no drive.json there and
 starts no run. "Sync now", which the tab shows
 once the repository tracks a drive, reads the default branch and starts one run of drive-sync.yml on
 it.
@@ -1485,7 +1483,8 @@ organization's public key is yours to read and the organization holds no such se
 same drive, and otherwise the repository's own secret as before, so another person's drive never
 replaces it; that anyone who may write to any repository on the list can then reach the whole drive;
 and that a new connection replaces the token, and its 90-day lapse, for every repository the secret
-serves. It says that in a repository carrying the drive catalog's workflow, drive-catalog.yml, Track
+serves. It says that in a repository carrying the drive catalog's workflow, drive-catalog.yml, and no drive
+sync, Track
 saves the secret alone, writing no drive.json and starting no run, and that workflow walks the drive
 from its top as the organizer's does, with no step organize. It says that Track also sets the
 repository's Actions variable SYMPHONY_DRIVE, with SymphonyBoard's repository permission Variables
