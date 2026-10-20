@@ -1289,14 +1289,20 @@ already there), brings what changed in the drive into the repository by pull req
 changed in the repository and, where a file changed on both sides, puts the repository's copy beside
 the drive's in the same folder; it touches nothing else in the drive. The drive organizer's workflow,
 drive-organize.yml, where a private repository runs it, trades the same secret at the same route for
-an access token in the same way and reads at Microsoft Graph alone, with nothing going through
-another connector, the names, kinds, sizes, dates, ids, folders and web addresses of the drive's
-files and folders and the contents of a sample of them, at most 400 files and 120 MB, to describe
-them; the folders that Microsoft 365's own apps keep at the drive's top, such as Recordings and
-Attachments, it lists without reading inside. It writes what it found, the list of the drive and,
-for each file of the sample, a short text digest taken from what the file says, to the branch
-drive-catalog of that repository as one commit, where whoever can read the repository can read it,
-and changes nothing in the drive. What comes down, and
+an access token in the same way and reads at Microsoft Graph alone, the workflow itself using no
+other connector, the names, kinds, sizes, dates, ids, folders and web addresses of the files and
+folders under what drive.json names for it (the whole drive where that is its top), up to 20,000
+entries, and the contents of a sample of them, at most 400 files of up to 5 MB each and 120 MB in all;
+where it starts from the drive's top, the folders Microsoft 365 keeps there (Apps, Attachments,
+Meetings, Recordings, Notebooks, Desktop, Documents, Pictures and the Teams and Copilot chat folders)
+it lists by name without reading inside. It writes what it found, the list and, for each file of the
+sample, a text of at most 1,500 characters taken from it (a document's headings, opening and
+comments, a sheet's header, first rows and column totals, a deck's slide text), to the branch
+drive-catalog of that repository as one commit on top of what the branch holds, where whoever can
+read the repository can read it, and changes nothing in the drive. Its step organize, when started,
+also gives that list and those texts to Claude, on the repository's own Claude token and under
+Anthropic's terms for that account, and opens issues in the repository naming the files, folders and
+links of the projects Claude proposes. What comes down, and
 drive.json with the names of what you ticked, can be read by whoever can read the repository, and by
 anyone where it is public, and the new review comments in its Word documents become tasks, issues of
 the repository, readable the same way. The route of the service that trades a refresh token for an
@@ -1319,7 +1325,8 @@ secret and that day, and once that day has passed it says that the connection ha
 every sync since stops before it reaches the drive. Google Drive is not offered: Google's own picker
 takes a browser API key, which the developer has declined, so the page connects no other drive and
 the service refuses any provider but OneDrive. The developer receives nothing from the tab, the
-service or the workflow.
+service, the workflow or the organizer's workflow; what Claude receives is under your Claude
+account's terms.
 
 ## The App's server, where it is run
 
@@ -1429,9 +1436,10 @@ the access Microsoft already granted for the drive (Files.ReadWrite), and each o
 what the explorer keeps it keeps in the open page's memory alone. It says that the tab no longer reads
 the drive organizer's catalog, which version 26 added, and that the drive organizer's workflow reads
 the drive through Microsoft Graph alone with the repository's drive secret and the sign-in service's
-route, as drive-sync.yml does, lists without reading inside the folders Microsoft 365's apps keep at
-the drive's top, and writes the drive's list and short digests of a sample of its files to the
-branch drive-catalog of a private repository.
+route, as drive-sync.yml does, lists without reading inside the folders Microsoft 365 keeps at the
+drive's top, writes the list and texts of up to 1,500 characters from a sample of the files to the
+branch drive-catalog of a private repository, and, in its step organize, gives them to Claude on the
+repository's own Claude token and opens issues for the projects Claude proposes.
 Nothing the developer
 receives or keeps changed, and neither App's permissions changed.
 
