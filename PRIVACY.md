@@ -1,6 +1,6 @@
 # Symphony GitHub Apps privacy statement
 
-Version 36, 2026-10-20. This text is also at https://openspineconsortium.com/symphony/apps-privacy.html.
+Version 37, 2026-10-20. This text is also at https://openspineconsortium.com/symphony/apps-privacy.html.
 The Symphony browser extension has a statement of its own, at https://openspineconsortium.com/symphony/privacy.html.
 
 Who makes the Apps: Gregory Schwing, trading as OpenSpineConsortium ("the developer"). Questions:
@@ -11,7 +11,7 @@ template, or its claim protocol, into a repository by pull request, afterwards r
 of that repository once a day for anonymous aggregates and, where the repository holds the claim
 protocol without the whole template, offers it, by another pull request, the newer versions the
 template comes to hold of the files Symphony's board and control panel run on. **Symphony Setup**
-(github.com/apps/symphony-setup) applies up to seven settings to a repository in the adoption run,
+(github.com/apps/symphony-setup) applies up to eight settings to a repository in the adoption run,
 and stays installed, acting only
 during an adoption run, until you uninstall it. Both work only through GitHub: nothing of yours goes
 anywhere but to GitHub's own API, to your own repository and, as aggregates, to the developer, save
@@ -152,7 +152,7 @@ GitHub asks each person for when they sign in with GitHub on the control panel. 
 it up to version 13 of this statement to hand its GitHub sign-in to a Codespace; it no longer uses
 it, and it stays on the App until the developer takes it off.
 
-Symphony Setup asks for two repository permissions, Administration (read and write), for the seven
+Symphony Setup asks for two repository permissions, Administration (read and write), for the eight
 settings below, and Metadata (read), and, on an organization, three organization permissions:
 Administration (read and write), Secrets (read and write) and Variables (read and write). It uses
 Administration for one thing only: where the organization holds
@@ -262,7 +262,7 @@ exists, the one word in `.github/symphony-adopt` and `.github/symphony-metrics` 
 its name before the rename to Symphony, `.github/sdlc-adopt` and `.github/sdlc-metrics`, the full
 listing of the default branch's tree (to decide the kind), a checkout of that branch at depth one (to add the
 files) and whether you administer the repository. With Symphony Setup installed, the run also reads the repository's record, keeping its id, to name
-it when lending, and whether it is public, private or internal, to say in the pull request whether
+it when lending, and its default branch, to limit the environment token-store to it, and whether it is public, private or internal, to say in the pull request whether
 GitHub enforces its ruleset and, in an organization's repository, which of the organization's
 secrets reach it already; and its rulesets, its topics and its workflow permissions for GitHub
 Actions, to leave what is there as it is. When the
@@ -284,7 +284,14 @@ setting, which may name your account's plan; in an organization's new repository
 also writes that login into `.github/CODEOWNERS`. With Symphony Setup installed, the run creates the
 default branch's ruleset, turns on delete-head-branches and auto-merge, adds the topic `symphony` to
 the repository's topics (the sign on the repository's page that it is adopted, which anyone can see
-there and the Symphony browser extension reads from the page; your other topics stay), turns on secret scanning and push protection where your plan and visibility allow it, in a
+there and the Symphony browser extension reads from the page; your other topics stay), turns on secret scanning and push protection where your plan and visibility allow it, makes the
+environment `token-store`, limited to the default branch, unless the repository has an environment
+of that name, which it leaves as it is (the Token workflow saves a Claude token you lend there with
+SymphonyBoard's key, and GitHub would otherwise make the environment on the workflow's first run
+open to every branch; where GitHub refuses it, as for a private repository whose plan has no
+environments, the pull request says so and where to make it, and where it refuses the branch rule
+after making the environment, the environment stands with no branch allowed, so nothing runs there
+until you add one), in a
 repository that takes the whole template ticks "Allow GitHub Actions to create and approve pull requests" where
 your organization and its enterprise allow it, in an organization's repository lends it your own
 Claude tokens of the organization's pool, but none you lent with no say, and, beside one of them, the pool's two variables (as the
@@ -1433,6 +1440,16 @@ Symphony is for people who administer GitHub repositories. It is not directed at
 A new version of this statement is published at https://openspineconsortium.com/symphony/apps-privacy.html
 and in the front door repository, github.com/OpenSpineConsortium/symphony-start, whose PRIVACY.md is
 this text.
+
+Version 37 adds the environment `token-store` to what Symphony Setup makes in an adoption run, of
+either kind, as the section on the adoption says: it reads the repository's default branch from the
+record it already reads, asks GitHub whether the repository has an environment of that name, through
+the environment's list of deployment protection apps, which Administration reads, and where it has
+none makes one whose deployment branches are the default branch alone, with the Administration on
+the repository the Setup App already holds. It reads and writes nothing else; the environment holds
+no secret and no variable; the pull request says whether it was made, was there already or was not
+set up, quoting GitHub where it refused; and the run's public log says only that, per setting. Nothing
+the developer receives or keeps changed, and neither App's permissions changed.
 
 Version 36 adds the Folders tab's own actions on your OneDrive, as the section on the Folders tab
 says: new folder, rename, delete into the recycle bin, upload, download, cut, copy and paste, sharing
