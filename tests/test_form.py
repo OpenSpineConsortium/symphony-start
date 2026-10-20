@@ -284,9 +284,20 @@ class TheWorkflows(unittest.TestCase):
         self.assertNotIn("permission-contents", asking[0])
         # The key is minted for Administration once, for the organization's
         # Administration once, probed once, read as set-or-not once, and
-        # signs the JWT that mints the organization's Secrets and Variables
-        # token once; the App no longer uninstalls itself.
-        self.assertEqual(text.count("secrets.SDLC_SETUP_APP_PRIVATE_KEY"), 5)
+        # signs the JWTs that mint the organization's Secrets and Variables
+        # token and the repository's Pages and Variables token, once each;
+        # the App no longer uninstalls itself.
+        self.assertEqual(text.count("secrets.SDLC_SETUP_APP_PRIVATE_KEY"), 6)
+        pages, = [step for step in steps if "id: pages-token" in step]
+        self.assertIn("APP_ID: ${{ vars.SDLC_SETUP_APP_ID }}", pages)
+        self.assertIn("continue-on-error: true", pages)
+        self.assertIn("steps.setup-token.outcome == 'success'", pages)
+        self.assertIn("env.MODE == 'new'", pages)
+        self.assertIn('"repositories": [os.environ["NAME"]]', pages)
+        self.assertIn('"permissions": {"pages": "write", "actions_variables": "write", "administration": "write",'
+                      ' "metadata": "read"}', pages)
+        self.assertIn('"https://api.github.com/repos/$OWNER/$NAME/installation"', pages)
+        self.assertNotIn("echo \"the token", pages)
         lend, = [step for step in steps if "id: lend-token" in step]
         self.assertIn("APP_ID: ${{ vars.SDLC_SETUP_APP_ID }}", lend)
         self.assertIn("continue-on-error: true", lend)

@@ -181,8 +181,9 @@ class Apply(unittest.TestCase):
         self.ruleset = self.root / "ruleset-main.json"
         self.ruleset.write_text(json.dumps(RULESET, indent=2) + "\n", encoding="utf-8")
         self.report = self.root / "settings.json"
-        # The run's own environment in mode new: both tokens are there.
-        patcher = mock.patch.dict(os.environ, {"GH_TOKEN": "ghs_token_for_tests", "GH_CHECKS_TOKEN": CHECKS_TOKEN})
+        # The run's own environment in mode new: the tokens are there.
+        patcher = mock.patch.dict(os.environ, {"GH_TOKEN": "ghs_token_for_tests", "GH_CHECKS_TOKEN": CHECKS_TOKEN,
+                                               "GH_PAGES_TOKEN": "ghs_pages_token_for_tests"})
         patcher.start()
         self.addCleanup(patcher.stop)
         self.clock = FakeClock()
@@ -251,12 +252,14 @@ class Apply(unittest.TestCase):
 
     def test_every_call_carries_the_token_and_the_api_version(self):
         """The Setup App's token for everything but the check runs, which
-        only the main App's Checks token reads."""
+        only the main App's Checks token reads, and the Pages site, which
+        its own token with Pages and Variables makes."""
         github = FakeGitHub()
         self.apply(github)
         for method, path, headers, body in github.calls:
             with self.subTest(call=(method, path)):
-                token = CHECKS_TOKEN if path == CHECK_RUNS else "ghs_token_for_tests"
+                token = (CHECKS_TOKEN if path == CHECK_RUNS else "ghs_pages_token_for_tests" if path == PAGES
+                         else "ghs_token_for_tests")
                 self.assertEqual(headers["Authorization"], f"Bearer {token}")
                 self.assertEqual(headers["X-GitHub-Api-Version"], setup.API_VERSION)
                 self.assertEqual(headers["Accept"], "application/vnd.github+json")
@@ -1289,13 +1292,22 @@ class Pages(unittest.TestCase):
     repository that is not public is deleted again."""
 
     NONE = {("GET", PAGES): (404, {"message": "Not Found"})}
+    @staticmethod
+    def read_back(public):
+        """The site's read before it is made, then its read back once
+        limited; a fresh list each time, since the fake pops from it."""
+        return {("GET", PAGES): [(404, {"message": "Not Found"}), (200, {"public": public})]}
+
     VARIABLE = ("POST", f"/repos/{REPO}/actions/variables", {"name": "SYMPHONY_DOCS", "value": "pages"})
 
-    def pages(self, answers=None, visibility="public"):
-        github = FakeGitHub({**self.NONE, **(answers or {})})
+    def pages(self, answers=None, visibility="public", base=None):
+        github = FakeGitHub({**(base or self.NONE), **(answers or {})})
         report = setup.new_report(setup.APPLIED, "new")
         setup.apply_pages(setup.GitHub("ghs_token_for_tests", transport=github), REPO, visibility, report)
         return github, report["settings"][setup.PAGES]
+
+    def calls(self, github):
+        return [(method, path) for method, path, _, _ in github.calls]
 
     def test_a_public_repository_gets_a_site_built_by_actions_and_the_variable(self):
         github, setting = self.pages()
@@ -1305,7 +1317,7 @@ class Pages(unittest.TestCase):
     def test_a_private_or_internal_repositorys_site_is_limited_to_its_readers(self):
         for visibility in ("private", "internal", ""):
             with self.subTest(visibility=visibility):
-                github, setting = self.pages(visibility=visibility)
+                github, setting = self.pages(visibility=visibility, base=self.read_back(False))
                 self.assertEqual(setting["state"], setup.DONE)
                 self.assertEqual(github.writes(), [("POST", PAGES, {"build_type": "workflow"}),
                                                    ("PUT", PAGES, {"public": False}), self.VARIABLE])
@@ -1313,8 +1325,23 @@ class Pages(unittest.TestCase):
     def test_a_site_github_will_not_limit_is_deleted_and_no_variable_set(self):
         github, setting = self.pages({("PUT", PAGES): (422, {"message": "Upgrade the plan"})}, visibility="private")
         self.assertEqual(setting["state"], setup.FORBIDDEN)
-        self.assertIn(("DELETE", PAGES), [(method, path) for method, path, _, _ in github.calls])
+        self.assertIn(("DELETE", PAGES), self.calls(github))
+        self.assertIn("was deleted again", setting["detail"])
         self.assertNotIn(self.VARIABLE, github.writes())
+
+    def test_a_limit_github_accepted_but_did_not_keep_is_deleted(self):
+        github, setting = self.pages(visibility="private",
+                                     base=self.read_back(True))
+        self.assertEqual(setting["state"], setup.FORBIDDEN)
+        self.assertIn("still reads as public", setting["detail"])
+        self.assertIn(("DELETE", PAGES), self.calls(github))
+        self.assertNotIn(self.VARIABLE, github.writes())
+
+    def test_a_site_that_could_not_be_deleted_again_says_so(self):
+        github, setting = self.pages({("PUT", PAGES): (422, {"message": "Upgrade the plan"}),
+                                      ("DELETE", PAGES): (500, {"message": "Server Error"})}, visibility="private")
+        self.assertEqual(setting["state"], setup.FORBIDDEN)
+        self.assertIn("could not be deleted again", setting["detail"])
 
     def test_a_site_there_already_is_left_as_it_is(self):
         github, setting = self.pages({("GET", PAGES): (200, {"build_type": "legacy"})})
@@ -1334,8 +1361,20 @@ class Pages(unittest.TestCase):
 
     def test_a_refused_variable_says_the_site_is_on(self):
         github, setting = self.pages({("POST", f"/repos/{REPO}/actions/variables"): (403, {"message": "Resource not accessible by integration"})})
-        self.assertEqual(setting["state"], setup.FAILED)
-        self.assertIn("the site was turned on", setting["detail"])
+        self.assertEqual(setting, {"state": setup.SITE_ONLY, "detail": "HTTP 403: Resource not accessible by integration"})
+
+    def test_no_token_for_pages_is_not_granted_and_calls_nothing(self):
+        report = setup.new_report(setup.APPLIED, "new")
+        setup.apply_pages(None, REPO, "public", report)
+        self.assertEqual(report["settings"][setup.PAGES]["state"], setup.NOT_GRANTED)
+
+    def test_the_run_without_a_pages_token_leaves_the_site_and_adopts(self):
+        github = FakeGitHub(self.NONE)
+        with mock.patch.dict(os.environ, {"GH_TOKEN": "ghs_token_for_tests"}, clear=True):
+            report = setup.apply_settings(setup.GitHub("ghs_token_for_tests", transport=github), REPO, RULESET, "new",
+                                          waiting=FakeClock().waiting())
+        self.assertEqual(report["settings"][setup.PAGES]["state"], setup.NOT_GRANTED)
+        self.assertNotIn(("POST", PAGES), self.calls(github))
 
 
 class Transport(unittest.TestCase):

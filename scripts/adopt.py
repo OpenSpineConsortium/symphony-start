@@ -1804,9 +1804,19 @@ def pages_line(manifest, report):
         return ("- GitHub Pages: a site is there already, left as it is; the documentation site is published there"
                 " only once you set the repository variable `SYMPHONY_DOCS` to `pages`.")
     if state == "forbidden":
-        return (f"- GitHub Pages: not turned on, since GitHub would not keep the site to the repository's readers"
+        return (f"- GitHub Pages: not kept on, since GitHub would not keep the site to the repository's readers"
                 f"{github_said(report, 'pages')} and it would have been open to anyone; turn it on at {where} if that"
                 " is meant, and set the repository variable `SYMPHONY_DOCS` to `pages`.")
+    if state == "site-only":
+        return (f"- GitHub Pages: on, built by GitHub Actions, but the variable `SYMPHONY_DOCS` was not set"
+                f"{github_said(report, 'pages')}; set it to `pages` at"
+                f" https://github.com/{manifest['repository']}/settings/variables/actions and docs.yml publishes the"
+                " documentation site from its next run.")
+    if state == "not-granted":
+        return ("- GitHub Pages: not turned on, since the Setup App's installation has not accepted the permissions"
+                " Pages and Variables; once it has, under the installation's settings, adopting again turns the"
+                f" documentation site on, or at {where} choose GitHub Actions as the source and set the repository"
+                " variable `SYMPHONY_DOCS` to `pages`.")
     return (f"- GitHub Pages: not set up{github_said(report, 'pages')}; at {where}, under Build and deployment, choose"
             " GitHub Actions as the source, then set the repository variable `SYMPHONY_DOCS` to `pages`.")
 

@@ -607,6 +607,44 @@ jobs:
           echo "::add-mask::$token"
           (umask 077; printf '%s' "$token" > "$RUNNER_TEMP/lend-token")
 
+      # For mode new, a token of the Setup App's for this one repository
+      # with Pages and Variables (write), beside the Administration (write)
+      # that GitHub asks for with Pages on the calls that change a site,
+      # and Metadata (read): setup.py turns on GitHub Pages built by
+      # GitHub Actions with it and sets the variable SYMPHONY_DOCS, so the
+      # template's docs.yml publishes the documentation site. Minted with
+      # the App's JWT, as the lending token is, and on its own, so an
+      # installation that has not accepted Pages and Variables still
+      # adopts and only the site is left, which the pull request says; the
+      # step never fails and prints nothing. The token goes to a file in
+      # the runner's temporary directory, for the reason the lending
+      # token's does. Revoked with the others.
+      - name: Make the token that turns on the documentation site
+        id: pages-token
+        if: env.REFUSED != 'true' && env.SETUP_APP == 'present' && steps.setup-token.outcome == 'success' && env.MODE == 'new'
+        continue-on-error: true
+        env:
+          APP_ID: ${{ vars.SDLC_SETUP_APP_ID }}
+          APP_PRIVATE_KEY: ${{ secrets.SDLC_SETUP_APP_PRIVATE_KEY }}
+        run: |
+          jwt="$(bash start/scripts/jwt.sh 2>/dev/null)" || exit 0
+          echo "::add-mask::$jwt"
+          installation="$(curl -sSf -H "Authorization: Bearer $jwt" -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/$OWNER/$NAME/installation" 2>/dev/null \
+            | python3 -c 'import json, sys; print(int(json.load(sys.stdin)["id"]))' 2>/dev/null)" || installation=""
+          if [ -z "$installation" ]; then
+            exit 0
+          fi
+          body="$(python3 -c 'import json, os; print(json.dumps({"repositories": [os.environ["NAME"]], "permissions": {"pages": "write", "actions_variables": "write", "administration": "write", "metadata": "read"}}))')"
+          token="$(curl -sSf -X POST -H "Authorization: Bearer $jwt" -H "Accept: application/vnd.github+json" \
+            -d "$body" "https://api.github.com/app/installations/$installation/access_tokens" 2>/dev/null \
+            | python3 -c 'import json, sys; print(json.load(sys.stdin)["token"])' 2>/dev/null)" || token=""
+          if [ -z "$token" ]; then
+            exit 0
+          fi
+          echo "::add-mask::$token"
+          (umask 077; printf '%s' "$token" > "$RUNNER_TEMP/pages-token")
+
       # Only after that mint failed, on the owner's own installation of
       # the Setup App, which is on this repository and nothing else, with
       # metadata read: a failure here is the Setup App's id or key, not the
@@ -645,6 +683,7 @@ jobs:
         run: |
           if [ "$SETUP_APP" = present ] && [ "$SETUP_OUTCOME" = success ]; then
             GH_LEND_TOKEN="$(cat "$RUNNER_TEMP/lend-token" 2>/dev/null || true)" \
+              GH_PAGES_TOKEN="$(cat "$RUNNER_TEMP/pages-token" 2>/dev/null || true)" \
               python3 start/scripts/setup.py apply --repo "$TARGET" --mode "$MODE" --head "${ADOPT_HEAD:-}" \
               --owner-type "$OWNER_TYPE" --requester="$REQUESTER" --requester-id="$REQUESTER_ID" \
               --ruleset template/docs/setup/ruleset-main.json --report "$RUNNER_TEMP/settings.json"
@@ -689,6 +728,16 @@ jobs:
             GH_TOKEN="$(cat "$RUNNER_TEMP/lend-token")" gh api --method DELETE installation/token --silent >/dev/null 2>&1 || true
           fi
           rm -f "$RUNNER_TEMP/lend-token"
+
+      # Whenever the step that makes it ran, made or not, and silent, as
+      # the lending token's revoke is.
+      - name: Revoke the token that turns on the documentation site
+        if: always() && steps.pages-token.outcome != 'skipped'
+        run: |
+          if [ -s "$RUNNER_TEMP/pages-token" ]; then
+            GH_TOKEN="$(cat "$RUNNER_TEMP/pages-token")" gh api --method DELETE installation/token --silent >/dev/null 2>&1 || true
+          fi
+          rm -f "$RUNNER_TEMP/pages-token"
 
       - name: Revoke the token that reads the check runs
         if: always() && steps.checks-token.outputs.token != ''

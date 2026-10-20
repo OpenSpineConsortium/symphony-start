@@ -503,9 +503,15 @@ class Body(unittest.TestCase):
         self.assertNotIn("was used in this run", body)
         body = self.body(settings=report(states=dict(ALL_DONE, pages="forbidden"),
                                          details={"pages": "HTTP 422: Upgrade the plan"}))
-        self.assertIn(pages + "not turned on, since GitHub would not keep the site", body)
+        self.assertIn(pages + "not kept on, since GitHub would not keep the site", body)
         self.assertIn("https://github.com/octo-org/widget/settings/pages", body)
         self.assertIn("was used in this run", body)
+        body = self.body(settings=report(states=dict(ALL_DONE, pages="site-only"),
+                                         details={"pages": "HTTP 403: Resource not accessible by integration"}))
+        self.assertIn(pages + "on, built by GitHub Actions, but the variable `SYMPHONY_DOCS` was not set", body)
+        self.assertIn("https://github.com/octo-org/widget/settings/variables/actions", body)
+        body = self.body(settings=report(states=dict(ALL_DONE, pages="not-granted")))
+        self.assertIn(pages + "not turned on, since the Setup App's installation has not accepted", body)
         # The protocol alone, and a report from before the step, say nothing of it.
         self.assertNotIn(pages, self.body(settings=report(states=dict(ALL_DONE, pages="not-tried"))))
         self.assertNotIn(pages, self.body(settings=report()))
