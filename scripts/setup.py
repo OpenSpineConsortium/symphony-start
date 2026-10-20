@@ -115,7 +115,7 @@ is the person's own and never asked for; and GitHub's reading of
          request's text has one source for all of it.
 
 Python 3.12 or later, standard library only. The tokens are read from
-GH_TOKEN, GH_ORG_TOKEN, GH_CHECKS_TOKEN and GH_LEND_TOKEN and never printed.
+GH_TOKEN, GH_ORG_TOKEN, GH_CHECKS_TOKEN, GH_LEND_TOKEN and GH_PAGES_TOKEN and never printed.
 """
 
 import argparse
@@ -162,6 +162,8 @@ NONE_LENT = "none-lent"
 # The check's pin only: no check run of GitHub Actions came within the
 # bound, so the ruleset still takes the check from any source.
 NOT_YET = "not-yet"
+# The site is on and the variable that publishes it was refused.
+SITE_ONLY = "site-only"
 # The settings, in the order they are applied and reported.
 RULESET = "ruleset"
 TOGGLES = "toggles"
@@ -170,16 +172,24 @@ SECRET_SCANNING = "secret_scanning"
 PUSH_PROTECTION = "push_protection"
 ACTIONS_PULL_REQUESTS = "actions_pull_requests"
 TOKEN_STORE = "token_store"
+PAGES = "pages"
 CHECK_SOURCE = "check_source"
 TOKEN_LENDING = "token_lending"
 # The pin comes last, though it belongs to the ruleset, since it may wait
 # minutes for the check run and every other setting is applied meanwhile.
 SETTINGS = (RULESET, TOGGLES, TOPIC, SECRET_SCANNING, PUSH_PROTECTION, ACTIONS_PULL_REQUESTS, TOKEN_LENDING,
-            TOKEN_STORE, CHECK_SOURCE)
+            TOKEN_STORE, PAGES, CHECK_SOURCE)
 # The environment the template's Token workflow (.github/workflows/token.yml)
 # saves a Claude token in with SymphonyBoard's key; limited to the default
 # branch, so only the default branch's script ever runs there.
 TOKEN_STORE_NAME = "token-store"
+# The variable the template's .github/workflows/docs.yml waits for before it
+# publishes the living documentation site with GitHub Pages.
+DOCS_VARIABLE = "SYMPHONY_DOCS"
+DOCS_VALUE = "pages"
+PAGES_NOT_GRANTED_HINT = ("the Setup App's installation has not accepted Pages and Variables, so the site was not turned on; "
+                          "accept them under the installation's settings and adopt again, or run scripts/setup-repo.sh")
+CONFLICT = 409
 # The topic an adopted repository carries, which the template's own
 # scripts/setup-repo.sh adds too.
 TOPIC_NAME = "symphony"
@@ -856,8 +866,78 @@ def apply_token_lending(lend_github, repo, repo_id, repo_visibility, owner_type,
     record(report, TOKEN_LENDING, FAILED if refused else DONE, refused)
 
 
+def apply_pages(github, repo, repo_visibility, report):
+    """GitHub Pages built by GitHub Actions and the variable SYMPHONY_DOCS,
+    so the whole template's docs.yml publishes its documentation site, as
+    the template's scripts/setup-repo.sh does from a clone. github is the
+    Setup App's token with Pages and Variables, minted on its own, or None
+    where the installation has not accepted those permissions. A site the
+    repository has is left as it is and the variable unset, since docs.yml
+    would deploy over what the owner publishes there. A site of a
+    repository that is not public is limited to its readers, read back to
+    be sure, and where GitHub will not limit it (a plan below Enterprise)
+    it is deleted again, never left open to anyone."""
+    if github is None:
+        record(report, PAGES, NOT_GRANTED, PAGES_NOT_GRANTED_HINT)
+        return
+    path = f"/repos/{repo}/pages"
+    try:
+        try:
+            github.call("GET", path)
+            record(report, PAGES, EXISTS)
+            return
+        except GitHubError as said:
+            if said.status != NOT_FOUND:
+                raise
+        github.call("POST", path, {"build_type": "workflow"})
+        if repo_visibility != "public":
+            refusal = limit_to_readers(github, path)
+            if refusal:
+                record(report, PAGES, FORBIDDEN, refusal + take_down(github, path))
+                return
+        try:
+            set_variable(github, repo, DOCS_VARIABLE, DOCS_VALUE)
+        except GitHubError as said:
+            record(report, PAGES, SITE_ONLY, str(said))
+            return
+        record(report, PAGES, DONE)
+    except GitHubError as said:
+        record(report, PAGES, FAILED, str(said))
+
+
+def limit_to_readers(github, path):
+    """None once GitHub says the site is limited to the repository's
+    readers, else why not: a PUT GitHub accepts on a plan that cannot
+    limit a site is read back, so its answer alone is not trusted."""
+    try:
+        github.call("PUT", path, {"public": False})
+        site = github.call("GET", path)
+    except GitHubError as said:
+        return f"GitHub would not limit the site to the repository's readers: {said}"
+    if not isinstance(site, dict) or site.get("public") is not False:
+        return "GitHub accepted limiting the site to the repository's readers, but the site still reads as public"
+    return None
+
+
+def take_down(github, path):
+    try:
+        github.call("DELETE", path)
+    except GitHubError as said:
+        return f"; the site could not be deleted again, so turn it off under Settings, Pages: {said}"
+    return "; the site was deleted again"
+
+
+def set_variable(github, repo, name, value):
+    try:
+        github.call("POST", f"/repos/{repo}/actions/variables", {"name": name, "value": value})
+    except GitHubError as said:
+        if said.status != CONFLICT:
+            raise
+        github.call("PATCH", f"/repos/{repo}/actions/variables/{name}", {"name": name, "value": value})
+
+
 def apply_settings(github, repo, ruleset, mode, org_github=None, checks_github=None, head=None, waiting=None,
-                   lending=None):
+                   lending=None, pages_github=None):
     """Every setting, each on its own: one that fails costs itself and
     nothing else. ruleset is the dict, or the one-line reason it could not
     be read. lending is (the organization's token or None, the owner's
@@ -883,6 +963,11 @@ def apply_settings(github, repo, ruleset, mode, org_github=None, checks_github=N
     apply_token_lending(lend_github, repo, repo_id, repo_visibility, owner_type, requester, requester_id, report)
     # Both kinds bring the Token workflow (symphony-start #76).
     apply_token_store(github, repo, report)
+    # Only the whole template brings the documentation site's workflow.
+    if mode == "new":
+        apply_pages(pages_github, repo, repo_visibility, report)
+    else:
+        record(report, PAGES, NOT_TRIED, "the protocol alone brings no documentation site")
     # Only the whole template brings the CI job that reports the check (6).
     if mode == "new":
         apply_check_source(github, checks_github, repo, head, report, waiting or WAITING)
@@ -909,6 +994,10 @@ LOG_LINES = {
     TOKEN_STORE: {DONE: "environment token-store: made, default branch only",
                   EXISTS: "environment token-store: exists, left as it is",
                   FAILED: "environment token-store: not made"},
+    PAGES: {DONE: "GitHub Pages: on, built by GitHub Actions", EXISTS: "GitHub Pages: a site is there, left as it is",
+            FAILED: "GitHub Pages: not turned on", FORBIDDEN: "GitHub Pages: not turned on",
+            NOT_GRANTED: "GitHub Pages: not turned on", SITE_ONLY: "GitHub Pages: on, the variable SYMPHONY_DOCS not set",
+            NOT_TRIED: "GitHub Pages: not tried"},
     CHECK_SOURCE: {DONE: "the check's source: GitHub Actions", EXISTS: "the check's source: set already",
                    FAILED: "the check's source: not set", NOT_YET: "the check's source: not set yet",
                    NOT_TRIED: "the check's source: not tried"},
@@ -966,9 +1055,14 @@ def command_apply(options, transport=urllib_transport):
     lend_token = os.environ.get("GH_LEND_TOKEN", "")
     lend_github = GitHub(lend_token, transport, options.api) if lend_token else None
     lending = (lend_github, options.owner_type, options.requester, options.requester_id)
+    # The Setup App's token with Pages and Variables for this repository,
+    # minted on its own so an installation that has not accepted them
+    # still adopts and only the site is left.
+    pages_token = os.environ.get("GH_PAGES_TOKEN", "")
+    pages_github = GitHub(pages_token, transport, options.api) if pages_token else None
     try:
         report = apply_settings(github, options.repo, ruleset, options.mode, org_github, checks_github, options.head,
-                                lending=lending)
+                                lending=lending, pages_github=pages_github)
         write_report(options.report, report)
     except OSError as problem:
         print(f"setup: {problem}", file=sys.stderr)

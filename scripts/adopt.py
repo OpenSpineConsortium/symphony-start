@@ -1643,8 +1643,9 @@ def every_setting_done(manifest, report):
     applied."""
     keys = ("secret_scanning", "push_protection") + (("actions_pull_requests",) if manifest["mode"] == "new" else ())
     store = setting_state(report, "token_store")
+    pages = setting_state(report, "pages")
     return (settings_done(report) and all(setting_state(report, key) == "done" for key in keys)
-            and store in (None, "done", "exists"))
+            and store in (None, "done", "exists") and pages in (None, "done", "exists", "not-tried"))
 
 
 def the_settings(manifest):
@@ -1787,6 +1788,39 @@ def toggles_line(manifest, report):
             f" both under https://github.com/{manifest['repository']}/settings.")
 
 
+def pages_line(manifest, report):
+    """GitHub Pages for the whole template's documentation site and the
+    variable docs.yml waits for; nothing where the report is older than
+    the step or the protocol alone was adopted."""
+    state = setting_state(report, "pages")
+    if state in (None, "not-tried"):
+        return None
+    where = f"https://github.com/{manifest['repository']}/settings/pages"
+    if state == "done":
+        return ("- GitHub Pages: on, built by GitHub Actions, with the variable `SYMPHONY_DOCS` set to `pages`, so"
+                " .github/workflows/docs.yml publishes the documentation site (docs/learn/README.md) from its next run"
+                " on the default branch; a repository that is not public keeps it to the people who can read it.")
+    if state == "exists":
+        return ("- GitHub Pages: a site is there already, left as it is; the documentation site is published there"
+                " only once you set the repository variable `SYMPHONY_DOCS` to `pages`.")
+    if state == "forbidden":
+        return (f"- GitHub Pages: not kept on, since GitHub would not keep the site to the repository's readers"
+                f"{github_said(report, 'pages')} and it would have been open to anyone; turn it on at {where} if that"
+                " is meant, and set the repository variable `SYMPHONY_DOCS` to `pages`.")
+    if state == "site-only":
+        return (f"- GitHub Pages: on, built by GitHub Actions, but the variable `SYMPHONY_DOCS` was not set"
+                f"{github_said(report, 'pages')}; set it to `pages` at"
+                f" https://github.com/{manifest['repository']}/settings/variables/actions and docs.yml publishes the"
+                " documentation site from its next run.")
+    if state == "not-granted":
+        return ("- GitHub Pages: not turned on, since the Setup App's installation has not accepted the permissions"
+                " Pages and Variables; once it has, under the installation's settings, adopting again turns the"
+                f" documentation site on, or at {where} choose GitHub Actions as the source and set the repository"
+                " variable `SYMPHONY_DOCS` to `pages`.")
+    return (f"- GitHub Pages: not set up{github_said(report, 'pages')}; at {where}, under Build and deployment, choose"
+            " GitHub Actions as the source, then set the repository variable `SYMPHONY_DOCS` to `pages`.")
+
+
 def token_store_line(manifest, report):
     """The environment the Token workflow saves a lent Claude token in,
     limited to the default branch; nothing where the report is older than
@@ -1892,9 +1926,10 @@ def stays_installed_sentence(manifest):
     person may uninstall it whenever they like, and the sentence says
     where. A report from before that decision may carry "uninstalled",
     which nothing reads any more."""
-    holds = ("Administration on this repository and, where its installation accepted them, Administration, Secrets"
+    repository = "Administration on this repository, and Pages and Variables there where its installation accepted them"
+    holds = (f"{repository}, and, where its installation accepted them, Administration, Secrets"
              " and Variables on the organization"
-             if manifest["owner_type"] == "Organization" else "Administration on this repository")
+             if manifest["owner_type"] == "Organization" else repository)
     owner = "the organization's" if manifest["owner_type"] == "Organization" else "your account's"
     return (f"The {SETUP_APP} App stays installed, acting only during an adoption run. It holds {holds};"
             " you can uninstall it at any time, from the repository's Settings, GitHub Apps, at"
@@ -1926,6 +1961,9 @@ def settings_section(manifest, report):
         store = token_store_line(manifest, report)
         if store:
             parts.append(store)
+        pages = pages_line(manifest, report)
+        if pages:
+            parts.append(pages)
         parts.append("")
         parts.append(stays_installed_sentence(manifest))
     elif outcome == "not-installed":
