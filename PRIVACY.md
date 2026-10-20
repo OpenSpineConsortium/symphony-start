@@ -1,6 +1,6 @@
 # Symphony GitHub Apps privacy statement
 
-Version 39, 2026-10-20. This text is also at https://openspineconsortium.com/symphony/apps-privacy.html.
+Version 40, 2026-10-20. This text is also at https://openspineconsortium.com/symphony/apps-privacy.html.
 The Symphony browser extension has a statement of its own, at https://openspineconsortium.com/symphony/privacy.html.
 
 Who makes the Apps: Gregory Schwing, trading as OpenSpineConsortium ("the developer"). Questions:
@@ -56,7 +56,8 @@ tokens as secrets of its own, each as you (the control panel, below); Variables 
 the Tokens page on a personal account's repository, which holds a Claude slot's settings and the list
 of accounts (SYMPHONY_CLAUDE_SETTINGS and SYMPHONY_CLAUDE_ACCOUNTS) as that repository's own Actions
 variables, and for the Folders tab's Track, which sets the repository's variable SYMPHONY_DRIVE
-so that the drive sync's schedule runs there, each as you (the control panel, below); and Metadata (read), which
+so that the drive sync's schedule runs there, as the tab also does when it opens a repository that
+tracks a drive already, each as you (the control panel, below); and Metadata (read), which
 every App has, to list the
 repositories it reaches. It subscribes to five event types (issues, issue comments, pull requests,
 pushes and check suites), which GitHub delivers only while the App's webhook is turned on; as this
@@ -404,7 +405,8 @@ default branch has a unit is read from one file of it alone, the unit's workflow
 `tools/VENDORED`. A unit your default branch does not have is not added, since you removed it or never
 took it, with two exceptions, the Token workflow and the drive sync's workflow, each with its
 scripts, which are added where they are missing (the drive sync's runs nothing on its schedule until
-Track has set the repository's variable SYMPHONY_DRIVE, below, and reads no drive until a drive's
+Track, or the Folders tab opening a repository that tracks a drive already, has set the repository's
+variable SYMPHONY_DRIVE, below, and reads no drive until a drive's
 token is there); a unit you have gains every file of it that your default branch lacks, whether a module its
 newer scripts import or load by its path, a file the newer library holds that yours does not, a script
 or module of the unit you deleted while keeping its workflow or, where `tools/VENDORED` stands without
@@ -1243,6 +1245,14 @@ starts no run. "Sync now", which the tab shows
 once the repository tracks a drive, reads the default branch and starts one run of drive-sync.yml on
 it.
 
+When the Folders tab opens a repository that tracks a drive already, which it tells by the
+workflow drive-sync.yml there, the file drive.json on its default branch, the repository's own
+secret `SYMPHONY_DRIVE_REFRESH` set and the connection that drive.json records not run out, it also
+reads the repository's Actions variable `SYMPHONY_DRIVE` and, where that is not `on`, sets it to
+`on`, as you, without a press of Track, the owner's choice of 2026-10-20, so that a drive tracked
+before Track set the switch syncs each half hour. It writes nothing else, reads no drive and starts
+no run, and says on the page when it set the variable or could not.
+
 The drive's side goes through Microsoft and the sign-in service. When you first open the tab, it
 asks the sign-in service which drives it is set up for, and the service answers with the public
 client id of the developer's Microsoft app registration, or that OneDrive is not set up yet. When
@@ -1481,6 +1491,14 @@ Symphony is for people who administer GitHub repositories. It is not directed at
 A new version of this statement is published at https://openspineconsortium.com/symphony/apps-privacy.html
 and in the front door repository, github.com/OpenSpineConsortium/symphony-start, whose PRIVACY.md is
 this text.
+
+Version 40 says that the Folders tab, when it opens a repository that tracks a drive already, its
+workflow drive-sync.yml, its drive.json on the default branch and its own secret
+SYMPHONY_DRIVE_REFRESH there and the connection not run out, reads the repository's variable
+SYMPHONY_DRIVE and, where that is not on, sets it to on, as you, without a press of Track, so that a
+drive tracked before Track set the switch syncs each half hour; it writes nothing else and says on
+the page that it did. Nothing the developer receives or keeps changed, and neither App's
+permissions changed.
 
 Version 39 says that the Folders tab's Track takes the organization's secret only where the
 repository is public or the organization's plan is a paid one, for which it reads the organization's
