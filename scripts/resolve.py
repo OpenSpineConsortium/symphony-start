@@ -23,12 +23,14 @@ SETUP_JWT set, the Setup App is a preference among those candidates and
 never a requirement: SymphonyBoard alone adopts and applies the settings
 (the owner's rule of 2026-10-20), and Symphony Setup is only the fallback
 for an installation of SymphonyBoard that cannot accept Administration.
-Where the Setup App is installed on some of the candidates, asked by id
-with that App's JWT, the newest of those is chosen, since installing it
-there was the person's choice of repository, so an account with the App
-on all its repositories and the Setup App on one gets that one; where it
-is on none of them, the newest candidate is chosen. Without SETUP_JWT
-there is no preference. The file --out
+Where the person installed the Setup App on the account, only the
+candidates it is installed on count, asked by id with that App's JWT,
+since installing it there was their choice of repository, so an account
+with the App on all its repositories and the Setup App on one gets that
+one, and nothing once that one is adopted; where they never installed it
+on the account, the newest candidate is chosen. Without SETUP_JWT there
+is no such rule. Whether the author administers a repository is asked
+first, one call each, so a stranger's guess asks nothing more. The file --out
 gets installation_id, repository_ids (a JSON list) and count, as KEY=value
 lines for $GITHUB_OUTPUT; stdout says how many and nothing else.
 
@@ -129,13 +131,18 @@ def reached_by_the_setup_app(setup, repositories):
     return kept
 
 
-def preferred(setup, candidates):
-    """The candidates the Setup App is installed on where it is on any of
-    them, else all of them: a preference, never a filter, so a person who
-    never installed the Setup App still adopts."""
+def chosen_by_the_setup_app(setup, account_id, candidates):
+    """Where the person installed the Setup App on this account, its
+    installation is their choice of repository, so only the candidates it
+    reaches; where they never installed it, every candidate, since the
+    Setup App is a fallback and never a requirement. Without that rule an
+    account whose Setup App sits on one repository, adopted already, would
+    have its newest other repository adopted by a second press."""
     if setup is None or not candidates:
         return candidates
-    return reached_by_the_setup_app(setup, candidates) or candidates
+    if installation_on_account(setup, account_id) is None:
+        return candidates
+    return reached_by_the_setup_app(setup, candidates)
 
 
 def only_the_setup_apps(setup, installation):
@@ -169,7 +176,12 @@ def resolve(app, setup, installation_id, author):
         repositories = repositories_of(github)
         if only is not None:
             repositories = [repository for repository in repositories if repository["id"] in only]
-        mine = preferred(setup, administered(github, sweep.unadopted(github, repositories), author))
+        # The author's own first, one call each, so a stranger's guessed
+        # number asks nothing more of the repositories and its answer
+        # comes as soon as any other refusal.
+        account = found.get("account") if isinstance(found.get("account"), dict) else {}
+        mine = chosen_by_the_setup_app(setup, account.get("id"),
+                                       sweep.unadopted(github, administered(github, repositories, author)))
     finally:
         sweep.revoke(github)
     if not mine:

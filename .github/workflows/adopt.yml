@@ -156,7 +156,7 @@ jobs:
           # no mask exists in this job and nothing printed can differ; and
           # each refusal waits for the same moment, so the step's length
           # says nothing.
-          refusal="Nothing was done: the installation this form carried is not the Symphony App's or its Setup App's, or it reaches no repository with no adoption yet, or none of those that your account administers. Check that the Symphony App is installed on the repository, https://github.com/apps/symphonyboard/installations/new, then open a new request with the form naming the repository as OWNER/NAME, as an administrator of it; this one is closed."
+          refusal="Nothing was done: the installation this form carried is not the Symphony App's or its Setup App's, or it reaches no repository with no adoption yet, or none of those that your account administers, or, where you installed the Setup App too, none it was given. Check that the Symphony App is installed on the repository, https://github.com/apps/symphonyboard/installations/new, then open a new request with the form naming the repository as OWNER/NAME, as an administrator of it; this one is closed."
           deadline=$((SECONDS + 25))
           refuse_alike() {
             sleep $((deadline > SECONDS ? deadline - SECONDS : 0))

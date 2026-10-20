@@ -61,6 +61,9 @@ class Transport:
             return 200, SETUP
         if token == "app" and path.startswith("/app/installations?"):
             return 200, [MAIN]
+        if token == "setup" and path.startswith("/app/installations?"):
+            # Installed on the account when it is on any repository.
+            return 200, [SETUP] if self.setup_on else []
         if method == "POST" and path.startswith("/app/installations/") and path.endswith("/access_tokens"):
             return 201, {"token": f"token-{token}-{path.split('/')[3]}"}
         if path.startswith("/installation/repositories"):
@@ -155,20 +158,35 @@ class Resolving(unittest.TestCase):
         self.assertNotIn(("setup", "GET", "/repositories/3/installation"), transport.calls)
 
     def test_with_the_setup_app_on_no_candidate_the_newest_is_chosen(self):
-        """A person who never installed the Setup App, or installed it
-        elsewhere, still adopts: the newest candidate; and without the
-        Setup App's JWT the Setup App is never asked."""
+        """A person who never installed the Setup App still adopts: the
+        newest candidate; and without the Setup App's JWT the Setup App is
+        never asked."""
         transport = Transport(setup_on=[])
         code, written, out, err = self.run_resolve(transport)
         self.assertEqual((code, written, err), (0, "installation_id=70\nrepository_ids=[1]\ncount=1\n", ""))
         self.assertEqual(out, "the installation reaches 1 repository to adopt\n")
-        transport = Transport(setup_on=[3])
-        code, written, _, _ = self.run_resolve(transport)
-        self.assertEqual((code, written), (0, "installation_id=70\nrepository_ids=[1]\ncount=1\n"))
         transport = Transport(setup_on=[2])
         code, written, _, _ = self.run_resolve(transport, setup=False)
         self.assertEqual((code, written), (0, "installation_id=70\nrepository_ids=[1]\ncount=1\n"))
         self.assertFalse([call for call in transport.calls if call[0] == "setup"])
+
+    def test_a_setup_app_on_the_account_but_on_no_candidate_adopts_nothing(self):
+        """Where the person installed the Setup App on one repository, that
+        is their choice: once it is adopted, a second press adopts no other
+        repository of the account, which the press never chose."""
+        transport = Transport(setup_on=[3])
+        code, written, out, err = self.run_resolve(transport)
+        self.assertEqual((code, written, out, err), (3, None, "", ""))
+
+    def test_a_stranger_asks_nothing_of_the_repositories_but_whether_they_administer(self):
+        """A guessed number reads no repository's contents or branches, so
+        its refusal takes no longer however large the installation is."""
+        transport = Transport(permissions={})
+        code, _, _, _ = self.run_resolve(transport, author="stranger")
+        self.assertEqual(code, 3)
+        asked = [path for _, _, path in transport.calls if path.startswith("/repositories/")]
+        self.assertTrue(asked)
+        self.assertTrue(all("/collaborators/" in path for path in asked), asked)
 
     def test_nothing_to_adopt_never_asks_the_setup_app(self):
         """No candidate is the one refusal, whoever the Setup App reaches,
