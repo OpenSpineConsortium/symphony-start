@@ -90,6 +90,11 @@ ENVIRONMENT = f"/repos/{REPO}/environments/token-store"
 ENVIRONMENT_PROBE = ENVIRONMENT + "/deployment_protection_rules/apps"
 ENVIRONMENT_BODY = {"deployment_branch_policy": {"protected_branches": False, "custom_branch_policies": True}}
 STORE_LOG = "settings: environment token-store: "
+# GitHub Pages for the documentation site; the default answer is a site
+# there already, which the run leaves as it is, so the class Pages tests
+# the site's making on its own.
+PAGES = f"/repos/{REPO}/pages"
+PAGES_LOG = "settings: GitHub Pages: "
 # The token lending's one line of two, the same for every requester.
 LENT_LOG = "token lending: tokens lent"
 NOT_LENT_LOG = "token lending: no tokens lent"
@@ -142,6 +147,8 @@ class FakeGitHub:
             status, answer = 200, {"private": False, "default_branch": "main"}
         elif (method, path) == ("GET", ENVIRONMENT_PROBE):
             status, answer = 404, {"message": "Not Found"}
+        elif (method, path) == ("GET", PAGES):
+            status, answer = 200, {"build_type": "legacy"}
         elif (method, path) == ("GET", f"/repos/{REPO}/rulesets?includes_parents=false"):
             status, answer = 200, []
         elif (method, path) == ("GET", TOPICS):
@@ -200,10 +207,11 @@ class Apply(unittest.TestCase):
     def states(self, report):
         """Each setting's state but the token lending's, which these tests
         leave untried, as a run for a personal account's repository does,
-        and the class Lending tests on its own, and the token store's,
-        which the class TokenStore tests on its own."""
+        and the class Lending tests on its own, and the token store's and
+        the Pages site's, which the classes TokenStore and Pages test on
+        their own."""
         return {key: setting["state"] for key, setting in report["settings"].items()
-                if key not in ("token_lending", "token_store")}
+                if key not in ("token_lending", "token_store", "pages")}
 
     def test_new_mode_applies_every_setting_in_order(self):
         github = FakeGitHub()
@@ -237,6 +245,7 @@ class Apply(unittest.TestCase):
             ACTIONS_LOG + "on",
             NOT_LENT_LOG,
             STORE_LOG + "made, default branch only",
+            PAGES_LOG + "a site is there, left as it is",
             PIN_LOG + "GitHub Actions",
         ])
 
@@ -601,12 +610,14 @@ class Apply(unittest.TestCase):
         self.assertEqual(report["settings"]["actions_pull_requests"],
                          {"state": "not-tried", "detail": NOT_TRIED_IN_EXISTING})
         self.assertEqual(list(report["settings"]), list(setup.SETTINGS))
-        self.assertEqual(out.splitlines()[-4:], [ACTIONS_LOG + "not tried", NOT_LENT_LOG,
-                                                 STORE_LOG + "made, default branch only", PIN_LOG + "not tried"])
+        self.assertEqual(out.splitlines()[-5:], [ACTIONS_LOG + "not tried", NOT_LENT_LOG,
+                                                 STORE_LOG + "made, default branch only", PAGES_LOG + "not tried",
+                                                 PIN_LOG + "not tried"])
+        self.assertNotIn(PAGES, [path for _, path, _, _ in github.calls])
 
     def test_the_log_has_a_line_for_every_setting_done_or_refused(self):
         self.assertEqual(setup.SETTINGS, ("ruleset", "toggles", "topic", "secret_scanning", "push_protection",
-                                          "actions_pull_requests", "token_lending", "token_store", "check_source"))
+                                          "actions_pull_requests", "token_lending", "token_store", "pages", "check_source"))
         for key in setup.SETTINGS:
             if key == setup.TOKEN_LENDING:
                 continue
@@ -652,6 +663,7 @@ class Apply(unittest.TestCase):
             ACTIONS_LOG + "not turned on",
             NOT_LENT_LOG,
             STORE_LOG + "not made",
+            PAGES_LOG + "not turned on",
             PIN_LOG + "not tried",
         ])
         self.assertNotIn("integration", out)
@@ -1268,6 +1280,62 @@ class TokenStore(unittest.TestCase):
         setup.apply_token_store(setup.GitHub("ghs_token_for_tests", transport=github), REPO, report)
         self.assertEqual(report["settings"][setup.TOKEN_STORE]["state"], setup.FAILED)
         self.assertEqual(github.calls, [])
+
+
+class Pages(unittest.TestCase):
+    """GitHub Pages built by GitHub Actions and the variable SYMPHONY_DOCS,
+    for the whole template's documentation site; a site there already is
+    left as it is, and one GitHub will not limit to the readers of a
+    repository that is not public is deleted again."""
+
+    NONE = {("GET", PAGES): (404, {"message": "Not Found"})}
+    VARIABLE = ("POST", f"/repos/{REPO}/actions/variables", {"name": "SYMPHONY_DOCS", "value": "pages"})
+
+    def pages(self, answers=None, visibility="public"):
+        github = FakeGitHub({**self.NONE, **(answers or {})})
+        report = setup.new_report(setup.APPLIED, "new")
+        setup.apply_pages(setup.GitHub("ghs_token_for_tests", transport=github), REPO, visibility, report)
+        return github, report["settings"][setup.PAGES]
+
+    def test_a_public_repository_gets_a_site_built_by_actions_and_the_variable(self):
+        github, setting = self.pages()
+        self.assertEqual(setting["state"], setup.DONE)
+        self.assertEqual(github.writes(), [("POST", PAGES, {"build_type": "workflow"}), self.VARIABLE])
+
+    def test_a_private_or_internal_repositorys_site_is_limited_to_its_readers(self):
+        for visibility in ("private", "internal", ""):
+            with self.subTest(visibility=visibility):
+                github, setting = self.pages(visibility=visibility)
+                self.assertEqual(setting["state"], setup.DONE)
+                self.assertEqual(github.writes(), [("POST", PAGES, {"build_type": "workflow"}),
+                                                   ("PUT", PAGES, {"public": False}), self.VARIABLE])
+
+    def test_a_site_github_will_not_limit_is_deleted_and_no_variable_set(self):
+        github, setting = self.pages({("PUT", PAGES): (422, {"message": "Upgrade the plan"})}, visibility="private")
+        self.assertEqual(setting["state"], setup.FORBIDDEN)
+        self.assertIn(("DELETE", PAGES), [(method, path) for method, path, _, _ in github.calls])
+        self.assertNotIn(self.VARIABLE, github.writes())
+
+    def test_a_site_there_already_is_left_as_it_is(self):
+        github, setting = self.pages({("GET", PAGES): (200, {"build_type": "legacy"})})
+        self.assertEqual(setting["state"], setup.EXISTS)
+        self.assertEqual(github.writes(), [])
+
+    def test_a_variable_there_already_is_updated(self):
+        github, setting = self.pages({("POST", f"/repos/{REPO}/actions/variables"): (409, {"message": "Already exists"})})
+        self.assertEqual(setting["state"], setup.DONE)
+        self.assertEqual(github.writes()[-1], ("PATCH", f"/repos/{REPO}/actions/variables/SYMPHONY_DOCS",
+                                               {"name": "SYMPHONY_DOCS", "value": "pages"}))
+
+    def test_a_refused_site_is_a_failure_and_sets_no_variable(self):
+        github, setting = self.pages({("POST", PAGES): (403, {"message": "Resource not accessible by integration"})})
+        self.assertEqual(setting, {"state": setup.FAILED, "detail": "HTTP 403: Resource not accessible by integration"})
+        self.assertNotIn(self.VARIABLE, github.writes())
+
+    def test_a_refused_variable_says_the_site_is_on(self):
+        github, setting = self.pages({("POST", f"/repos/{REPO}/actions/variables"): (403, {"message": "Resource not accessible by integration"})})
+        self.assertEqual(setting["state"], setup.FAILED)
+        self.assertIn("the site was turned on", setting["detail"])
 
 
 class Transport(unittest.TestCase):

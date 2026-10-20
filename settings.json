@@ -113,6 +113,17 @@
       "when": "unless the repository has an environment token-store already, which is left as it is"
     },
     {
+      "key": "pages",
+      "report": "pages",
+      "scope": "repository",
+      "app": "Symphony Setup",
+      "permission": "Pages: write and Variables: write (repository)",
+      "api": "GET /repos/{owner}/{repo}/pages to see whether a site is there, then POST /repos/{owner}/{repo}/pages, PUT /repos/{owner}/{repo}/pages for a repository that is not public (DELETE /repos/{owner}/{repo}/pages where GitHub refuses that PUT), and POST /repos/{owner}/{repo}/actions/variables (PATCH /repos/{owner}/{repo}/actions/variables/SYMPHONY_DOCS where it is there)",
+      "value": {"build_type": "workflow", "public": "false unless the repository is public", "variable": {"SYMPHONY_DOCS": "pages"}},
+      "modes": ["new"],
+      "when": "unless the repository has a Pages site already, which is left as it is with no variable set; a site of a repository that is not public is limited to its readers, and deleted again where GitHub will not limit it"
+    },
+    {
       "key": "check_source",
       "report": "check_source",
       "scope": "repository",

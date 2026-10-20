@@ -39,7 +39,8 @@ MEANWHILE = ("Until it is on, `protocol.yml` brings each new release as an issue
 PARALLEL = "Some of those counts say how the work ran in parallel"
 # The Setup App stays installed after the run (the owner, 2026-10-19).
 STAYS = ("The Symphony Setup App stays installed, acting only during an adoption run. It holds"
-         " Administration on this repository; you can uninstall it at any time, from the repository's Settings,"
+         " Administration on this repository, and Pages and Variables there where its installation accepted them;"
+         " you can uninstall it at any time, from the repository's Settings,"
          " GitHub Apps, at https://github.com/octo-org/widget/settings/installations, or from your account's at"
          " https://github.com/settings/installations. The Symphony App, which opened this pull request, stays too;"
          " uninstalling it undoes nothing here and only stops what is shared, above, from being read.")
@@ -475,7 +476,8 @@ class Body(unittest.TestCase):
 
     def test_an_organization_uninstalls_from_its_own_page(self):
         body = self.body(settings=report(), owner_type="Organization")
-        self.assertIn("It holds Administration on this repository and, where its installation accepted them,"
+        self.assertIn("It holds Administration on this repository, and Pages and Variables there where its installation"
+                      " accepted them, and, where its installation accepted them,"
                       " Administration, Secrets and Variables on the organization; you can uninstall it at any time, from the repository's Settings, GitHub Apps,"
                       " at https://github.com/octo-org/widget/settings/installations, or from the organization's at"
                       " https://github.com/organizations/octo-org/settings/installations.", body)
@@ -493,6 +495,20 @@ class Body(unittest.TestCase):
         self.assertIn("was used in this run", body)
         # A report from before the step says nothing of it.
         self.assertNotIn(store, self.body(settings=report()))
+
+    def test_pages_says_what_became_of_the_documentation_site(self):
+        pages = "- GitHub Pages: "
+        body = self.body(settings=report(states=dict(ALL_DONE, pages="done")))
+        self.assertIn(pages + "on, built by GitHub Actions, with the variable `SYMPHONY_DOCS` set to `pages`", body)
+        self.assertNotIn("was used in this run", body)
+        body = self.body(settings=report(states=dict(ALL_DONE, pages="forbidden"),
+                                         details={"pages": "HTTP 422: Upgrade the plan"}))
+        self.assertIn(pages + "not turned on, since GitHub would not keep the site", body)
+        self.assertIn("https://github.com/octo-org/widget/settings/pages", body)
+        self.assertIn("was used in this run", body)
+        # The protocol alone, and a report from before the step, say nothing of it.
+        self.assertNotIn(pages, self.body(settings=report(states=dict(ALL_DONE, pages="not-tried"))))
+        self.assertNotIn(pages, self.body(settings=report()))
 
     def lending_report(self, state, lent=(), left=(), failed=(), detail="", mode="new", unreached=(), missing=()):
         settings = report(states=dict(ALL_DONE, token_lending=state), details={"token_lending": detail}, mode=mode)

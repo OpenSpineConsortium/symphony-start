@@ -170,16 +170,22 @@ SECRET_SCANNING = "secret_scanning"
 PUSH_PROTECTION = "push_protection"
 ACTIONS_PULL_REQUESTS = "actions_pull_requests"
 TOKEN_STORE = "token_store"
+PAGES = "pages"
 CHECK_SOURCE = "check_source"
 TOKEN_LENDING = "token_lending"
 # The pin comes last, though it belongs to the ruleset, since it may wait
 # minutes for the check run and every other setting is applied meanwhile.
 SETTINGS = (RULESET, TOGGLES, TOPIC, SECRET_SCANNING, PUSH_PROTECTION, ACTIONS_PULL_REQUESTS, TOKEN_LENDING,
-            TOKEN_STORE, CHECK_SOURCE)
+            TOKEN_STORE, PAGES, CHECK_SOURCE)
 # The environment the template's Token workflow (.github/workflows/token.yml)
 # saves a Claude token in with SymphonyBoard's key; limited to the default
 # branch, so only the default branch's script ever runs there.
 TOKEN_STORE_NAME = "token-store"
+# The variable the template's .github/workflows/docs.yml waits for before it
+# publishes the living documentation site with GitHub Pages.
+DOCS_VARIABLE = "SYMPHONY_DOCS"
+DOCS_VALUE = "pages"
+CONFLICT = 409
 # The topic an adopted repository carries, which the template's own
 # scripts/setup-repo.sh adds too.
 TOPIC_NAME = "symphony"
@@ -856,6 +862,54 @@ def apply_token_lending(lend_github, repo, repo_id, repo_visibility, owner_type,
     record(report, TOKEN_LENDING, FAILED if refused else DONE, refused)
 
 
+def apply_pages(github, repo, repo_visibility, report):
+    """GitHub Pages built by GitHub Actions and the variable SYMPHONY_DOCS,
+    so the whole template's docs.yml publishes its documentation site, as
+    the template's scripts/setup-repo.sh does from a clone. A site the
+    repository has is left as it is and the variable unset, since docs.yml
+    would deploy over what the owner publishes there. A site of a
+    repository that is not public is limited to its readers, and where
+    GitHub will not limit it (a plan below Enterprise) it is deleted again,
+    never left open to anyone."""
+    path = f"/repos/{repo}/pages"
+    try:
+        try:
+            github.call("GET", path)
+            record(report, PAGES, EXISTS)
+            return
+        except GitHubError as said:
+            if said.status != NOT_FOUND:
+                raise
+        github.call("POST", path, {"build_type": "workflow"})
+        if repo_visibility != "public":
+            try:
+                github.call("PUT", path, {"public": False})
+            except GitHubError as said:
+                try:
+                    github.call("DELETE", path)
+                except GitHubError:
+                    pass
+                record(report, PAGES, FORBIDDEN, f"GitHub would not limit the site to the repository's readers: {said}")
+                return
+        try:
+            set_variable(github, repo, DOCS_VARIABLE, DOCS_VALUE)
+        except GitHubError as said:
+            record(report, PAGES, FAILED, f"the site was turned on, but the variable {DOCS_VARIABLE} was refused: {said}")
+            return
+        record(report, PAGES, DONE)
+    except GitHubError as said:
+        record(report, PAGES, FAILED, str(said))
+
+
+def set_variable(github, repo, name, value):
+    try:
+        github.call("POST", f"/repos/{repo}/actions/variables", {"name": name, "value": value})
+    except GitHubError as said:
+        if said.status != CONFLICT:
+            raise
+        github.call("PATCH", f"/repos/{repo}/actions/variables/{name}", {"name": name, "value": value})
+
+
 def apply_settings(github, repo, ruleset, mode, org_github=None, checks_github=None, head=None, waiting=None,
                    lending=None):
     """Every setting, each on its own: one that fails costs itself and
@@ -883,6 +937,11 @@ def apply_settings(github, repo, ruleset, mode, org_github=None, checks_github=N
     apply_token_lending(lend_github, repo, repo_id, repo_visibility, owner_type, requester, requester_id, report)
     # Both kinds bring the Token workflow (symphony-start #76).
     apply_token_store(github, repo, report)
+    # Only the whole template brings the documentation site's workflow.
+    if mode == "new":
+        apply_pages(github, repo, repo_visibility, report)
+    else:
+        record(report, PAGES, NOT_TRIED, "the protocol alone brings no documentation site")
     # Only the whole template brings the CI job that reports the check (6).
     if mode == "new":
         apply_check_source(github, checks_github, repo, head, report, waiting or WAITING)
@@ -909,6 +968,9 @@ LOG_LINES = {
     TOKEN_STORE: {DONE: "environment token-store: made, default branch only",
                   EXISTS: "environment token-store: exists, left as it is",
                   FAILED: "environment token-store: not made"},
+    PAGES: {DONE: "GitHub Pages: on, built by GitHub Actions", EXISTS: "GitHub Pages: a site is there, left as it is",
+            FAILED: "GitHub Pages: not turned on", FORBIDDEN: "GitHub Pages: not turned on",
+            NOT_TRIED: "GitHub Pages: not tried"},
     CHECK_SOURCE: {DONE: "the check's source: GitHub Actions", EXISTS: "the check's source: set already",
                    FAILED: "the check's source: not set", NOT_YET: "the check's source: not set yet",
                    NOT_TRIED: "the check's source: not tried"},
