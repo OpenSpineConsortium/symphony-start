@@ -18,19 +18,23 @@ one, the newest, so that one press never reaches further than one
 repository (on 2026-10-11 an installation on all of an account's
 repositories, with "Merge the pull request for me" ticked, merged the
 adoption into eight before the run was cancelled); the person presses
-Create again for the next, or names a repository on the form. With SETUP_JWT set, only a
-repository the Setup App is installed on is a candidate, asked by id with
-that App's JWT before the newest is chosen: the Setup App's installation
-is the person's choice of repository and their consent to the settings it
-applies, so an account with the App on all its
-repositories and the Setup App on one gets that one. Without SETUP_JWT
-there is no such filter. The file --out
+Create again for the next, or names a repository on the form. With
+SETUP_JWT set, the Setup App is a preference among those candidates and
+never a requirement: SymphonyBoard alone adopts and applies the settings
+(the owner's rule of 2026-10-20), and Symphony Setup is only the fallback
+for an installation of SymphonyBoard that cannot accept Administration.
+Where the Setup App is installed on some of the candidates, asked by id
+with that App's JWT, the newest of those is chosen, since installing it
+there was the person's choice of repository, so an account with the App
+on all its repositories and the Setup App on one gets that one; where it
+is on none of them, the newest candidate is chosen. Without SETUP_JWT
+there is no preference. The file --out
 gets installation_id, repository_ids (a JSON list) and count, as KEY=value
 lines for $GITHUB_OUTPUT; stdout says how many and nothing else.
 
 Exit 0 with something to adopt; 3 when there is nothing (an installation
-that is neither App's, no repository with no adoption yet, none the
-author administers, or none the Setup App reaches), which the workflow
+that is neither App's, no repository with no adoption yet, or none the
+author administers), which the workflow
 answers with one message whatever the reason; 4 when the App's own record
 cannot be read, which is the front door's owner's problem; 1 when GitHub
 could not be asked. APP_JWT is the App's JWT (scripts/jwt.sh); SETUP_JWT,
@@ -125,6 +129,15 @@ def reached_by_the_setup_app(setup, repositories):
     return kept
 
 
+def preferred(setup, candidates):
+    """The candidates the Setup App is installed on where it is on any of
+    them, else all of them: a preference, never a filter, so a person who
+    never installed the Setup App still adopts."""
+    if setup is None or not candidates:
+        return candidates
+    return reached_by_the_setup_app(setup, candidates) or candidates
+
+
 def only_the_setup_apps(setup, installation):
     """The ids of the repositories a Setup App installation was given, or
     None when it was given them all."""
@@ -156,9 +169,7 @@ def resolve(app, setup, installation_id, author):
         repositories = repositories_of(github)
         if only is not None:
             repositories = [repository for repository in repositories if repository["id"] in only]
-        if setup is not None:
-            repositories = reached_by_the_setup_app(setup, repositories)
-        mine = administered(github, sweep.unadopted(github, repositories), author)
+        mine = preferred(setup, administered(github, sweep.unadopted(github, repositories), author))
     finally:
         sweep.revoke(github)
     if not mine:

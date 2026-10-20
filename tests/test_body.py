@@ -904,6 +904,8 @@ class Body(unittest.TestCase):
                       " private key there is wrong, it is not installed on the front door's own repository, or GitHub"
                       " did not answer), which is for the front door's owner to put right, and the run has told them",
                       body)
+        self.assertIn("Or accept Administration for the Symphony App at https://github.com/settings/installations and"
+                      " ask again, and it applies them itself, with no Setup App.", body)
         self.assertIn("If you installed the Setup App, it stays installed, so a run made once the owner has put it"
                       " right can apply them; you can uninstall it at any time at"
                       " https://github.com/settings/installations.", body)
@@ -911,15 +913,19 @@ class Body(unittest.TestCase):
 
     def test_a_settings_step_that_died_before_its_report(self):
         body = self.body(settings=report(outcome="not-reported"), owner_type="Organization")
-        self.assertIn("## Settings\n\nThe step that applies the settings stopped before it could say what it did. If"
-                      " you installed the Setup App, some of the settings `scripts/setup-repo.sh` applies", body)
+        self.assertIn("## Settings\n\nThe step that applies the settings stopped before it could say what it did."
+                      " Some of the settings `scripts/setup-repo.sh` applies", body)
+        self.assertIn("may be applied, by the Symphony App or, if you installed it, the Setup App: check", body)
         # Mode new's box, which the step may have ticked, is on a page of
         # its own; mode existing does not try it.
         self.assertIn("check https://github.com/octo-org/widget/settings/rules,"
                       f" https://github.com/octo-org/widget/settings and {ACTIONS_PAGE}. Step 2 of the next steps"
                       " applies them by hand", body)
-        self.assertIn("applies them by hand, with `scripts/setup-repo.sh`. The Symphony Setup App stays installed,"
-                      " acting only during an adoption run.", body)
+        # The Setup App is optional, so the sentence holds for a person who
+        # never installed it.
+        self.assertIn("applies them by hand, with `scripts/setup-repo.sh`. If you installed the Symphony Setup App, it"
+                      " stays installed, acting only during an adoption run.", body)
+        self.assertNotIn("The Symphony Setup App stays installed", body)
         self.assertIn("or from the organization's at https://github.com/organizations/octo-org/settings/installations",
                       body)
         self.assertIn("2. From a clone", body)

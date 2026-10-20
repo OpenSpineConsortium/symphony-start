@@ -136,28 +136,51 @@ class Resolving(unittest.TestCase):
         asked = [path for _, _, path in transport.calls if path.startswith("/repositories/4/")]
         self.assertIn("/repositories/4/branches?per_page=1", asked)
         self.assertFalse([path for path in asked if "/git/" in path or "/contents/" in path], asked)
-        # Chosen for the Setup App or not at all: the filter holds for it too.
-        self.assertEqual(self.run_resolve(Transport(answers, repositories=(empty,), permissions={4: "admin"},
-                                                    setup_on=[]))[0], resolve.NOTHING)
+        # The Setup App on none of them is no reason to refuse it.
+        code, written, _, _ = self.run_resolve(Transport(answers, repositories=(empty,), permissions={4: "admin"},
+                                                         setup_on=[]))
+        self.assertEqual((code, written), (0, "installation_id=70\nrepository_ids=[4]\ncount=1\n"))
 
-    def test_only_a_repository_the_setup_app_is_installed_on(self):
-        """The Setup App's installation is the person's choice of repository
-        and their consent to the settings: an account with the App on all
-        its repositories and the Setup App on one gets that one, by id with
-        the Setup App's JWT; on none, nothing; without the Setup App's
-        JWT, no filter, and the newest of all."""
+    def test_a_candidate_the_setup_app_is_installed_on_comes_first(self):
+        """SymphonyBoard alone adopts (the owner's rule of 2026-10-20), so
+        the Setup App is a preference among the candidates, asked by id
+        with its JWT: where it is on one of them, that one is chosen, even
+        though a newer candidate stands."""
         transport = Transport(setup_on=[2])
         code, written, _, _ = self.run_resolve(transport)
         self.assertEqual((code, written), (0, "installation_id=70\nrepository_ids=[2]\ncount=1\n"))
         self.assertIn(("setup", "GET", "/repositories/1/installation"), transport.calls)
         self.assertFalse([path for _, _, path in transport.calls if "/repos/" in path])
-        self.assertEqual(self.run_resolve(Transport(setup_on=[]))[0], 3)
+        # Only the candidates are asked: the adopted one is never a candidate.
+        self.assertNotIn(("setup", "GET", "/repositories/3/installation"), transport.calls)
+
+    def test_with_the_setup_app_on_no_candidate_the_newest_is_chosen(self):
+        """A person who never installed the Setup App, or installed it
+        elsewhere, still adopts: the newest candidate; and without the
+        Setup App's JWT the Setup App is never asked."""
+        transport = Transport(setup_on=[])
+        code, written, out, err = self.run_resolve(transport)
+        self.assertEqual((code, written, err), (0, "installation_id=70\nrepository_ids=[1]\ncount=1\n", ""))
+        self.assertEqual(out, "the installation reaches 1 repository to adopt\n")
+        transport = Transport(setup_on=[3])
+        code, written, _, _ = self.run_resolve(transport)
+        self.assertEqual((code, written), (0, "installation_id=70\nrepository_ids=[1]\ncount=1\n"))
         transport = Transport(setup_on=[2])
         code, written, _, _ = self.run_resolve(transport, setup=False)
         self.assertEqual((code, written), (0, "installation_id=70\nrepository_ids=[1]\ncount=1\n"))
         self.assertFalse([call for call in transport.calls if call[0] == "setup"])
-        # An answer that is neither 200 nor 404 is GitHub failing, not a
-        # repository without the App.
+
+    def test_nothing_to_adopt_never_asks_the_setup_app(self):
+        """No candidate is the one refusal, whoever the Setup App reaches,
+        and nothing of a repository is printed."""
+        transport = Transport(permissions={}, setup_on=[1, 2])
+        code, written, out, err = self.run_resolve(transport, author="stranger")
+        self.assertEqual((code, written, out, err), (3, None, "", ""))
+        self.assertFalse([call for call in transport.calls if call[0] == "setup"])
+
+    def test_the_setup_app_failing_is_github_failing(self):
+        """An answer that is neither 200 nor 404 is GitHub failing, not a
+        repository without the App, and names nothing."""
         transport = Transport({("setup", "GET", "/repositories/1/installation"): (500, {"message": "boom"})})
         code, written, out, err = self.run_resolve(transport)
         self.assertEqual((code, written, out), (1, None, ""))

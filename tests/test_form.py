@@ -98,18 +98,19 @@ class TheForm(unittest.TestCase):
         that the issue is public and where the App is installed."""
         for words in ("never code, text or names", ".github/symphony-metrics", "This issue is public", "installations/new",
                       "Press Create", "the newest repository the installation reaches", "press Create again",
-                      "Both Apps are needed", "https://github.com/apps/symphonyboard/installations/new",
-                      "stays installed, acting only during an adoption run", "without the Setup App is refused"):
+                      "is enough", "https://github.com/apps/symphonyboard/installations/new", "is optional",
+                      "stays installed, acting only during an adoption run"):
             self.assertIn(words, self.text)
+        self.assertNotIn("refused", self.text)
         prose = re.search(r"value: \|\n((?:        .*\n)+)", self.text).group(1)
         self.assertLess(len(prose.split()), 140)
 
     def test_the_form_and_the_readme_name_the_setup_app_and_its_one_use(self):
-        """Installing the Setup App is the person's consent to the settings,
-        so the form says what it is for, where it is and that it is
-        stays installed afterwards, which the person may uninstall whenever
-        they like (the owner, 2026-10-19), and the README names the same
-        App."""
+        """The Setup App is optional, the fallback where SymphonyBoard cannot
+        have Administration (the owner, 2026-10-20), so the form says what
+        it is for, where it is and that it stays installed afterwards,
+        which the person may uninstall whenever they like (the owner,
+        2026-10-19), and the README names the same App."""
         for text in (self.text, (ROOT / "README.md").read_text(encoding="utf-8")):
             self.assertIn(SETUP_APP_INSTALL, text)
             self.assertIn("Administration", text)
@@ -119,19 +120,15 @@ class TheForm(unittest.TestCase):
         self.assertNotIn("Setup App", "\n".join(re.findall(r"^      label: (.+)$", self.text, re.MULTILINE)))
 
     def test_the_consent_names_every_setting_the_setup_app_applies(self):
-        """Installing the Setup App is the consent to its settings, so the
-        README's first step and the refusal that sends a person to install
-        it name each one the pull request's text names, the box that lets
-        GitHub Actions open pull requests among them, and so does the
-        privacy statement."""
+        """Accepting the permissions of the App that applies the settings is
+        the consent to them, so the README's first step names each one the
+        pull request's text names, the box that lets GitHub Actions open
+        pull requests among them, and so does the privacy statement."""
         readme = (ROOT / "README.md").read_text(encoding="utf-8")
-        step = readme[readme.index("1. **Install both Apps**"):readme.index("2. **Press Create**")]
-        workflow = (ROOT / ".github/workflows/adopt.yml").read_text(encoding="utf-8")
-        refusal = next(line for line in workflow.splitlines() if "Symphony Setup is not installed on $TARGET" in line)
-        for place, text in (("README.md", step), ("adopt.yml", refusal)):
-            for name in (*adopt.THE_SETTINGS, adopt.ACTIONS_SETTING):
-                with self.subTest(place=place, setting=name):
-                    self.assertIn(name, text)
+        step = readme[readme.index("1. **Install SymphonyBoard**"):readme.index("2. **Press Create**")]
+        for name in (*adopt.THE_SETTINGS, adopt.ACTIONS_SETTING):
+            with self.subTest(setting=name):
+                self.assertIn(name, step)
         privacy = " ".join((ROOT / "PRIVACY.md").read_text(encoding="utf-8").split())
         self.assertIn("applies up to eight settings", privacy)
         self.assertIn(f"ticks \"{adopt.ACTIONS_LABEL}\"", privacy)
@@ -372,57 +369,44 @@ class TheWorkflows(unittest.TestCase):
         for step in main_mints:
             if not any(mint in step for mint in settings_mints):
                 self.assertNotIn("administration", step)
-        # The issue path holds the Setup App's key to sign the JWT that
-        # tells its installation's number from the App's, to read whether
-        # it is set, and to mint metadata-only tokens that say whether the
-        # Setup App is on the named repository (and, when not, whether the
-        # App itself works): no token with Administration is minted there.
+        # The issue path holds the Setup App's key only to sign the JWT
+        # that tells its installation's number from the App's and asks
+        # which candidates it reaches: it mints no token of the Setup App,
+        # and none with Administration.
         issue_path = (ROOT / ".github/workflows/adopt.yml").read_text(encoding="utf-8")
         self.assertNotIn("administration", issue_path)
-        self.assertEqual(issue_path.count("secrets.SDLC_SETUP_APP_PRIVATE_KEY"), 4)
-        self.assertIn("secrets.SDLC_SETUP_APP_PRIVATE_KEY != ''", issue_path)
+        self.assertEqual(issue_path.count("secrets.SDLC_SETUP_APP_PRIVATE_KEY"), 1)
         self.assertIn('setup_jwt="$(APP_ID="$SETUP_ID" APP_PRIVATE_KEY="$SETUP_KEY" bash start/scripts/jwt.sh)"', issue_path)
         for step in re.split(r"\n      - (?=uses:|name:)", issue_path):
-            if "vars.SDLC_SETUP_APP_ID" in step and "create-github-app-token" in step:
-                self.assertIn("permission-metadata: read", step)
-                self.assertEqual(step.count("permission-"), 1)
+            if "create-github-app-token" in step:
+                self.assertNotIn("vars.SDLC_SETUP_APP_ID", step)
 
-    def test_a_named_repository_needs_the_setup_app_too(self):
-        """Installing the Setup App is the consent to the settings, so the
-        issue path mints a metadata-only token of it for the named
-        repository, probes the front door's own installation when that
-        fails, and refuses a repository without it with the install link
-        that preselects the account and the repository by id and carries
-        the name as state, which GitHub returns to the form; the
-        installation path's one refusal names the Setup App too, with its
-        install link; there is no third path, since the sweep is gone."""
+    def test_a_named_repository_needs_only_symphonyboard(self):
+        """SymphonyBoard alone is enough (the owner's rule of 2026-10-20):
+        the issue path asks nothing of Symphony Setup on a named repository
+        and refuses no request for its absence, and the installation
+        path's one refusal sends nobody to install it; the run reports a
+        broken Setup App of the front door's by itself, so nothing here
+        probes it. There is no third path, since the sweep is gone."""
         text = (ROOT / ".github/workflows/adopt.yml").read_text(encoding="utf-8")
-        steps = ("name: Say whether this front door has the Setup App", "id: setup-token", "id: setup-probe",
-                 "name: Check that the Setup App is installed on the repository")
-        for step in steps:
-            start = text.index(step)
-            self.assertIn("steps.form.outputs.repository != ''", text[start:start + 400])
-        places = [text.index(step) for step in steps]
-        self.assertEqual(places, sorted(places))
-        self.assertLess(text.index("name: Check that the App reaches the repository"), places[0])
-        self.assertLess(places[-1], text.index("id: verdict"))
-        self.assertIn("env.SETUP_APP == 'present' && steps.setup-token.outcome == 'failure'", text)
-        self.assertIn("owner: ${{ steps.form.outputs.owner }}\n          repositories: ${{ steps.form.outputs.name }}\n", text)
-        link = ("https://github.com/apps/symphony-setup/installations/new/permissions"
-                "?suggested_target_id=$OWNER_ID&repository_ids[]=$REPOSITORY_ID&state=$TARGET")
-        self.assertIn(link, text)
-        self.assertIn('OWNER_ID="$(gh api "repos/$TARGET" --jq .owner.id)"', text)
-        self.assertIn('REPOSITORY_ID="$(gh api "repos/$TARGET" --jq .id)"', text)
-        check = text[text.index("name: Check that the Setup App is installed on the repository"):text.index("id: verdict")]
-        self.assertIn("GH_TOKEN: ${{ steps.account-token.outputs.token }}", check)
-        self.assertIn("refuse.sh --keep-open", check)
-        self.assertIn("exit 1", check)
+        for words in ("name: Say whether this front door has the Setup App", "id: setup-token", "id: setup-probe",
+                      "id: contents-token", "name: Check that the Setup App is installed on the repository",
+                      "env.SETUP_APP", "Symphony Setup is not installed", "this front door's Setup App is not working"):
+            self.assertNotIn(words, text)
         resolve = text.index("name: Resolve the installation to the repositories to adopt")
         refusal = text[text.index('refusal="', resolve):]
         refusal = refusal[:refusal.index("\n")]
-        self.assertIn("or Symphony Setup is not installed on it", refusal)
-        self.assertIn(SETUP_APP_INSTALL, refusal)
+        self.assertNotIn(SETUP_APP_INSTALL, refusal)
+        self.assertNotIn("Symphony Setup", refusal)
+        self.assertIn("https://github.com/apps/symphonyboard/installations/new", refusal)
         self.assertFalse((ROOT / ".github/workflows/sweep.yml").exists())
+        # The run's own probe, which runs when neither App's token could be
+        # made, tells a broken front-door Setup App from a missing one.
+        run = (ROOT / ".github/workflows/adopt-run.yml").read_text(encoding="utf-8")
+        steps = re.split(r"\n      - (?=uses:|name:)", run)
+        probe, = [step for step in steps if "id: setup-probe" in step]
+        self.assertIn("env.SETTINGS_BY == '' && steps.setup-token.outcome == 'failure'", probe)
+        self.assertIn("why=front-door-broken", run)
 
     def test_the_settings_are_applied_after_the_push_and_before_the_pull_request(self):
         text = (ROOT / ".github/workflows/adopt-run.yml").read_text(encoding="utf-8")

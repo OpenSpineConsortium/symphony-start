@@ -10,14 +10,12 @@ since the run's log is public. The step of .github/workflows/adopt-run.yml
 that asks it is run here for real, with gh answered from a table and the
 script asking a fake GitHub: an adopted repository gets one answer that
 names nothing of it and says what to do instead, and nothing after it is
-read. On the form's paths the Setup App that request needed stays
-installed, as after an adoption, and the answer says so; and the stage
-step answers apply's
-refusal of an adoption that could not write docs/agents/PROTOCOL.md, the
-file the rule reads, as a refusal on the request. A named repository
-without the Setup App is asked the same question by adopt.yml before it is
-sent to install that App, and gets the same answer, kept in the script;
-and a form from the install, which adopt.yml answers once after the run,
+read. Symphony Setup, where the person installed it, stays installed,
+as after an adoption, and the answer says so; and the stage step answers
+apply's refusal of an adoption that could not write
+docs/agents/PROTOCOL.md, the file the rule reads, as a refusal on the
+request. A named repository without the Setup App is not refused by
+adopt.yml, which asks nothing of that App; and a form from the install, which adopt.yml answers once after the run,
 is answered by nothing more once the run refused it and closed its issue.
 Those steps are run here for real too.
 """
@@ -327,8 +325,8 @@ class TheRunsCheck(unittest.TestCase):
         self.assertIn("To adopt it again, as the other kind or with what was left out, first revert that adoption's"
                       " merge on the default branch, so docs/agents/PROTOCOL.md is gone from it, or rename that file if"
                       " it is one of your own and not this protocol, then ask again", answer)
-        # The Setup App the form asked for, and the topic the extension reads.
-        self.assertIn("Symphony Setup, where it was installed for this request, did nothing here; it stays installed,"
+        # The Setup App, optional, and the topic the extension reads.
+        self.assertIn("Symphony Setup, if you installed it, did nothing here; it stays installed,"
                       " acting only during an adoption run, and you can uninstall it at any time", answer)
         self.assertNotIn("uninstalls itself", answer)
         self.assertIn("add the topic symphony with the gear beside About", answer)
@@ -506,101 +504,27 @@ class TheStageStep(unittest.TestCase):
         self.assertEqual((self.runner / "title").read_text(encoding="utf-8"), "Take up the Symphony claim protocol\n")
 
 
-SETUP_CHECK_STEP = "name: Check that the Setup App is installed on the repository"
 ANSWER_STEP = "name: Answer the request and close it"
 ISSUE_CALLS = ("comment", "close", "view")
 
 
 class TheNamedRequestWithoutTheSetupApp(unittest.TestCase):
-    """A named repository without Symphony Setup is refused with the App's
-    install link, since installing it is the consent to the settings; but
-    one adopted already would be refused by the run once the App was there,
-    so the person would grant Administration for nothing. The issue path
-    therefore asks scripts/adopted.py first, with the App's token for that
-    one repository that reads contents, and gives the run's own answer.
-    The step of adopt.yml is run here for real, as the run's are."""
+    """SymphonyBoard alone adopts a named repository (the owner's rule of
+    2026-10-20): adopt.yml asks nothing of Symphony Setup and refuses no
+    request for its absence, so a repository adopted already is answered
+    by the run's own check, and the run applies the settings with the
+    Setup App only as a fallback."""
 
-    def setUp(self):
-        self.scratch = tempfile.TemporaryDirectory()
-        self.addCleanup(self.scratch.cleanup)
-        self.root = Path(self.scratch.name)
-        self.runner = make_runner(self.root)
-        (self.root / "start/scripts/adopted.py").write_text(STAND_IN.format(scripts=str(SCRIPTS)), encoding="utf-8")
-        self.text = ADOPT.read_text(encoding="utf-8")
+    def test_the_issue_path_holds_no_setup_app_step(self):
+        text = ADOPT.read_text(encoding="utf-8")
+        for words in ("name: Check that the Setup App is installed on the repository", "id: setup-token",
+                      "id: setup-probe", "id: contents-token", "name: Say whether this front door has the Setup App",
+                      "Symphony Setup is not installed on $TARGET", "adopted.py"):
+            self.assertNotIn(words, text)
 
-    def check(self, status, **more):
-        """(exit code, GITHUB_ENV's lines, the calls made, what it printed),
-        the contents call answering status."""
-        for name in ("env", "gh.log"):
-            (self.runner / name).write_text("", encoding="utf-8")
-        environ = {"SETUP_OUTCOME": "failure", "PROBE_OUTCOME": "success", "CONTENTS_OUTCOME": "success",
-                   "CONTENTS_TOKEN": TOKEN, "GH_TOKEN": "account-token", "TARGET": REPOSITORY,
-                   "ISSUE_TOKEN": "issue-token", "ISSUE": "7", "GITHUB_REPOSITORY": "OpenSpineConsortium/symphony-start",
-                   "RUN": "https://github.com/OpenSpineConsortium/symphony-start/actions/runs/1",
-                   "RUNNER_TEMP": str(self.runner), "GITHUB_ENV": str(self.runner / "env"),
-                   "GH_LOG": str(self.runner / "gh.log"), "ANSWER_STATUS": str(status), **more}
-        code, out = run_script(self.root, step_script(self.text, SETUP_CHECK_STEP), environ)
-        env = (self.runner / "env").read_text(encoding="utf-8").splitlines()
-        return code, env, logged(self.runner / "gh.log"), out
-
-    def answered(self, calls):
-        comment, = [call for call in calls if call[:2] == ["issue", "comment"]]
-        return comment[comment.index("--body") + 1]
-
-    def test_an_adopted_repository_gets_the_runs_answer_and_no_install_link(self):
-        code, env, calls, out = self.check(200)
-        self.assertEqual(code, 0, out)
-        self.assertIn("REFUSED=true", env)
-        self.assertIn(["adopted.py", REPOSITORY, TOKEN], calls, "asked with the token that reads contents")
-        self.assertEqual(self.answered(calls), adopted.ANSWER)
-        self.assertIn(["issue", "close", "7", "--repo", "OpenSpineConsortium/symphony-start", "--reason", "not planned"],
-                      calls)
-        self.assertFalse([call for call in calls if call[:1] == ["api"]], "no id is read for an install link")
-
-    def test_one_with_no_adoption_or_no_answer_is_sent_to_install_the_setup_app(self):
-        """A question GitHub does not answer, or a token that could not be
-        made, leaves the adopted check to the run, which asks again once the
-        Setup App is there."""
-        link = (f"https://github.com/apps/symphony-setup/installations/new/permissions?suggested_target_id=583231"
-                f"&repository_ids[]=1296269&state={REPOSITORY}")
-        for status, more, asked in ((404, {}, True), (500, {}, True), (200, {"CONTENTS_OUTCOME": "failure"}, False)):
-            with self.subTest(status=status, **more):
-                code, env, calls, out = self.check(status, **more)
-                self.assertEqual(code, 0, out)
-                self.assertIn("REFUSED=true", env)
-                answer = self.answered(calls)
-                self.assertTrue(answer.startswith(f"Nothing was done: Symphony Setup is not installed on {REPOSITORY}."))
-                self.assertIn(link, answer)
-                questions = [call for call in calls if call[:1] == ["adopted.py"]]
-                self.assertEqual(questions, [["adopted.py", REPOSITORY, TOKEN]] if asked else [])
-
-    def test_nothing_is_asked_where_the_setup_app_is_there_or_broken(self):
-        code, env, calls, out = self.check(200, SETUP_OUTCOME="success", CONTENTS_OUTCOME="", CONTENTS_TOKEN="")
-        self.assertEqual((code, env, calls), (0, [], []), out)
-        code, env, calls, out = self.check(200, PROBE_OUTCOME="failure", CONTENTS_OUTCOME="", CONTENTS_TOKEN="")
-        self.assertEqual(code, 1, out)
-        self.assertIn("this front door's Setup App is not working", self.answered(calls))
-        self.assertFalse([call for call in calls if call[:1] == ["adopted.py"]])
-        self.assertFalse([call for call in calls if call[:2] == ["issue", "close"]], "the owner's to fix; left open")
-
-    def test_the_question_is_asked_with_a_token_that_reads_the_one_repository(self):
-        """The main App's token, for the named repository alone, with
-        contents read and nothing else, made only once the Setup App's mint
-        failed and its probe showed that App works."""
-        steps = re.split(r"\n      - (?=uses:|name:)", self.text)
-        mint, = [step for step in steps if "id: contents-token" in step]
-        self.assertIn("app-id: ${{ vars.SDLC_APP_ID }}", mint)
-        self.assertIn("owner: ${{ steps.form.outputs.owner }}\n          repositories: ${{ steps.form.outputs.name }}\n",
-                      mint)
-        self.assertEqual(re.findall(r"permission-[a-z-]+: \w+", mint), ["permission-contents: read"])
-        self.assertIn("steps.setup-token.outcome == 'failure' && steps.setup-probe.outcome == 'success'", mint)
-        self.assertIn("continue-on-error: true", mint)
-        self.assertNotIn("skip-token-revoke", mint)
-        order = [self.text.index(words) for words in ("id: setup-probe", "id: contents-token", SETUP_CHECK_STEP)]
-        self.assertEqual(order, sorted(order))
-        check = step_script(self.text, SETUP_CHECK_STEP)
-        self.assertIn('GH_TOKEN="$CONTENTS_TOKEN" python3 start/scripts/adopted.py "$TARGET"', check)
-        self.assertLess(check.index("adopted.py --answer"), check.index('OWNER_ID="$('))
+    def test_the_run_still_asks_whether_it_is_adopted(self):
+        self.assertIn('python3 start/scripts/adopted.py "$TARGET"', step_script(RUN.read_text(encoding="utf-8"),
+                                                                                TARGET_STEP))
 
 
 class TheInstallationsAnswer(unittest.TestCase):

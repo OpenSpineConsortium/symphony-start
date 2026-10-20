@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
-"""Apply the template's repository settings in the adoption run, as the Setup App.
+"""Apply the template's repository settings in the adoption run.
 
-.github/workflows/adopt.yml runs this after the branch symphony/adopt is
-pushed and before the pull request opens, with the token of the OpenSpine
-Symphony Setup App for the one repository (Administration: write, Metadata:
-read), when the person installed that App on it; the App stays
-installed after the run, acting only during an adoption run,
-until the person uninstalls it. It does what the
+.github/workflows/adopt-run.yml runs this after the branch symphony/adopt
+is pushed and before the pull request opens, with a token for the one
+repository (Administration: write, Metadata: read): SymphonyBoard's,
+where its installation accepted Administration, or else, as the optional
+fallback, Symphony Setup's, where the person installed that App on it,
+which then stays installed after the run, acting only during an adoption
+run, until the person uninstalls it (--app says which). It does what the
 template's scripts/setup-repo.sh does from a clone, through the REST API
 with the standard library, so the repository's settings need no step by
 hand:
