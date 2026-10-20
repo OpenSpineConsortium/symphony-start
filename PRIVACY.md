@@ -55,7 +55,7 @@ that secret, and for the Tokens page on a personal account's repository, which h
 tokens as secrets of its own, each as you (the control panel, below); Variables (read and write), for
 the Tokens page on a personal account's repository, which holds a Claude slot's settings and the list
 of accounts (SYMPHONY_CLAUDE_SETTINGS and SYMPHONY_CLAUDE_ACCOUNTS) as that repository's own Actions
-variables, and for the Folders tab's Track, which sets the repository's variable SYMPHONY_DRIVE_SYNC
+variables, and for the Folders tab's Track, which sets the repository's variable SYMPHONY_DRIVE
 so that the drive sync's schedule runs there, each as you (the control panel, below); and Metadata (read), which
 every App has, to list the
 repositories it reaches. It subscribes to five event types (issues, issue comments, pull requests,
@@ -404,7 +404,7 @@ default branch has a unit is read from one file of it alone, the unit's workflow
 `tools/VENDORED`. A unit your default branch does not have is not added, since you removed it or never
 took it, with two exceptions, the Token workflow and the drive sync's workflow, each with its
 scripts, which are added where they are missing (the drive sync's runs nothing on its schedule until
-Track has set the repository's variable SYMPHONY_DRIVE_SYNC, below, and reads no drive until a drive's
+Track has set the repository's variable SYMPHONY_DRIVE, below, and reads no drive until a drive's
 token is there); a unit you have gains every file of it that your default branch lacks, whether a module its
 newer scripts import or load by its path, a file the newer library holds that yours does not, a script
 or module of the unit you deleted while keeping its workflow or, where `tools/VENDORED` stands without
@@ -1207,9 +1207,11 @@ reads first, on the default branch or, where that branch takes only pull request
 branch of that name is there already, so that it holds this one commit and nothing else, with a pull
 request for you to merge, or the one already open from that branch; and, only where the file went to
 the default branch, one run of drive-sync.yml started by hand. With the file it also sets the
-repository's Actions variable `SYMPHONY_DRIVE_SYNC` to `on`, which says nothing of the drive and
+repository's Actions variable `SYMPHONY_DRIVE` to `on`, which says nothing of the drive and
 which whoever can read the repository's settings can see, so that the workflow's half-hourly schedule
-runs there; until it is set, the schedule starts nothing. Where your token may not save the
+runs there; until it is set, the schedule starts nothing. Where the tab opens on a repository whose
+default branch holds drive.json and whose variable is not `on`, as in one that tracked a drive before
+the variable existed, it reads the variable and sets it then, as you, where your token may. Where your token may not save the
 secret, the page says so and writes nothing else; where the file cannot be written, the secret stays
 saved, and the page says so and starts no run; where the run cannot be started, the page says so and
 links the workflow's page on GitHub, where you press "Run workflow".
@@ -1480,7 +1482,7 @@ on the list can then reach the whole drive; that a new connection replaces the t
 90-day lapse, for every repository the secret serves; and that in a repository carrying the drive
 catalog's workflow, drive-catalog.yml, Track saves the secret alone, writing no drive.json and
 starting no run, and that workflow walks the drive from its top as the organizer's does, with no
-step organize. It says that Track also sets the repository's Actions variable SYMPHONY_DRIVE_SYNC,
+step organize. It says that Track also sets the repository's Actions variable SYMPHONY_DRIVE,
 with SymphonyBoard's repository permission Variables it already held for the Tokens page, so that the
 drive sync's schedule runs only where a drive is tracked, and that the Sync run adds the drive sync's
 workflow and its scripts where an adopted repository lacks them, as it adds the Token workflow.
