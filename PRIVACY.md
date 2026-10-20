@@ -1,6 +1,6 @@
 # Symphony GitHub Apps privacy statement
 
-Version 38, 2026-10-20. This text is also at https://openspineconsortium.com/symphony/apps-privacy.html.
+Version 39, 2026-10-20. This text is also at https://openspineconsortium.com/symphony/apps-privacy.html.
 The Symphony browser extension has a statement of its own, at https://openspineconsortium.com/symphony/privacy.html.
 
 Who makes the Apps: Gregory Schwing, trading as OpenSpineConsortium ("the developer"). Questions:
@@ -1206,10 +1206,11 @@ reads first, on the default branch or, where that branch takes only pull request
 `symphony/drive`, which it makes from the default branch's head, or sets back to that head where a
 branch of that name is there already, so that it holds this one commit and nothing else, with a pull
 request for you to merge, or the one already open from that branch; and, only where the file went to
-the default branch, one run of drive-sync.yml started by hand. With the file it also sets the
-repository's Actions variable `SYMPHONY_DRIVE` to `on`, which says nothing of the drive and
+the default branch, one run of drive-sync.yml started by hand. Where the file went to the default
+branch it also sets the repository's Actions variable `SYMPHONY_DRIVE` to `on`, which says nothing of the drive and
 which whoever can read the repository's settings can see, so that the workflow's half-hourly schedule
-runs there; until it is set, the schedule starts nothing. Where your token may not save the
+runs there; until it is set, the schedule starts nothing, and where the file waits in a pull request
+the variable waits for a later Track. Where your token may not save the
 secret, the page says so and writes nothing else; where the file cannot be written, the secret stays
 saved, and the page says so and starts no run; where the run cannot be started, the page says so and
 links the workflow's page on GitHub, where you press "Run workflow".
@@ -1217,16 +1218,23 @@ links the workflow's page on GitHub, where you press "Run workflow".
 In a repository of an organization, Track saves the refresh token not in the repository but once
 for the organization, as the organization's secret `SYMPHONY_DRIVE_REFRESH`, where all of these
 hold: the repository has no secret of that name of its own, which would take the organization's
-place there; your token may read the organization's public key for secrets, as an owner's may; and
-the organization holds no such secret yet, or its variable `SYMPHONY_DRIVE_ID` names the same drive
-you connected, so that one person's Track never replaces another person's drive. To tell, it reads
-that key, whether that secret is there and the variable's value, a drive's id, which says nothing of
-what the drive holds. It then reads the list of repositories the secret is shared with, saves the
+place there; the repository is public, or the organization's plan is a paid one, since GitHub lets a
+private repository on GitHub Free read no organization secret; your token may read the
+organization's public key for secrets, as an owner's may; the secret's list of repositories can be
+read whole; and the organization holds no such secret yet, or its variable `SYMPHONY_DRIVE_ID` names the same drive
+you connected, so that one person's Track does not replace another person's drive, save where
+two Tracks with different drives run at the same moment, which the page then says. To tell, it reads
+the organization's record, of which it uses only its plan's name, that key, whether that secret is
+there, the variable's value, a drive's id, which says nothing of what the drive holds, and the list
+of repositories the secret is shared with, page by page. It then saves the
 token sealed in your browser as that secret, shared with selected repositories only, those already
 on its list and this one, never with all of the organization's repositories or its private ones,
 and saves the drive's id as the organization's variable `SYMPHONY_DRIVE_ID`, shared with the same
-repositories, which whoever can read the organization's or those repositories' settings can see.
-Otherwise Track saves the repository's own secret as above. So one connection serves every
+repositories, which whoever can read the organization's or those repositories' settings can see,
+and reads the variable back, to say on the page when another Track wrote it in the meantime.
+Otherwise, or where GitHub refuses the organization's secret, Track saves the repository's own secret
+as above; a repository that once took the organization's secret stays on its list until an owner of
+the organization takes it off there. So one connection serves every
 repository of the organization that tracks the same drive, and a new connection, pressed in any of
 them, replaces the token for all of them.
 A repository that carries the workflow `.github/workflows/drive-catalog.yml` and not drive-sync.yml,
@@ -1473,6 +1481,15 @@ Symphony is for people who administer GitHub repositories. It is not directed at
 A new version of this statement is published at https://openspineconsortium.com/symphony/apps-privacy.html
 and in the front door repository, github.com/OpenSpineConsortium/symphony-start, whose PRIVACY.md is
 this text.
+
+Version 39 says that the Folders tab's Track takes the organization's secret only where the
+repository is public or the organization's plan is a paid one, for which it reads the organization's
+record and uses only its plan's name, and only where the secret's list of repositories reads whole,
+which it reads page by page; that where GitHub refuses the organization's secret it saves the
+repository's own; that it reads SYMPHONY_DRIVE_ID back after writing it; that a repository that
+once took the organization's secret stays on its list; and that it sets SYMPHONY_DRIVE only where
+drive.json went to the default branch. Nothing the developer receives or keeps changed, and neither
+App's permissions changed.
 
 Version 38 says that in an organization's repository the Folders tab's Track saves a drive's
 refresh token once for the organization, as its secret SYMPHONY_DRIVE_REFRESH, and the drive's id as
