@@ -18,19 +18,25 @@ one, the newest, so that one press never reaches further than one
 repository (on 2026-10-11 an installation on all of an account's
 repositories, with "Merge the pull request for me" ticked, merged the
 adoption into eight before the run was cancelled); the person presses
-Create again for the next, or names a repository on the form. With SETUP_JWT set, only a
-repository the Setup App is installed on is a candidate, asked by id with
-that App's JWT before the newest is chosen: the Setup App's installation
-is the person's choice of repository and their consent to the settings it
-applies, so an account with the App on all its
-repositories and the Setup App on one gets that one. Without SETUP_JWT
-there is no such filter. The file --out
+Create again for the next, or names a repository on the form. With
+SETUP_JWT set, the Setup App is a preference among those candidates and
+never a requirement: SymphonyBoard alone adopts and applies the settings
+(the owner's rule of 2026-10-20), and Symphony Setup is only the fallback
+for an installation of SymphonyBoard that cannot accept Administration.
+Where the person installed the Setup App on the account, only the
+candidates it is installed on count, asked by id with that App's JWT,
+since installing it there was their choice of repository, so an account
+with the App on all its repositories and the Setup App on one gets that
+one, and nothing once that one is adopted; where they never installed it
+on the account, the newest candidate is chosen. Without SETUP_JWT there
+is no such rule. Whether the author administers a repository is asked
+first, one call each, so a stranger's guess asks nothing more. The file --out
 gets installation_id, repository_ids (a JSON list) and count, as KEY=value
 lines for $GITHUB_OUTPUT; stdout says how many and nothing else.
 
 Exit 0 with something to adopt; 3 when there is nothing (an installation
-that is neither App's, no repository with no adoption yet, none the
-author administers, or none the Setup App reaches), which the workflow
+that is neither App's, no repository with no adoption yet, or none the
+author administers), which the workflow
 answers with one message whatever the reason; 4 when the App's own record
 cannot be read, which is the front door's owner's problem; 1 when GitHub
 could not be asked. APP_JWT is the App's JWT (scripts/jwt.sh); SETUP_JWT,
@@ -125,6 +131,20 @@ def reached_by_the_setup_app(setup, repositories):
     return kept
 
 
+def chosen_by_the_setup_app(setup, account_id, candidates):
+    """Where the person installed the Setup App on this account, its
+    installation is their choice of repository, so only the candidates it
+    reaches; where they never installed it, every candidate, since the
+    Setup App is a fallback and never a requirement. Without that rule an
+    account whose Setup App sits on one repository, adopted already, would
+    have its newest other repository adopted by a second press."""
+    if setup is None or not candidates:
+        return candidates
+    if installation_on_account(setup, account_id) is None:
+        return candidates
+    return reached_by_the_setup_app(setup, candidates)
+
+
 def only_the_setup_apps(setup, installation):
     """The ids of the repositories a Setup App installation was given, or
     None when it was given them all."""
@@ -156,9 +176,12 @@ def resolve(app, setup, installation_id, author):
         repositories = repositories_of(github)
         if only is not None:
             repositories = [repository for repository in repositories if repository["id"] in only]
-        if setup is not None:
-            repositories = reached_by_the_setup_app(setup, repositories)
-        mine = administered(github, sweep.unadopted(github, repositories), author)
+        # The author's own first, one call each, so a stranger's guessed
+        # number asks nothing more of the repositories and its answer
+        # comes as soon as any other refusal.
+        account = found.get("account") if isinstance(found.get("account"), dict) else {}
+        mine = chosen_by_the_setup_app(setup, account.get("id"),
+                                       sweep.unadopted(github, administered(github, repositories, author)))
     finally:
         sweep.revoke(github)
     if not mine:

@@ -20,9 +20,7 @@ the run answers with one message that names nothing of it, 1 when GitHub
 could not be asked, and 2 when GH_TOKEN is not set or the name is missing
 or not one scripts/adopt.py name would print. With --answer it asks
 nothing and prints that message, ANSWER, the one place its words are
-kept: the run answers with it, and so does .github/workflows/adopt.yml,
-which asks this before it sends the administrator of a named repository
-to install Symphony Setup for a request the run would refuse. Nothing
+kept, which the run answers with on both of the form's paths. Nothing
 printed names the repository, since the run's log is public and a
 repository given by ids may be private. GH_TOKEN is an installation token
 for the repository that reads its contents, and it is never printed.
@@ -52,7 +50,7 @@ ANSWER = (
     " the adoption's pull request did not write, its notes say how to add. To adopt it again, as the other kind or"
     " with what was left out, first revert that adoption's merge on the default branch, so docs/agents/PROTOCOL.md is"
     " gone from it, or rename that file if it is one of your own and not this protocol, then ask again. Symphony"
-    " Setup, where it was installed for this request, did nothing here; it stays installed, acting only during an"
+    " Setup, if you installed it, did nothing here; it stays installed, acting only during an"
     " adoption run, and you can uninstall it at any time from the repository's or the"
     " organization's Settings, GitHub Apps. For the repository's page to"
     " say it is adopted, and the Symphony browser extension's button to read Ready for Symphony, add the topic"

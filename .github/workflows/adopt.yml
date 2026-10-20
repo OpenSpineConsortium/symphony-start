@@ -15,20 +15,22 @@ name: Adopt
 # adopt-run.yml, which does the adoption itself for both of the form's
 # paths and whose header says how.
 #
-# Both Apps are required on the form's two paths: SymphonyBoard, which
-# opens the pull request, and Symphony Setup, which applies the
-# repository's settings in the run (the default branch's ruleset,
-# delete-on-merge and auto-merge, the topic symphony, secret scanning
-# with push protection and, for the whole template, letting GitHub
-# Actions create and approve pull requests) and stays installed
-# afterwards, acting only during an adoption run, until the person
-# uninstalls it. Installing the Setup App on the repository is the
-# person's consent to those settings, so a named
-# repository without it is refused with its install link, which brings
-# the person back to the form with the repository filled in, unless it
-# is adopted already, which is the answer then, since the run would
-# refuse it anyway; and an installation's request takes only a
-# repository the Setup App reaches too.
+# SymphonyBoard alone is enough on the form's two paths: it opens the
+# pull request and, where its installation accepted Administration,
+# applies the repository's settings in the run (the default branch's
+# ruleset, delete-on-merge and auto-merge, the topic symphony, secret
+# scanning with push protection and, for the whole template, letting
+# GitHub Actions create and approve pull requests), the owner's rule of
+# 2026-10-20. Symphony Setup is an optional fallback, for a person whose
+# SymphonyBoard installation cannot accept Administration: where it is
+# installed on the repository the run applies the settings with it
+# instead, and it stays installed afterwards, acting only during an
+# adoption run, until the person uninstalls it. Where neither App can,
+# the pull request says the settings are left to the steps by hand, so
+# no request is refused for a missing Setup App; and an installation's
+# request prefers a repository the Setup App reaches, where it reaches
+# any of the candidates, since installing it there was the person's
+# choice of repository.
 #
 # Anyone can open an issue here, so everything the issue says is data: the
 # body reaches scripts/adopt.py parse through env:, never through an
@@ -45,20 +47,19 @@ name: Adopt
 # run ends red) from an account that did not install it. A form that
 # carries the installation's number and no name is resolved with the
 # App's own JWT, or the Setup App's when the number is that App's, since
-# both send the person to the form (scripts/resolve.py): the installation's
-# token lists the repositories it reaches, and the newest one with no
-# adoption yet (by scripts/sweep.py's rules, asked by id, or with no
-# commit at all, whose first commit the run makes) that the author
-# administers and the Setup App is installed on is adopted, one per
-# press, since one press that reached every repository of an account
-# merged the adoption into eight on 2026-10-11; the person presses Create
-# again for the next. None, a number neither App knows, an author who
-# administers none and a Setup App on none get one answer at one moment,
-# and no name is read in this job, so nothing here can be masked and
-# nothing printed can differ: a guessed number learns nothing. Where the
-# Setup App is missing from a named repository whose administrator asked,
-# one more token, for that repository alone with contents read, asks
-# whether it is adopted already. GitHub's own
+# both can send the person to the form (scripts/resolve.py): the
+# installation's token lists the repositories it reaches, and of those
+# with no adoption yet (by scripts/sweep.py's rules, asked by id, or with
+# no commit at all, whose first commit the run makes) that the author
+# administers, the newest is adopted, one the Setup App is installed on
+# first where there is one, one per press, since one press that reached
+# every repository of an account merged the adoption into eight on
+# 2026-10-11; the person presses Create again for the next. None, a
+# number neither App knows and an author who administers none get one
+# answer at one moment, and no name is read in this job, so nothing here
+# can be masked and nothing printed can differ: a guessed number learns
+# nothing. A named repository adopted already is refused by the run,
+# which asks before anything else. GitHub's own
 # token, which may write only this repository's issues, posts every
 # answer. A refusal (scripts/refuse.sh) comments, closes the issue as not
 # planned and ends the run green; anything else that fails comments with
@@ -134,9 +135,9 @@ jobs:
 
       # The form came from the install: the installation's number and no
       # name. scripts/resolve.py turns it into the repository to adopt,
-      # the newest the installation and the Setup App both reach, by id;
-      # nothing of a repository is printed, and every refusal is the same
-      # one.
+      # the newest the installation reaches, one the Setup App reaches
+      # first where there is one, by id; nothing of a repository is
+      # printed, and every refusal is the same one.
       - name: Resolve the installation to the repositories to adopt
         id: resolve
         if: env.REFUSED != 'true' && steps.form.outputs.repository == ''
@@ -155,7 +156,7 @@ jobs:
           # no mask exists in this job and nothing printed can differ; and
           # each refusal waits for the same moment, so the step's length
           # says nothing.
-          refusal="Nothing was done: the installation this form carried is not the Symphony App's or its Setup App's, or it reaches no repository with no adoption yet, or none of those that your account administers, or Symphony Setup is not installed on it. Install Symphony Setup on the repository, https://github.com/apps/symphony-setup/installations/new (\"Only select repositories\", that one): it brings you back to this form; press Create. Or open a new request with the form naming the repository as OWNER/NAME, as an administrator of it; this one is closed."
+          refusal="Nothing was done: the installation this form carried is not the Symphony App's or its Setup App's, or it reaches no repository with no adoption yet, or none of those that your account administers, or, where you installed the Setup App too, none it was given. Check that the Symphony App is installed on the repository, https://github.com/apps/symphonyboard/installations/new, then open a new request with the form naming the repository as OWNER/NAME, as an administrator of it; this one is closed."
           deadline=$((SECONDS + 25))
           refuse_alike() {
             sleep $((deadline > SECONDS ? deadline - SECONDS : 0))
@@ -236,115 +237,6 @@ jobs:
             bash start/scripts/refuse.sh "Nothing was done: the Symphony App is not installed on $TARGET, or not given that repository, or your account is not one of its administrators. Install the App at https://github.com/apps/symphonyboard/installations/new and choose the repository, then open a new request with the form as an administrator of it; this one is closed."
           fi
 
-      # Only whether the Setup App's key is set reaches the shell, never
-      # the key. Without the pair this front door has no Setup App, and
-      # the request goes on without the check below: the pull request then
-      # says the settings are left to the steps by hand.
-      - name: Say whether this front door has the Setup App
-        if: env.REFUSED != 'true' && steps.form.outputs.repository != ''
-        env:
-          SETUP_ID: ${{ vars.SDLC_SETUP_APP_ID }}
-          SETUP_KEY_SET: ${{ secrets.SDLC_SETUP_APP_PRIVATE_KEY != '' }}
-        run: |
-          if [ -n "$SETUP_ID" ] && [ "$SETUP_KEY_SET" = true ]; then
-            echo "SETUP_APP=present" >> "$GITHUB_ENV"
-          else
-            echo "SETUP_APP=absent" >> "$GITHUB_ENV"
-          fi
-
-      # The Setup App on the named repository, with metadata read: the
-      # mint fails where the person did not install it there, and
-      # installing it is their consent to the settings, so the check below
-      # refuses without it. The token is used for nothing; the run mints
-      # the one that applies the settings, and this job holds none that
-      # could change anything.
-      - uses: actions/create-github-app-token@v1
-        id: setup-token
-        if: env.REFUSED != 'true' && steps.form.outputs.repository != '' && env.SETUP_APP == 'present'
-        continue-on-error: true
-        with:
-          app-id: ${{ vars.SDLC_SETUP_APP_ID }}
-          private-key: ${{ secrets.SDLC_SETUP_APP_PRIVATE_KEY }}
-          owner: ${{ steps.form.outputs.owner }}
-          repositories: ${{ steps.form.outputs.name }}
-          permission-metadata: read
-
-      # Only after that mint failed, on the owner's own installation of
-      # the Setup App, which is on this repository: a failure here is the
-      # Setup App's id or key, not the requester, as adopt-run.yml tells
-      # the two apart the same way.
-      - uses: actions/create-github-app-token@v1
-        id: setup-probe
-        if: env.REFUSED != 'true' && steps.form.outputs.repository != '' && env.SETUP_APP == 'present' && steps.setup-token.outcome == 'failure'
-        continue-on-error: true
-        with:
-          app-id: ${{ vars.SDLC_SETUP_APP_ID }}
-          private-key: ${{ secrets.SDLC_SETUP_APP_PRIVATE_KEY }}
-          owner: OpenSpineConsortium
-          repositories: symphony-start
-          permission-metadata: read
-
-      # Only where the Setup App is missing from the named repository and
-      # works: the App's token for that one repository, with contents
-      # read, to ask scripts/adopted.py whether it is adopted already, as
-      # the run asks before anything else. An adopted repository is then
-      # told so at once, instead of being sent to install the Setup App,
-      # which holds Administration, for a request the run would refuse.
-      # Its administrator asked, by the check above, and the name is
-      # public already, typed on this issue; the token is revoked when the
-      # job ends.
-      - uses: actions/create-github-app-token@v1
-        id: contents-token
-        if: env.REFUSED != 'true' && steps.form.outputs.repository != '' && env.SETUP_APP == 'present' && steps.setup-token.outcome == 'failure' && steps.setup-probe.outcome == 'success'
-        continue-on-error: true
-        with:
-          app-id: ${{ vars.SDLC_APP_ID }}
-          private-key: ${{ secrets.SDLC_APP_PRIVATE_KEY }}
-          owner: ${{ steps.form.outputs.owner }}
-          repositories: ${{ steps.form.outputs.name }}
-          permission-contents: read
-
-      # The refusal's install link preselects the account and the
-      # repository by their ids and carries the name as state, which
-      # GitHub returns to the Setup URL, so the install brings the person
-      # back to the form with the repository filled in. The ids are read
-      # on the account token, which the step above showed reaches the
-      # repository; the name is public already, typed on this issue. A
-      # repository adopted already gets the run's own answer instead; a
-      # question GitHub does not answer leaves that to the run, which asks
-      # again once the Setup App is there.
-      - name: Check that the Setup App is installed on the repository
-        if: env.REFUSED != 'true' && steps.form.outputs.repository != '' && env.SETUP_APP == 'present'
-        env:
-          SETUP_OUTCOME: ${{ steps.setup-token.outcome }}
-          PROBE_OUTCOME: ${{ steps.setup-probe.outcome }}
-          CONTENTS_OUTCOME: ${{ steps.contents-token.outcome }}
-          CONTENTS_TOKEN: ${{ steps.contents-token.outputs.token }}
-          GH_TOKEN: ${{ steps.account-token.outputs.token }}
-          TARGET: ${{ steps.form.outputs.repository }}
-          ISSUE_TOKEN: ${{ github.token }}
-          RUN: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-        run: |
-          if [ "$SETUP_OUTCOME" = success ]; then
-            echo "the Setup App is installed on the repository"
-            exit 0
-          fi
-          if [ "$PROBE_OUTCOME" != success ]; then
-            bash start/scripts/refuse.sh --keep-open "Nothing was done yet: this front door's Setup App is not working (its id or private key here is wrong, or GitHub did not answer), which is for the owner of this repository to put right; the run is $RUN. This issue stays open, and its run can be started again once that is done."
-            exit 1
-          fi
-          if [ "$CONTENTS_OUTCOME" = success ]; then
-            adopted=0
-            GH_TOKEN="$CONTENTS_TOKEN" python3 start/scripts/adopted.py "$TARGET" 2> "$RUNNER_TEMP/adopted-said" || adopted=$?
-            if [ "$adopted" = 3 ]; then
-              bash start/scripts/refuse.sh "$(python3 start/scripts/adopted.py --answer)"
-              exit 0
-            fi
-          fi
-          OWNER_ID="$(gh api "repos/$TARGET" --jq .owner.id)"
-          REPOSITORY_ID="$(gh api "repos/$TARGET" --jq .id)"
-          bash start/scripts/refuse.sh "Nothing was done: Symphony Setup is not installed on $TARGET. It applies the repository's settings in the adoption run (the default branch's ruleset, delete-on-merge and auto-merge, the topic symphony, secret scanning with push protection and, for the whole template, letting GitHub Actions create and approve pull requests) and stays installed afterwards, acting only during an adoption run, until you uninstall it; an adoption needs both Apps. Install it at https://github.com/apps/symphony-setup/installations/new/permissions?suggested_target_id=$OWNER_ID&repository_ids[]=$REPOSITORY_ID&state=$TARGET (\"Only select repositories\", that one): it brings you back to the form with the repository filled in; press Create. This one is closed."
-
       # What the second job reads: a refusal here means nothing to adopt.
       - name: Say whether the request goes on
         id: verdict
@@ -378,9 +270,9 @@ jobs:
     secrets: inherit
 
   # An installation is one run, for the newest repository it reaches with
-  # no adoption yet that the Setup App reaches too (scripts/resolve.py
-  # gives one per press), by ids; the matrix keeps the list's shape, and
-  # the issue is answered once, below.
+  # no adoption yet, one the Setup App reaches first where there is one
+  # (scripts/resolve.py gives one per press), by ids; the matrix keeps
+  # the list's shape, and the issue is answered once, below.
   adopt_each:
     needs: request
     if: needs.request.result == 'success' && needs.request.outputs.refused != 'true' && needs.request.outputs.repository_ids != ''

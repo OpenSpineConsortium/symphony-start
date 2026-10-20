@@ -36,9 +36,10 @@ name: Adopt (run)
 # sweep.is_adopted), since a name typed on the form meets none of the
 # installation path's checks, and a second adoption would put the
 # template's files over the repository's own or, for the protocol alone,
-# bring back what it took out; the Setup App, which both paths need,
-# stays installed, as after an adoption, acting only during an adoption
-# run, and the person removes it whenever they like. And
+# bring back what it took out; the Setup App, an optional fallback that
+# neither path needs, stays installed where the person installed it, as
+# after an adoption, acting only during an adoption run, and the person
+# removes it whenever they like. And
 # apply refuses an adoption that could not write docs/agents/PROTOCOL.md,
 # the one file that rule reads, so every adoption made is one the next
 # request knows.
@@ -288,11 +289,10 @@ jobs:
           # nothing of the repository and says what to do instead: where
           # the protocol's later releases come from, how to adopt it again
           # (the other kind, or what its pull request left out, both by
-          # reverting that adoption first), that the Setup App the form
-          # asked for stays installed and did nothing, and that the topic
-          # symphony is what the browser extension reads; its words are
-          # adopted.py's ANSWER, which adopt.yml gives too where the Setup
-          # App is missing from a named repository adopted already. It comes before the branch
+          # reverting that adoption first), that the Setup App, where the
+          # person installed it, stays installed and did nothing, and that
+          # the topic symphony is what the browser extension reads; its
+          # words are adopted.py's ANSWER. It comes before the branch
           # symphony/adopt, so a merged adoption that kept its branch is
           # told that it is adopted rather than sent to delete the branch
           # and ask again.
