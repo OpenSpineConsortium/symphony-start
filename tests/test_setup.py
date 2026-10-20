@@ -84,6 +84,12 @@ GIVEN_BACK = dict(json.loads(json.dumps(RULESET)), id=RULESET_ID, source_type="R
 PINNED = json.loads(json.dumps(RULESET))
 PINNED["rules"][2]["parameters"]["required_status_checks"] = [{"context": "check", "integration_id": 15368}]
 PIN_LOG = "settings: the check's source: "
+# The Token workflow's environment, limited to the default branch.
+ENVIRONMENT = f"/repos/{REPO}/environments/token-store"
+# Administration reads this; the environment's own read needs Actions.
+ENVIRONMENT_PROBE = ENVIRONMENT + "/deployment_protection_rules/apps"
+ENVIRONMENT_BODY = {"deployment_branch_policy": {"protected_branches": False, "custom_branch_policies": True}}
+STORE_LOG = "settings: environment token-store: "
 # The token lending's one line of two, the same for every requester.
 LENT_LOG = "token lending: tokens lent"
 NOT_LENT_LOG = "token lending: no tokens lent"
@@ -133,7 +139,9 @@ class FakeGitHub:
             status, answer = answers.pop(0) if isinstance(answers, list) and len(answers) > 1 else (
                 answers[0] if isinstance(answers, list) else answers)
         elif (method, path) == ("GET", f"/repos/{REPO}"):
-            status, answer = 200, {"private": False}
+            status, answer = 200, {"private": False, "default_branch": "main"}
+        elif (method, path) == ("GET", ENVIRONMENT_PROBE):
+            status, answer = 404, {"message": "Not Found"}
         elif (method, path) == ("GET", f"/repos/{REPO}/rulesets?includes_parents=false"):
             status, answer = 200, []
         elif (method, path) == ("GET", TOPICS):
@@ -192,8 +200,10 @@ class Apply(unittest.TestCase):
     def states(self, report):
         """Each setting's state but the token lending's, which these tests
         leave untried, as a run for a personal account's repository does,
-        and the class Lending tests on its own."""
-        return {key: setting["state"] for key, setting in report["settings"].items() if key != "token_lending"}
+        and the class Lending tests on its own, and the token store's,
+        which the class TokenStore tests on its own."""
+        return {key: setting["state"] for key, setting in report["settings"].items()
+                if key not in ("token_lending", "token_store")}
 
     def test_new_mode_applies_every_setting_in_order(self):
         github = FakeGitHub()
@@ -206,6 +216,8 @@ class Apply(unittest.TestCase):
             ("PATCH", f"/repos/{REPO}", SCANNING),
             ("PATCH", f"/repos/{REPO}", PUSH_PROTECTION),
             ("PUT", WORKFLOW, ACTIONS_ON),
+            ("PUT", ENVIRONMENT, ENVIRONMENT_BODY),
+            ("POST", ENVIRONMENT + "/deployment-branch-policies", {"name": "main", "type": "branch"}),
             ("PUT", RULESET_PATH, PINNED),
         ])
         self.assertEqual(report["schema"], setup.REPORT_SCHEMA)
@@ -224,6 +236,7 @@ class Apply(unittest.TestCase):
             "settings: push protection: on",
             ACTIONS_LOG + "on",
             NOT_LENT_LOG,
+            STORE_LOG + "made, default branch only",
             PIN_LOG + "GitHub Actions",
         ])
 
@@ -256,7 +269,7 @@ class Apply(unittest.TestCase):
         github = FakeGitHub(listed)
         code, report, out, _ = self.apply(github)
         self.assertEqual(code, 0)
-        self.assertNotIn("POST", [method for method, _, _ in github.writes()])
+        self.assertNotIn(("POST", f"/repos/{REPO}/rulesets"), [(method, path) for method, path, _ in github.writes()])
         self.assertEqual(self.states(report)["ruleset"], "exists")
         self.assertIn("settings: ruleset: exists, left as it is", out)
 
@@ -588,12 +601,12 @@ class Apply(unittest.TestCase):
         self.assertEqual(report["settings"]["actions_pull_requests"],
                          {"state": "not-tried", "detail": NOT_TRIED_IN_EXISTING})
         self.assertEqual(list(report["settings"]), list(setup.SETTINGS))
-        self.assertEqual(out.splitlines()[-3:], [ACTIONS_LOG + "not tried", NOT_LENT_LOG,
-                                                 PIN_LOG + "not tried"])
+        self.assertEqual(out.splitlines()[-4:], [ACTIONS_LOG + "not tried", NOT_LENT_LOG,
+                                                 STORE_LOG + "made, default branch only", PIN_LOG + "not tried"])
 
     def test_the_log_has_a_line_for_every_setting_done_or_refused(self):
         self.assertEqual(setup.SETTINGS, ("ruleset", "toggles", "topic", "secret_scanning", "push_protection",
-                                          "actions_pull_requests", "token_lending", "check_source"))
+                                          "actions_pull_requests", "token_lending", "token_store", "check_source"))
         for key in setup.SETTINGS:
             if key == setup.TOKEN_LENDING:
                 continue
@@ -611,6 +624,8 @@ class Apply(unittest.TestCase):
         # The pin may wait out its bound, which the log tells from a refusal.
         lines = setup.LOG_LINES[setup.CHECK_SOURCE]
         self.assertEqual(set(lines), {setup.DONE, setup.EXISTS, setup.FAILED, setup.NOT_YET, setup.NOT_TRIED})
+        # The token store may be there already, which the log says.
+        self.assertEqual(set(setup.LOG_LINES[setup.TOKEN_STORE]), {setup.DONE, setup.EXISTS, setup.FAILED})
 
     def test_a_token_github_refuses_fails_each_setting_and_nothing_else(self):
         class Github(FakeGitHub):
@@ -636,6 +651,7 @@ class Apply(unittest.TestCase):
             "settings: push protection: not tried",
             ACTIONS_LOG + "not turned on",
             NOT_LENT_LOG,
+            STORE_LOG + "not made",
             PIN_LOG + "not tried",
         ])
         self.assertNotIn("integration", out)
@@ -679,7 +695,7 @@ class Apply(unittest.TestCase):
         self.assertEqual(report["settings"]["ruleset"]["detail"],
                          "the template's ruleset file could not be read, so no ruleset was made")
         self.assertIsNone(report["ruleset_name"])
-        self.assertEqual([method for method, _, _ in github.writes()], ["PATCH", "PUT", "PATCH", "PATCH", "PUT"])
+        self.assertEqual([method for method, _, _ in github.writes()], ["PATCH", "PUT", "PATCH", "PATCH", "PUT", "PUT", "POST"])
         self.assertIn("settings: ruleset: not created", out)
         self.ruleset.write_text('{"name": "x"}\n', encoding="utf-8")
         code, report, _, _ = self.apply(FakeGitHub())
@@ -1201,6 +1217,57 @@ class Lending(unittest.TestCase):
         self.assertEqual(setup.owned_secrets(json.dumps(settings), "mona", REQUESTER_ID),
                          ["SYMPHONY_CLAUDE_2", "SYMPHONY_CLAUDE_12", "CLAUDE_CODE_OAUTH_TOKEN"])
         self.assertEqual(setup.owned_secrets(None, "mona", REQUESTER_ID), [])
+
+
+class TokenStore(unittest.TestCase):
+    """The environment token-store, made limited to the repository's
+    default branch, so a workflow pushed to another branch never runs the
+    Token workflow's job that holds SymphonyBoard's token; one of that name
+    the repository has already is left as it is."""
+
+    def store(self, answers=None):
+        github = FakeGitHub(answers)
+        report = setup.new_report(setup.APPLIED, "existing")
+        report["default_branch"] = "trunk"
+        setup.apply_token_store(setup.GitHub("ghs_token_for_tests", transport=github), REPO, report)
+        return github, report["settings"][setup.TOKEN_STORE]
+
+    def test_it_is_made_for_the_default_branch_alone(self):
+        github, setting = self.store()
+        self.assertEqual(setting["state"], setup.DONE)
+        self.assertEqual(github.writes(), [
+            ("PUT", ENVIRONMENT, ENVIRONMENT_BODY),
+            ("POST", ENVIRONMENT + "/deployment-branch-policies", {"name": "trunk", "type": "branch"}),
+        ])
+
+    def test_one_there_already_is_left_as_it_is(self):
+        github, setting = self.store({("GET", ENVIRONMENT_PROBE): (200, {"total_count": 0, "available_custom_deployment_protection_rule_integrations": []})})
+        self.assertEqual(setting["state"], setup.EXISTS)
+        self.assertEqual(github.writes(), [])
+
+    def test_a_read_github_refuses_writes_nothing(self):
+        github, setting = self.store({("GET", ENVIRONMENT_PROBE): (403, {"message": "Resource not accessible"})})
+        self.assertEqual(setting, {"state": setup.FAILED, "detail": "HTTP 403: Resource not accessible"})
+        self.assertEqual(github.writes(), [])
+
+    def test_a_refused_branch_rule_is_a_failure_with_githubs_words(self):
+        rule = ("POST", ENVIRONMENT + "/deployment-branch-policies")
+        github, setting = self.store({rule: (422, {"message": "Validation Failed"})})
+        self.assertEqual(setting, {"state": setup.FAILED, "detail": "made with no branch allowed, since the rule"
+                                                                   " for trunk was refused: HTTP 422: Validation Failed"})
+        self.assertEqual([path for _, path, _ in github.writes()], [ENVIRONMENT, rule[1]])
+
+    def test_the_environment_is_never_read_with_a_permission_the_app_lacks(self):
+        github, _ = self.store()
+        self.assertNotIn(("GET", ENVIRONMENT), [(method, path) for method, path, _, _ in github.calls])
+
+    def test_an_unknown_default_branch_makes_nothing(self):
+        github = FakeGitHub()
+        report = setup.new_report(setup.APPLIED, "new")
+        report["default_branch"] = None
+        setup.apply_token_store(setup.GitHub("ghs_token_for_tests", transport=github), REPO, report)
+        self.assertEqual(report["settings"][setup.TOKEN_STORE]["state"], setup.FAILED)
+        self.assertEqual(github.calls, [])
 
 
 class Transport(unittest.TestCase):

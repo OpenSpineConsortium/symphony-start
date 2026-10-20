@@ -1642,7 +1642,9 @@ def every_setting_done(manifest, report):
     done or was there already, so the section may say the settings were
     applied."""
     keys = ("secret_scanning", "push_protection") + (("actions_pull_requests",) if manifest["mode"] == "new" else ())
-    return settings_done(report) and all(setting_state(report, key) == "done" for key in keys)
+    store = setting_state(report, "token_store")
+    return (settings_done(report) and all(setting_state(report, key) == "done" for key in keys)
+            and store in (None, "done", "exists"))
 
 
 def the_settings(manifest):
@@ -1785,6 +1787,23 @@ def toggles_line(manifest, report):
             f" both under https://github.com/{manifest['repository']}/settings.")
 
 
+def token_store_line(manifest, report):
+    """The environment the Token workflow saves a lent Claude token in,
+    limited to the default branch; nothing where the report is older than
+    the step and says nothing of it."""
+    if setting_state(report, "token_store") is None:
+        return None
+    why = "so only the default branch's Token workflow ever holds the Symphony App's token"
+    if setting_state(report, "token_store") == "done":
+        return f"- The environment `token-store`: made, limited to the default branch, {why}."
+    if setting_state(report, "token_store") == "exists":
+        return ("- The environment `token-store`: there already, left as it is; under Deployment branches and tags,"
+                f" choose your default branch alone, {why}.")
+    return (f"- The environment `token-store`: not set up{github_said(report, 'token_store')}; make it, or open it"
+            f" where it is there, at https://github.com/{manifest['repository']}/settings/environments and, under"
+            f" Deployment branches and tags, choose your default branch alone, {why}.")
+
+
 def topic_line(manifest, report):
     """The topic is what the repository's page shows of the adoption, so
     the line says what it is for; when GitHub refused it, where to add it:
@@ -1904,6 +1923,9 @@ def settings_section(manifest, report):
         lending = token_lending_line(manifest, report)
         if lending:
             parts.append(lending)
+        store = token_store_line(manifest, report)
+        if store:
+            parts.append(store)
         parts.append("")
         parts.append(stays_installed_sentence(manifest))
     elif outcome == "not-installed":
