@@ -1,6 +1,6 @@
 # Symphony GitHub Apps privacy statement
 
-Version 35, 2026-10-19. This text is also at https://openspineconsortium.com/symphony/apps-privacy.html.
+Version 37, 2026-10-20. This text is also at https://openspineconsortium.com/symphony/apps-privacy.html.
 The Symphony browser extension has a statement of its own, at https://openspineconsortium.com/symphony/privacy.html.
 
 Who makes the Apps: Gregory Schwing, trading as OpenSpineConsortium ("the developer"). Questions:
@@ -11,7 +11,7 @@ template, or its claim protocol, into a repository by pull request, afterwards r
 of that repository once a day for anonymous aggregates and, where the repository holds the claim
 protocol without the whole template, offers it, by another pull request, the newer versions the
 template comes to hold of the files Symphony's board and control panel run on. **Symphony Setup**
-(github.com/apps/symphony-setup) applies up to seven settings to a repository in the adoption run,
+(github.com/apps/symphony-setup) applies up to eight settings to a repository in the adoption run,
 and stays installed, acting only
 during an adoption run, until you uninstall it. Both work only through GitHub: nothing of yours goes
 anywhere but to GitHub's own API, to your own repository and, as aggregates, to the developer, save
@@ -152,7 +152,7 @@ GitHub asks each person for when they sign in with GitHub on the control panel. 
 it up to version 13 of this statement to hand its GitHub sign-in to a Codespace; it no longer uses
 it, and it stays on the App until the developer takes it off.
 
-Symphony Setup asks for two repository permissions, Administration (read and write), for the seven
+Symphony Setup asks for two repository permissions, Administration (read and write), for the eight
 settings below, and Metadata (read), and, on an organization, three organization permissions:
 Administration (read and write), Secrets (read and write) and Variables (read and write). It uses
 Administration for one thing only: where the organization holds
@@ -262,7 +262,7 @@ exists, the one word in `.github/symphony-adopt` and `.github/symphony-metrics` 
 its name before the rename to Symphony, `.github/sdlc-adopt` and `.github/sdlc-metrics`, the full
 listing of the default branch's tree (to decide the kind), a checkout of that branch at depth one (to add the
 files) and whether you administer the repository. With Symphony Setup installed, the run also reads the repository's record, keeping its id, to name
-it when lending, and whether it is public, private or internal, to say in the pull request whether
+it when lending, and its default branch, to limit the environment token-store to it, and whether it is public, private or internal, to say in the pull request whether
 GitHub enforces its ruleset and, in an organization's repository, which of the organization's
 secrets reach it already; and its rulesets, its topics and its workflow permissions for GitHub
 Actions, to leave what is there as it is. When the
@@ -284,7 +284,14 @@ setting, which may name your account's plan; in an organization's new repository
 also writes that login into `.github/CODEOWNERS`. With Symphony Setup installed, the run creates the
 default branch's ruleset, turns on delete-head-branches and auto-merge, adds the topic `symphony` to
 the repository's topics (the sign on the repository's page that it is adopted, which anyone can see
-there and the Symphony browser extension reads from the page; your other topics stay), turns on secret scanning and push protection where your plan and visibility allow it, in a
+there and the Symphony browser extension reads from the page; your other topics stay), turns on secret scanning and push protection where your plan and visibility allow it, makes the
+environment `token-store`, limited to the default branch, unless the repository has an environment
+of that name, which it leaves as it is (the Token workflow saves a Claude token you lend there with
+SymphonyBoard's key, and GitHub would otherwise make the environment on the workflow's first run
+open to every branch; where GitHub refuses it, as for a private repository whose plan has no
+environments, the pull request says so and where to make it, and where it refuses the branch rule
+after making the environment, the environment stands with no branch allowed, so nothing runs there
+until you add one), in a
 repository that takes the whole template ticks "Allow GitHub Actions to create and approve pull requests" where
 your organization and its enterprise allow it, in an organization's repository lends it your own
 Claude tokens of the organization's pool, but none you lent with no say, and, beside one of them, the pool's two variables (as the
@@ -847,7 +854,7 @@ as it keeps any issue's comments, and are sent to nobody else: the developer rec
 
 The bar's button "Ask in claude.ai" opens claude.ai in a new browser tab, signed in as whoever you are
 there, with your question and a line or two naming what the page shows (the repository and the tab,
-and the task, the OneDrive folder and item, or the Explore level you are at, each with its GitHub or
+and the task, the OneDrive folder and item or the words of a search of your drive, or the Explore level you are at, each with its GitHub or
 OneDrive link) carried in that tab's address, as the question claude.ai starts with. The page itself
 sends nothing to claude.ai, reads nothing from it and writes nothing for it, asks no write access to
 the repository for it, and cuts the whole to 2,000 characters, which an address carries. What you and
@@ -919,7 +926,7 @@ drive's files, each meant to become a private repository of its own that points 
 they are and never moves them. It reads, as you, with the GitHub token you gave it, two files on the
 repository's branch drive-catalog: notebooks.json, the proposal (each notebook's title, summary,
 repository name and the paths of its files), and catalog.json, the names, kinds, sizes, dates and
-OneDrive links of the drive's files, as the Folders tab reads it; and, for each notebook, whether a
+OneDrive links of the drive's files, as the drive organizer wrote it; and, for each notebook, whether a
 repository of that name exists under the same owner, whether it is private, internal or public, and
 whether GitHub counts you its administrator, which GitHub gives in the same answer.
 On a public or internal repository it reads none of these, since a notebook names your files. When
@@ -1153,9 +1160,10 @@ token it issued you, under Settings, Applications, Authorized GitHub Apps.
 
 ## The control panel's Folders tab
 
-The control panel's Folders tab, https://openspineconsortium.com/symphony/control/#folders, makes a
-repository of yours track files and folders of your OneDrive, which the repository's own workflow,
-drive-sync.yml, then keeps in step with the drive. It is a tab of the control panel's one page: it
+The control panel's Folders tab, https://openspineconsortium.com/symphony/control/#folders, shows your
+OneDrive as a file explorer, in which you can also make, rename, move, copy, delete, upload, download
+and share its files and folders, and makes a repository of yours track files and folders of the
+drive, which the repository's own workflow, drive-sync.yml, then keeps in step with the drive. It is a tab of the control panel's one page: it
 uses the panel's sign-in, whichever way you signed in, and works on the repository the panel's bar
 has chosen. It reads nothing until you open it, or until it opens itself on Microsoft's return
 (below). Once open, it reads with your GitHub token, for the chosen repository, the file
@@ -1173,16 +1181,9 @@ adopts a repository through the front door, as the section on the adoption says.
 nothing there. Where GitHub refuses the tab even to say whether the repository's secret is set, the
 tab says so as it opens, before you connect a drive, and offers no Track.
 
-Where the chosen repository holds the branch drive-catalog, which the drive organizer writes (a
-workflow of the repository with the drive's own access, or a Claude session with your own connector;
-in a private repository only, since the catalog names your files), and no drive is connected in the
-tab, the tab shows that catalog in place of the drive: it reads, with your GitHub token, when that
-branch was last written and its file catalog.json, the names, sizes, dates and OneDrive links of the
-folders and files the organizer listed, and draws them in the same explorer, read from the
-repository alone, with no Microsoft sign-in and nothing asked of Microsoft. A double-click opens a
-file in its Office app or in OneDrive through the link the catalog holds, as it does from the drive;
-Track is not offered, since the page holds no token for the drive. Connecting the drive puts the
-drive itself in the catalog's place. The developer receives none of it.
+The tab no longer reads the drive organizer's catalog, catalog.json on the repository's branch
+drive-catalog, as versions 26 to 35 of this statement said it did while no drive was connected: it
+shows only the drive you connect. The Notebooks tab still reads that file (the control panel, above).
 
 When you press Track it reads the repository's record (its default branch and whether it is public),
 the names of what its default branch holds at its top, to refuse a folder the repository already
@@ -1236,8 +1237,12 @@ through Microsoft Graph, the drive's type and its owner's display name, to say w
 connected, and its id, to refuse at Track an item the repository tracked from another drive, and the
 names, kinds, sizes, dates, ids, paths in the drive and web addresses of the files and folders in the
 folders you open, to draw the list you tick in, laid out as a file explorer with a tree of the
-folders you open in it; nothing of that list leaves your browser but the name, the id and the
-drive's id of what you tick, which go into drive.json. When you open a file from the list, by a
+folders you open in it, each read asking Microsoft also for a small picture of each file, which
+your browser then loads from Microsoft's own servers with no token and no referrer (where Microsoft
+refuses it as a bad request, the page reads the list again without the pictures and asks for none
+again until the page is reloaded; a search asks for none); nothing of that list
+leaves your browser but the name, the id and the drive's id of what you tick, which go into
+drive.json. When you open a file from the list, by a
 double click, Enter or its menu, the page hands your browser the file's address and nothing else: a
 Word, Excel, PowerPoint or Visio file goes to that program on your computer through Office's own
 address scheme (`ms-word:` and the like), at the file's address on your drive (for a personal
@@ -1245,9 +1250,48 @@ OneDrive, d.docs.live.net, your drive's id and the file's path; for a work or sc
 address OneDrive gave), so that the program opens it from the drive, signs in to Microsoft itself
 and saves your edits there; any other file, or one you choose to open in the browser, opens on
 OneDrive's own page in a new tab. Your browser may ask first whether to open the program. Nothing is
-sent to the developer, the sign-in service or GitHub when you open a file, and the page never
-downloads it. When the access token runs out during
-a sitting, the page sends the refresh token to the service, which answers with a new access token.
+sent to the developer, the sign-in service or GitHub when you open a file. When the access token
+runs out during a sitting, the page sends the refresh token to the service, which answers with a new
+access token.
+
+The explorer's own actions also go from your browser to Microsoft Graph alone, as you and with the
+same access token, each only when you press it, and each changes your drive as the same action in
+OneDrive would. New folder makes a folder named New folder, numbered where that name is taken, in
+the folder you are in, and then lets you rename it. Rename gives an item the name you type, and
+where the item is one you ticked, that name is the one Track writes into drive.json. Delete
+asks you on the page first and then deletes each item you chose, one request each, into your
+drive's recycle bin, from which OneDrive lets you restore it, and unticks an item you had ticked. Upload, by its button or by dropping
+files on the list, sends each file you chose from your computer into the folder you are in: a file
+of up to 4 MB in one request, a larger one through an upload session Microsoft opens, in pieces of
+about 3.3 MB sent to the address Microsoft gives for it with no token; where a file of that name is
+there, the page asks you first whether to replace it, keep both or skip it. Download asks Microsoft
+for a short-lived address of the file and hands it to your browser, which saves the file from
+Microsoft with no token; the page never reads the file's contents. Cut, copy and paste, or dragging
+items onto a folder, move or copy
+the items you chose into the folder you paste in (to know the drive's top folder the page reads its
+id once for each connection); Microsoft makes a copy in its own time, so the page reads the folder
+again a few seconds later to show it; a copy whose name is taken gets a numbered name, and a move
+whose name is taken is refused and the page says so. Share makes, only when you press Create link, a sharing link to one item, for
+viewing or for editing, as you choose: on a work or school drive one that works for people in your
+organization, its default, or for anyone who has the link; on a personal drive (or on any drive whose
+type the page could not read) one for anyone who has the link, the only kind it offers; whoever you then give the link to can open the item, and edit it
+where you chose editing, until you remove the link in OneDrive, which the page does not do. Copy puts
+the link on your device's clipboard. Properties reads one item's name, id, size, kind and file details, folder and the number of
+items it holds, dates, web address and whether it is shared, and who made it and last changed it
+(Microsoft's record of each, of which the page shows the display name); for several items it adds up what the list already shows. The preview pane, off until you turn
+it on, shows the one file you choose: for an image, a larger picture read from Microsoft; for any
+other file, Microsoft's own preview, from a short-lived address Microsoft makes for it, drawn in a
+frame limited by the browser's sandbox on Microsoft's own site with no referrer, or, where Microsoft
+makes none, a larger picture; a folder reads nothing. Search, when you
+press Enter, sends the words you typed to Microsoft to find the matching files and folders anywhere in
+the drive, up to two thousand of them; typing without pressing Enter only filters the list already
+shown, in your browser. The views, the sort order and choosing several items with Shift or Ctrl ask
+nothing of anyone. The page keeps the view, the sort order, whether the preview is on, what you have
+chosen, what you cut or copied, the words you searched for and the preview's addresses in the open
+page's memory alone, with nothing of them in the browser's storage, the address or a log, unless you press "Ask in
+claude.ai", which carries the words of a search shown, as the bar's section says, and forgets
+them, with the drive's tokens, when you reload or leave the page. None of these actions sends anything
+to GitHub, the sign-in service or the developer.
 
 The repository's workflow does the same at the start of every sync: on GitHub's runners it sends the
 secret, your refresh token, to the service, or to the address the repository's variable
@@ -1256,7 +1300,22 @@ Microsoft the items the default branch's drive.json names and what a ticked fold
 down (until a pull request carrying a new list merges, the newly saved secret is used with the list
 already there), brings what changed in the drive into the repository by pull request, sends up what
 changed in the repository and, where a file changed on both sides, puts the repository's copy beside
-the drive's in the same folder; it touches nothing else in the drive. What comes down, and
+the drive's in the same folder; it touches nothing else in the drive. The drive organizer's workflow,
+drive-organize.yml, where a private repository runs it, trades the same secret at the same route for
+an access token in the same way and reads at Microsoft Graph alone, the workflow itself using no
+other connector, the names, kinds, sizes, dates, ids, folders and web addresses of the files and
+folders under what drive.json names for it (the whole drive where that is its top), up to 20,000
+entries, and the contents of a sample of them, at most 400 files of up to 5 MB each and 120 MB in all;
+where it starts from the drive's top, the folders Microsoft 365 keeps there (Apps, Attachments,
+Meetings, Recordings, Notebooks, Desktop, Documents, Pictures and the Teams and Copilot chat folders)
+it lists by name without reading inside. It writes what it found, the list and, for each file of the
+sample, a text of at most 1,500 characters taken from it (a document's headings, opening and
+comments, a sheet's header, first rows and column totals, a deck's slide text), to the branch
+drive-catalog of that repository as one commit on top of what the branch holds, where whoever can
+read the repository can read it, and changes nothing in the drive. Its step organize, when started,
+also gives that list and those texts to Claude, on the repository's own Claude token and under
+Anthropic's terms for that account, and opens issues in the repository naming the files, folders and
+links of the projects Claude proposes. What comes down, and
 drive.json with the names of what you ticked, can be read by whoever can read the repository, and by
 anyone where it is public, and the new review comments in its Word documents become tasks, issues of
 the repository, readable the same way. The route of the service that trades a refresh token for an
@@ -1279,7 +1338,8 @@ secret and that day, and once that day has passed it says that the connection ha
 every sync since stops before it reaches the drive. Google Drive is not offered: Google's own picker
 takes a browser API key, which the developer has declined, so the page connects no other drive and
 the service refuses any provider but OneDrive. The developer receives nothing from the tab, the
-service or the workflow.
+service, the workflow or the organizer's workflow; what Claude receives is under your Claude
+account's terms.
 
 ## The App's server, where it is run
 
@@ -1380,6 +1440,31 @@ Symphony is for people who administer GitHub repositories. It is not directed at
 A new version of this statement is published at https://openspineconsortium.com/symphony/apps-privacy.html
 and in the front door repository, github.com/OpenSpineConsortium/symphony-start, whose PRIVACY.md is
 this text.
+
+Version 37 adds the environment `token-store` to what Symphony Setup makes in an adoption run, of
+either kind, as the section on the adoption says: it reads the repository's default branch from the
+record it already reads, asks GitHub whether the repository has an environment of that name, through
+the environment's list of deployment protection apps, which Administration reads, and where it has
+none makes one whose deployment branches are the default branch alone, with the Administration on
+the repository the Setup App already holds. It reads and writes nothing else; the environment holds
+no secret and no variable; the pull request says whether it was made, was there already or was not
+set up, quoting GitHub where it refused; and the run's public log says only that, per setting. Nothing
+the developer receives or keeps changed, and neither App's permissions changed.
+
+Version 36 adds the Folders tab's own actions on your OneDrive, as the section on the Folders tab
+says: new folder, rename, delete into the recycle bin, upload, download, cut, copy and paste, sharing
+links for viewing or editing, properties, a preview pane, a search of the whole drive and small
+pictures of the files in the list, each sent from your browser to Microsoft Graph alone, as you, with
+the access Microsoft already granted for the drive (Files.ReadWrite), and each only when you press it;
+what the explorer keeps it keeps in the open page's memory alone. It says that the tab no longer reads
+the drive organizer's catalog, which version 26 added, and that the drive organizer's workflow reads
+the drive through Microsoft Graph alone with the repository's drive secret and the sign-in service's
+route, as drive-sync.yml does, lists without reading inside the folders Microsoft 365 keeps at the
+drive's top, writes the list and texts of up to 1,500 characters from a sample of the files to the
+branch drive-catalog of a private repository, and, in its step organize, gives them to Claude on the
+repository's own Claude token and opens issues for the projects Claude proposes.
+Nothing the developer
+receives or keeps changed, and neither App's permissions changed.
 
 Version 35 adds sign-in by code, GitHub's device flow, built for the control panel installed as an
 app and switched off until the developer turns it on, as the section on the control panel says:
