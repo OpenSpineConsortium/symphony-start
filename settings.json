@@ -102,6 +102,17 @@
       "when": "an organization's repository, where the installation granted the permissions; only a secret or variable that exists and whose visibility is selected is written; the run reads the value of SYMPHONY_CLAUDE_SETTINGS, which holds the slots' owners, and never a secret's value; no value, visibility or other person's slot is changed"
     },
     {
+      "key": "token_store",
+      "report": "token_store",
+      "scope": "repository",
+      "app": "Symphony Setup",
+      "permission": "Administration: write (repository)",
+      "api": "GET /repos/{owner}/{repo}/environments/token-store/deployment_protection_rules/apps to see whether it is there (the environment's own read needs Actions: read, which the App does not hold), then PUT /repos/{owner}/{repo}/environments/token-store and POST /repos/{owner}/{repo}/environments/token-store/deployment-branch-policies",
+      "value": {"deployment_branch_policy": {"protected_branches": false, "custom_branch_policies": true}, "branch": "the repository's default branch"},
+      "modes": ["new", "existing"],
+      "when": "unless the repository has an environment token-store already, which is left as it is"
+    },
+    {
       "key": "check_source",
       "report": "check_source",
       "scope": "repository",

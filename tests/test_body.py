@@ -480,6 +480,20 @@ class Body(unittest.TestCase):
                       " at https://github.com/octo-org/widget/settings/installations, or from the organization's at"
                       " https://github.com/organizations/octo-org/settings/installations.", body)
 
+    def test_the_token_store_says_what_became_of_it(self):
+        store = "- The environment `token-store`: "
+        body = self.body(settings=report(states=dict(ALL_DONE, token_store="done")))
+        self.assertIn(store + "made, limited to the default branch, so only the default branch's Token workflow"
+                      " ever holds the Symphony App's token.\n", body)
+        self.assertNotIn("was used in this run", body)
+        body = self.body(settings=report(states=dict(ALL_DONE, token_store="failed"),
+                                         details={"token_store": "HTTP 403: Resource not accessible"}))
+        self.assertIn(store + "not set up", body)
+        self.assertIn("https://github.com/octo-org/widget/settings/environments and", body)
+        self.assertIn("was used in this run", body)
+        # A report from before the step says nothing of it.
+        self.assertNotIn(store, self.body(settings=report()))
+
     def lending_report(self, state, lent=(), left=(), failed=(), detail="", mode="new", unreached=(), missing=()):
         settings = report(states=dict(ALL_DONE, token_lending=state), details={"token_lending": detail}, mode=mode)
         settings["lending"] = {"lent": list(lent), "left": list(left), "unreached": list(unreached),

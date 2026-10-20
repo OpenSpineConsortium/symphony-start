@@ -84,6 +84,13 @@ hand:
      repositories: never a value, a visibility or another person's slot,
      and nothing is created. It comes before the pin, which may wait
      minutes.
+  8. in either mode, the environment token-store, limited to the
+     default branch, unless the repository has one of that name: the
+     Token workflow saves a lent Claude token there with SymphonyBoard's
+     key, and GitHub would make it on the first run open to every
+     branch, so a workflow pushed to any branch could run the job that
+     holds the App's token. An environment the repository has already
+     is left as it is.
 
 settings.json at the repository's root is the list of every setting, in
 this order, with its API call and the permission it needs; the tests hold
@@ -162,12 +169,17 @@ TOPIC = "topic"
 SECRET_SCANNING = "secret_scanning"
 PUSH_PROTECTION = "push_protection"
 ACTIONS_PULL_REQUESTS = "actions_pull_requests"
+TOKEN_STORE = "token_store"
 CHECK_SOURCE = "check_source"
 TOKEN_LENDING = "token_lending"
 # The pin comes last, though it belongs to the ruleset, since it may wait
 # minutes for the check run and every other setting is applied meanwhile.
 SETTINGS = (RULESET, TOGGLES, TOPIC, SECRET_SCANNING, PUSH_PROTECTION, ACTIONS_PULL_REQUESTS, TOKEN_LENDING,
-            CHECK_SOURCE)
+            TOKEN_STORE, CHECK_SOURCE)
+# The environment the template's Token workflow (.github/workflows/token.yml)
+# saves a Claude token in with SymphonyBoard's key; limited to the default
+# branch, so only the default branch's script ever runs there.
+TOKEN_STORE_NAME = "token-store"
 # The topic an adopted repository carries, which the template's own
 # scripts/setup-repo.sh adds too.
 TOPIC_NAME = "symphony"
@@ -176,6 +188,7 @@ TOPIC_NAME = "symphony"
 TOKEN_PERMISSIONS = ("read", "write")
 # GitHub's answer when the organization or its enterprise holds the setting.
 POLICY_CONFLICT = 409
+NOT_FOUND = 404
 # The check the template's CI reports and its ruleset requires, and GitHub
 # Actions' app id, the one source the pin allows for it.
 CHECK_NAME = "check"
@@ -378,6 +391,8 @@ def read_visibility(github, repo, report):
     answer = answer if isinstance(answer, dict) else {}
     visibility = answer.get("visibility") if isinstance(answer.get("visibility"), str) else ""
     report["private"] = visibility == "private"
+    branch = answer.get("default_branch")
+    report["default_branch"] = branch if isinstance(branch, str) and branch else None
     ident = answer.get("id")
     return (ident if isinstance(ident, int) and not isinstance(ident, bool) and ident > 0 else None), visibility
 
@@ -509,6 +524,45 @@ def apply_actions_pull_requests(github, repo, report, org_github=None):
             allow_for_organization(github, org_github, repo, report, str(said))
         else:
             record(report, ACTIONS_PULL_REQUESTS, FORBIDDEN if said.status == POLICY_CONFLICT else FAILED, str(said))
+
+
+def apply_token_store(github, repo, report):
+    """Make the environment token-store, limited to the default branch, so
+    no branch but the default one ever runs the Token workflow's job that
+    holds SymphonyBoard's token; GitHub would otherwise make it on the
+    first run open to every branch. An environment of that name the
+    repository has already is left as it is, as the ruleset is (1).
+
+    Whether it is there is read from its custom deployment rule
+    integrations, which Administration reads, since the environment's own
+    read needs Actions, which the Setup App does not hold; a 404 there is
+    no environment of that name. Where the branch rule is refused after the
+    environment is made, the environment stands with no branch allowed, so
+    nothing runs there until the rule is added, and the report says so."""
+    branch = report.get("default_branch")
+    if not branch:
+        record(report, TOKEN_STORE, FAILED, "the repository's default branch could not be read")
+        return
+    path = f"/repos/{repo}/environments/{TOKEN_STORE_NAME}"
+    try:
+        try:
+            github.call("GET", f"{path}/deployment_protection_rules/apps")
+            record(report, TOKEN_STORE, EXISTS)
+            return
+        except GitHubError as said:
+            if said.status != NOT_FOUND:
+                raise
+        github.call("PUT", path, {"deployment_branch_policy": {"protected_branches": False,
+                                                               "custom_branch_policies": True}})
+        try:
+            github.call("POST", f"{path}/deployment-branch-policies", {"name": branch, "type": "branch"})
+        except GitHubError as said:
+            record(report, TOKEN_STORE, FAILED, f"made with no branch allowed, since the rule for {branch} was"
+                   f" refused: {said}")
+            return
+        record(report, TOKEN_STORE, DONE)
+    except GitHubError as said:
+        record(report, TOKEN_STORE, FAILED, str(said))
 
 
 @dataclass
@@ -827,6 +881,8 @@ def apply_settings(github, repo, ruleset, mode, org_github=None, checks_github=N
         record(report, ACTIONS_PULL_REQUESTS, NOT_TRIED, "the protocol alone opens no pull request with GitHub Actions")
     lend_github, owner_type, requester, requester_id = lending or (None, "", "", "")
     apply_token_lending(lend_github, repo, repo_id, repo_visibility, owner_type, requester, requester_id, report)
+    # Both kinds bring the Token workflow (symphony-start #76).
+    apply_token_store(github, repo, report)
     # Only the whole template brings the CI job that reports the check (6).
     if mode == "new":
         apply_check_source(github, checks_github, repo, head, report, waiting or WAITING)
@@ -850,6 +906,9 @@ LOG_LINES = {
                             FAILED: "allow GitHub Actions to create and approve pull requests: not turned on",
                             FORBIDDEN: "allow GitHub Actions to create and approve pull requests: not turned on",
                             NOT_TRIED: "allow GitHub Actions to create and approve pull requests: not tried"},
+    TOKEN_STORE: {DONE: "environment token-store: made, default branch only",
+                  EXISTS: "environment token-store: exists, left as it is",
+                  FAILED: "environment token-store: not made"},
     CHECK_SOURCE: {DONE: "the check's source: GitHub Actions", EXISTS: "the check's source: set already",
                    FAILED: "the check's source: not set", NOT_YET: "the check's source: not set yet",
                    NOT_TRIED: "the check's source: not tried"},
