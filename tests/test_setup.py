@@ -1409,7 +1409,7 @@ class Transport(unittest.TestCase):
 
 class Skip(unittest.TestCase):
     def test_skip_writes_why_nothing_was_applied(self):
-        self.assertEqual(setup.WHYS, ("not-set-up", "not-installed", "front-door-broken", "not-reported"))
+        self.assertEqual(setup.WHYS, ("not-set-up", "not-granted", "not-installed", "front-door-broken", "not-reported"))
         with tempfile.TemporaryDirectory() as scratch:
             report = Path(scratch) / "settings.json"
             for why in setup.WHYS:
